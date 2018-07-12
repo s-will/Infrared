@@ -9,6 +9,8 @@
 #include <iostream>
 #include <array>
 
+#include <ctime>
+
 using namespace bscf;
 
 class ComplConstraint : public Constraint {
@@ -28,12 +30,12 @@ public:
     bool
     operator ()(const Assignment &a) const override {
 
-        static std::array<bool,16> 
+        static std::array<bool,16>
             tab = {0,0,0,1, //A
                    0,0,1,0, //C
                    0,1,0,1, //G
                    1,0,1,0};//U
-        
+
         return
             tab[ a[vars()[0]] + 4 * a[vars()[1]] ];
     }
@@ -62,7 +64,7 @@ public:
     operator ()(const Assignment &a) const override {
 
         static std::array<double,4> tab = {0,-1,-1,0};
-        
+
         return
             pow ( *weight_, - tab[ a[vars()[0]] ] );
     }
@@ -99,7 +101,7 @@ public:
              0,0,-3,0, //C
              0,-3,0,-1, //G
              -2,0,-1,0};//U
-        
+
         return
             pow ( *weight_, - tab[ a[vars()[0]] + 4 * a[vars()[1]] ] );
     }
@@ -129,6 +131,10 @@ operator <<(std::ostream &out, const Assignment &a) {
 
 int
 main(int argc, char** argv) {
+
+    srand(time(0)); // just kidding ;)
+
+
     int seqlen=30;
 
     auto ctd = ClusterTreeDecomposition<>(seqlen, 4);
@@ -150,7 +156,7 @@ main(int argc, char** argv) {
         ctd.add_function( cluster, BPEnergy(p.first, p.second, &weightE ) );
         ctd.add_function( cluster, CGControl(p.first, &weightCG ) );
         ctd.add_function( cluster, CGControl(p.second, &weightCG ) );
-        
+
         added[p.first] = true;
         added[p.second] = true;
     }
@@ -166,7 +172,7 @@ main(int argc, char** argv) {
     // write dot bracket
     std::vector<char> s(seqlen,'.');
     for (auto p : basepairs) {
-        s[p.first] = '('; 
+        s[p.first] = '(';
         s[p.second] = ')';
     }
     std::copy(s.begin(),s.end(),std::ostream_iterator<char>(std::cout,""));

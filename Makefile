@@ -1,7 +1,8 @@
-MAIN=sample
+MAIN=infrared
 #hello
 
-HEADERS=$(MAIN).hpp
+HEADERS=assignment.hpp cluster.hpp cluster_tree.hpp		\
+	constraint_network.hpp functions.hpp infrared.hpp
 
 all: $(MAIN).so
 
@@ -15,5 +16,5 @@ run: all
 	g++  --shared -fPIC -I /usr/include/python3.6 $< -lboost_python3 -o $@
 
 
-test_$(MAIN): test_$(MAIN).cpp $(MAIN).hpp
+test_$(MAIN): test_$(MAIN).cpp $(HEADERS)
 	g++ test_$(MAIN).cpp -o $@
