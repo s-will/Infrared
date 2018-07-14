@@ -56,7 +56,7 @@ namespace ired {
          * @brief Construct with uniform domains
          */
         ConstraintNetwork(int num_vars, int domsize)
-            : domsizes_(num_vars,domsize) {
+            : domsizes_(num_vars, domsize) {
         };
 
         /**
@@ -65,48 +65,49 @@ namespace ired {
          * @returns 0-based index of the new variable
          */
         var_idx_t
-        add_var(int domainsize) {
+        add_variable(int domainsize) {
             domsizes_.push_back(domainsize);
             return domsizes_.size()-1;
         }
+
+        // /**
+        //  * @brief add constraint (cloning)
+        //  * @returns pointer to the new constraint
+        //  */
+        // auto
+        // add_constraint(const constraint_t &x) {
+        //     return add_constraint( x.clone() );
+        // }
+
+        // /**
+        //  * @brief add function
+        //  */
+        // auto
+        // add_function(const function_t &x)  {
+        //     return add_function( x.clone() );
+        // }
 
         /**
          * @brief add constraint (moving ownership)
          */
         auto
-        add_constraint(std::unique_ptr<constraint_t> &&x) {
-            constraints_.push_back( std::move(x) );
+        add_constraint(const std::shared_ptr<constraint_t> &x) {
+            constraints_.push_back( x );
             return constraints_.back().get();
         }
 
         /**
-         * @brief add constraint (cloning)
-         * @returns pointer to the new constraint
-         */
-        auto
-        add_constraint(const constraint_t &x) {
-            return add_constraint( x.clone() );
-        }
-
-        /**
          * @brief add function
          */
         auto
-        add_function(std::unique_ptr<function_t> &&x) {
-            functions_.push_back( std::move(x) );
+        add_function(const std::shared_ptr<function_t> &x) {
+            functions_.push_back( x );
             return functions_.back().get();
         }
 
-        /**
-         * @brief add function
-         */
-        auto
-        add_function(const function_t &x)  {
-            return add_function( x.clone() );
-        }
 
         int
-        num_vars() const {return (signed)domsizes_.size();}
+        num_vars() const {return domsizes_.size();}
 
         const auto & domsizes() const {
             return domsizes_;
@@ -115,8 +116,10 @@ namespace ired {
     private:
         std::vector<int> domsizes_;
 
-        std::vector<std::unique_ptr<function_t>> functions_;
-        std::vector<std::unique_ptr<constraint_t>> constraints_;
+        std::vector<std::shared_ptr<function_t>> functions_;
+        std::vector<std::shared_ptr<constraint_t>> constraints_;
+
+
     };
 
 

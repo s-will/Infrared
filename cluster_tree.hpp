@@ -1,7 +1,7 @@
 #ifndef INFRARED_CLUSTER_TREE_HPP
 #define INFRARED_CLUSTER_TREE_HPP
 
-/* 
+/*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
  *
@@ -18,7 +18,8 @@
 
 namespace ired {
 
-    /** 
+
+    /**
      * @brief A tree of clusters (=variables, functions, constraints)
      *
      * Supports evaluation and sampling.
@@ -30,6 +31,7 @@ namespace ired {
     public:
         using constraint_network_t = ConstraintNetwork<FunValue>;
 
+        using var_idx_t = typename constraint_network_t::var_idx_t;
         using cluster_t = typename constraint_network_t::cluster_t;
         using assignment_t = typename constraint_network_t::assignment_t;
         using fun_value_t = typename constraint_network_t::fun_value_t;
@@ -69,7 +71,7 @@ namespace ired {
          * @brief Construct with uniform domains
          */
         ClusterTree(int num_vars, int domsize)
-            : cn_(num_vars,domsize) {
+            : cn_(num_vars, domsize) {
         };
 
 
@@ -91,35 +93,53 @@ namespace ired {
 
         // for 'manual' construction
         auto
-        make_root_cluster(const std::vector<int> &vars) {
+        add_root_cluster(const std::vector<var_idx_t> &vars) {
             auto node = boost::add_vertex(tree_);
             tree_[node].cluster = cluster_t(vars);
             return node;
         }
 
+        // auto
+        // make_root_cluster_python(const boost::python::list &vars) {
+        //     return make_root_cluster(python_extract_list<var_idx_t>(vars));
+        // }
+
         auto
-        make_child_cluster( vertex_descriptor parent, const std::vector<int> &vars) {
+        add_child_cluster( vertex_descriptor parent, const std::vector<int> &vars) {
             auto node = boost::add_vertex(tree_);
-            boost::add_edge(tree_, parent, node);
+            boost::add_edge(parent, node, tree_);
 
             tree_[node].cluster = cluster_t(vars);
             return node;
+        }
+
+        // auto
+        // make_child_cluster_python( vertex_descriptor parent, const boost::python::list &vars) {
+        //     return make_child_cluster(parent, python_extract_list<var_idx_t>(vars));
+        // }
+
+        //! @brief add variable to cluster
+        //!
+        //! synchronized between cluster and cn
+        auto
+        add_variable( vertex_descriptor node, var_idx_t var ) {
+            tree_[node].cluster.add_variable( var );
         }
 
         //! @brief add constraint to cluster
         //!
         //! synchronized between cluster and cn
         auto
-        add_constraint( vertex_descriptor node, const constraint_t &c ) {
-            tree_[node].cluster.add_constraint( cn_.add_constraint(c) );
+        add_constraint( vertex_descriptor node, const std::shared_ptr<constraint_t> &x ) {
+            tree_[node].cluster.add_constraint( cn_.add_constraint(x) );
         }
 
         //! @brief add function to cluster
         //!
         //! synchronized between cluster and cn
         auto
-        add_function( vertex_descriptor node, const function_t &c ) {
-            tree_[node].cluster.add_function( cn_.add_function(c) );
+        add_function( vertex_descriptor node, const std::shared_ptr<function_t> &x ) {
+            tree_[node].cluster.add_function( cn_.add_function(x) );
         }
 
         // run the dynamic programming evaluation
@@ -161,13 +181,12 @@ namespace ired {
                 auto parent = graph[ source(e, graph) ].cluster;
                 auto child =  graph[ target(e, graph) ].cluster;
 
-
                 // compute the message from cluster child to cluster parent
 
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
 
-                auto message = message_t(sep,cn_.domsizes());
+                auto message = std::make_unique<message_t>(sep, cn_.domsizes());
 
                 auto a = Assignment(cn_.num_vars());
 
@@ -187,13 +206,13 @@ namespace ired {
                         x = EvaluationPolicy::plus(x, p);
                     }
 
-                    message.set(a, x);
+                    message->set(a, x);
 
                     a.reset(diff);
                 }
 
                 // register message in cn, such that it persists!
-                auto msg = cn_.add_function(message);
+                auto msg = cn_.add_function(std::move(message));
                 // then, register in cluster parent
                 parent.add_function(msg);
                 // ... and as edge property
@@ -221,7 +240,7 @@ namespace ired {
                 auto message = graph[e].message;
 
                 double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
-                
+
                 auto x = EvaluationPolicy::zero();
                 for( auto it = ++ a_.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it.finished(); ++it ) {
                     fun_value_t p = EvaluationPolicy::one();

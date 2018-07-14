@@ -1,7 +1,7 @@
 #ifndef INFRARED_FUNCTIONS_HPP
 #define INFRARED_FUNCTIONS_HPP
 
-/* 
+/*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
  *
@@ -20,6 +20,11 @@ namespace ired {
 
     /**
      * Dependencies specify a dependency between variables
+     *
+     * @todo what does the engine need? Could we, e.g., rather offer
+     * only a depends_on(var_idx_t) than accessor vars()?  Currently,
+     * this almost requires functions to hold the vars as vector,
+     * which e.g. makes function definitions more ugly.
      */
     class Dependency {
     public:
@@ -37,7 +42,7 @@ namespace ired {
     /**
      * Functions evaluate assignments of a subset of variables
      */
-    template<class FunValue>
+    template<class FunValue=double>
     class Function : public Dependency {
     public:
         using self_t = Function<FunValue>;
@@ -47,19 +52,11 @@ namespace ired {
 
         Function(const std::vector<var_idx_t> &vars) : Dependency(vars) {}
 
-        Function(const Function &fun) : Dependency(fun) {}
+        // Function(const Function &fun) : Dependency(fun) {}
 
         virtual
         fun_value_t
-        operator () (const assignment_t &) const {
-            return fun_value_t();
-        }
-
-        virtual
-        std::unique_ptr<base_t>
-        clone() const {
-            return std::make_unique<self_t>(*this);
-        }
+        operator () (const assignment_t &) const = 0;
 
         virtual
         ~Function() {}
@@ -81,11 +78,6 @@ namespace ired {
 
         fun_value_t
         operator () (const assignment_t & a) const override { return f_(a); }
-
-        std::unique_ptr<base_t>
-        clone() const override {
-            return std::make_unique<self_t>(*this);
-        }
 
     private:
         using function_t = UnderlyingFunction;
@@ -115,26 +107,23 @@ namespace ired {
             parent_t(vars),
             domsizes_(domsizes),
             data_( calc_size() )
-        {}
+        {
+        }
 
         fun_value_t
         operator () ( const assignment_t & a ) const override { return data_[ index_(a) ]; }
-
-        std::unique_ptr<base_t>
-        clone() const override {
-            return std::make_unique<self_t>(*this);
-        }
 
         void
         set( const assignment_t & a, const fun_value_t &val) {
             data_[ index_(a) ] = val;
         }
 
+        int
+        datasize() const {return data_.size();}
+
     private:
-
-        data_t data_;
-
         const std::vector<int> domsizes_;
+        data_t data_;
 
         int
         index_( const assignment_t & a ) const {
@@ -155,6 +144,7 @@ namespace ired {
             for ( auto var : this->vars()) {
                 x *= domsizes_[var];
             }
+
             return x;
         }
     };

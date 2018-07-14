@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <limits>
+#include <cassert>
 
 namespace ired {
 
@@ -120,16 +121,19 @@ namespace ired {
              */
             auto
             operator ++ () {
+                if (top_<0) {
+                    return *this;
+                }
 
-                if (top_ == vars_.size()) {
+                if (top_ == static_cast<int>(vars_.size())) {
                     top_--;
-                    if (vars_.size()==0) {
+                    if (top_<0) {
                         return *this;
                     }
                     a_[vars_[top_]]++;
                 }
 
-                while ( top_ < vars_.size() ) {
+                while ( top_ < static_cast<int>(vars_.size()) ) {
                     while( a_[vars_[top_]] < domsizes_[vars_[top_]] && !is_valid() ) {
                         a_[vars_[top_]] ++;
                     }
@@ -187,10 +191,10 @@ namespace ired {
 
                         // determine maximum index
                         auto idx = std::distance(vars_.begin(), find(vars_.begin(),vars_.end(),var));
-                        last_idx = std::max(last_idx, (int)idx);
+                        last_idx = std::max(last_idx, static_cast<int>(idx));
                     }
 
-                    if ( 0 <= last_idx && last_idx < vars_.size() ) {
+                    if ( 0 <= last_idx && last_idx < static_cast<int>(vars_.size()) ) {
                         cb[last_idx].push_back( c );
                     }
                 }

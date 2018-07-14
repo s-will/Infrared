@@ -1,7 +1,7 @@
 #ifndef INFRARED_RNADESIGN_HPP
 #define INFRARED_RNADESIGN_HPP
 
-/* 
+/*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
  *
@@ -11,6 +11,9 @@
  * Boltzmann sampling over constraint networks
  *
  * This file provides domain-specific InfraRed extensions for RNA design sampling
+ *
+ * @todo find a python compatible way to allow later changes of weights without redefining everything
+ * ( needs indirection; similar to passing a pointer to weight instead of passing it directly )
  */
 
 
@@ -25,10 +28,6 @@ namespace ired {
             : Constraint({i,j}) {
         }
 
-        ComplConstraint(const self_t &c)
-            : Constraint(c) {
-        }
-
         bool
         operator ()(const Assignment &a) const override {
 
@@ -41,11 +40,6 @@ namespace ired {
             return
                 tab[ a[vars()[0]] + 4 * a[vars()[1]] ];
         }
-
-        std::unique_ptr<base_t>
-        clone() const override {
-            return std::make_unique<self_t>(*this);
-        }
     };
 
     class CGControl : public Function<double> {
@@ -54,12 +48,8 @@ namespace ired {
         using parent_t = Function<double>;
         using base_t = typename parent_t::base_t;
 
-        CGControl(int i , double *weight)
+        CGControl(int i , double weight)
             : parent_t({i}), weight_(weight) {
-        }
-
-        CGControl(const self_t &c)
-            : parent_t(c), weight_(c.weight_) {
         }
 
         double
@@ -68,16 +58,11 @@ namespace ired {
             static std::array<double,4> tab = {0,-1,-1,0};
 
             return
-                pow ( *weight_, - tab[ a[vars()[0]] ] );
-        }
-
-        std::unique_ptr<base_t>
-        clone() const override {
-            return std::make_unique<self_t>(*this);
+                pow ( weight_, - tab[ a[vars()[0]] ] );
         }
 
     private:
-        double *weight_;
+        double weight_;
     };
 
 
@@ -87,12 +72,8 @@ namespace ired {
         using parent_t = Function<double>;
         using base_t = typename parent_t::base_t;
 
-        BPEnergy(int i, int j, double *weight)
+        BPEnergy(int i, int j, double weight)
             : parent_t({i,j}), weight_(weight) {
-        }
-
-        BPEnergy(const self_t &c)
-            : parent_t(c), weight_(c.weight_) {
         }
 
         double
@@ -105,16 +86,11 @@ namespace ired {
                  -2,0,-1,0};//U
 
             return
-                pow ( *weight_, - tab[ a[vars()[0]] + 4 * a[vars()[1]] ] );
-        }
-
-        std::unique_ptr<base_t>
-        clone() const override {
-            return std::make_unique<self_t>(*this);
+                pow ( weight_, - tab[ a[vars()[0]] + 4 * a[vars()[1]] ] );
         }
 
     private:
-        double *weight_;
+        double weight_;
     };
 }
 
