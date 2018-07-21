@@ -190,25 +190,25 @@ namespace ired {
 
                 auto a = Assignment(cn_.num_vars());
 
-                auto it = a.make_iterator(sep, cn_.domsizes(), child.constraints());
-
-                for( ++it ; ! it.finished() ; ++it ) {
+                // std::cout<<"Make iterator sep ";
+                // std::copy(sep.begin(),sep.end(),std::ostream_iterator<int>(std::cout, ","));
+                // std::cout << std::endl;
+                
+                for(auto it = a.make_iterator(sep, cn_.domsizes(), child.constraints()); ! it.finished() ; ++it ) {
                     fun_value_t x = EvaluationPolicy::zero();
 
-                    auto it2 = a.make_iterator(diff, cn_.domsizes(), child.constraints());
+                    // std::cout<<"Make iterator diff ";
+                    // std::copy(diff.begin(),diff.end(),std::ostream_iterator<int>(std::cout, ","));
+                    // std::cout << std::endl;
 
-                    for( ++it2; ! it2.finished(); ++it2) {
-
+                    for( auto it2 = a.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it2.finished(); ++it2 ) {
                         fun_value_t p = EvaluationPolicy::one();
                         for ( auto f : child.functions() ) {
                             p = EvaluationPolicy::multiplies(p, (*f)(a) );
                         }
                         x = EvaluationPolicy::plus(x, p);
                     }
-
                     message->set(a, x);
-
-                    a.reset(diff);
                 }
 
                 // register message in cn, such that it persists!
@@ -242,7 +242,7 @@ namespace ired {
                 double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
 
                 auto x = EvaluationPolicy::zero();
-                for( auto it = ++ a_.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it.finished(); ++it ) {
+                for( auto it = a_.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it.finished(); ++it ) {
                     fun_value_t p = EvaluationPolicy::one();
                     for ( auto f : child.functions() ) {
                         p = EvaluationPolicy::multiplies(p, (*f)(a_) );
@@ -255,6 +255,7 @@ namespace ired {
                     }
                 }
             }
+
         private:
             constraint_network_t &cn_;
             assignment_t &a_;
@@ -308,7 +309,6 @@ namespace ired {
 
         evaluated_ = true;
     }
-
 
     template<class ConstraintNetwork, class EvaluationPolicy>
     auto

@@ -17,6 +17,8 @@
  */
 
 
+#include "iostream"
+
 namespace ired {
     class ComplConstraint : public Constraint {
     public:
@@ -32,23 +34,30 @@ namespace ired {
         operator ()(const Assignment &a) const override {
 
             static std::array<bool,16>
-                tab = {0,0,0,1, //A
-                       0,0,1,0, //C
-                       0,1,0,1, //G
-                       1,0,1,0};//U
+                tab = {false,false,false,true , //A
+                       false,false,true ,false, //C
+                       false,true ,false,true , //G
+                       true ,false,true ,false};//U
 
+            auto is_compl = tab[ a[vars()[0]] + 4 * a[vars()[1]] ];
+            // std::cout << "Check "
+            //           << vars()[0] << " " 
+            //           << vars()[1] << " " 
+            //           << a[vars()[0]] << " " 
+            //           << a[vars()[1]] << " " 
+            //           << is_compl << std::endl;
             return
-                tab[ a[vars()[0]] + 4 * a[vars()[1]] ];
+                is_compl;
         }
     };
 
-    class CGControl : public Function<double> {
+    class GCControl : public Function<double> {
     public:
-        using self_t = CGControl;
+        using self_t = GCControl;
         using parent_t = Function<double>;
         using base_t = typename parent_t::base_t;
 
-        CGControl(int i , double weight)
+        GCControl(int i , double weight)
             : parent_t({i}), weight_(weight) {
         }
 
@@ -76,22 +85,35 @@ namespace ired {
             : parent_t({i,j}), weight_(weight) {
         }
 
+        static
+        void
+        set_energy_table(const std::vector<double> table) {
+            assert(table.size() == 16);
+            std::copy(table.begin(),table.end(),tab_.begin());
+        }
+
         double
         operator ()(const Assignment &a) const override {
-
-            static std::array<double,16> tab =
-                {0,0,0,-2, //A
-                 0,0,-3,0, //C
-                 0,-3,0,-1, //G
-                 -2,0,-1,0};//U
-
             return
-                pow ( weight_, - tab[ a[vars()[0]] + 4 * a[vars()[1]] ] );
+                pow ( weight_, - tab_[ a[vars()[0]] + 4 * a[vars()[1]] ] );
         }
 
     private:
         double weight_;
+
+        static std::array<double,16> tab_;
     };
+    
+   #define INF 1.0e6
+   std::array<double,16> BPEnergy::
+   tab_ = { INF,INF,INF, -2, //A
+            INF,INF, -3,INF, //C
+            INF, -3,INF, -1, //G
+             -2,INF, -1,INF};//U
+    #undef INF
+   
 }
+
+
 
 #endif

@@ -5,7 +5,7 @@ HEADERS=assignment.hpp cluster.hpp cluster_tree.hpp		\
 	constraint_network.hpp functions.hpp infrared.hpp	\
 	rnadesign.hpp
 
-CXXFLAGS=-Wall -pedantic
+CXXFLAGS=-Wall -pedantic -O2 -g
 
 all: $(MAIN).so
 

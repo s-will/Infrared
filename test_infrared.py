@@ -1,85 +1,83 @@
 #!/usr/bin/env python3
 
-import infrared as ir
+import infrared_module as irm
+
+import argparse
 from collections import Counter
+import rna
 
-def val2nucl(x):
-    return "ACGU"[x]
-def values2seq(xs):
-    return "".join(map(val2nucl,xs))
+def main(args):
+    ## init seed
+    irm.seed(1)
 
-class SoftComplConstr(ir.Function):
-    def __init__(self,i,j,w):
-        ir.Function.__init__(self,[i,j])
-        self.w = w
-        self.i = i
-        self.j = j
-    def __call__(self,a):
-        v = a.values()
-        if v[self.i] == 3-v[self.j]:
-            e = -1
-        else:
-            e = 0
-        return pow(self.w, -e)
+    INF = 1e6
+    energy_tab = [INF,INF,INF, -2,  #A
+                  INF,INF, -3,INF,  #C
+                  INF, -3,INF, -1,  #G
+                   -2,INF, -1,INF] #U
+    
+    irm.set_bpenergy_table(energy_tab)
 
-w_C = 5
-w_CG = 2
-w_E = 10
+    ## read instance
+    with open(args.infile) as infh:
+        structures = rna.read_inp(infh)
 
-# a = ir.Assignment(10)
+    if len(args.weight) != len(structures):
+        print("Wrong number of weights specified for this instance, need",len(structures))
+        exit(-1)
 
-seqlen=30
+    if len(structures) == 0:
+        print("At least one structure is required in input")
+        exit(-1)
 
-ct = ir.ClusterTree(seqlen,4);
+    seqlen = len(structures[0])
 
-bpairs = [(1,9), (2,8), (3,5), (6,7), (11,13), (0,14)]
-structure= [ '.' for i in range(0,seqlen) ]
-for (i,j) in bpairs:
-    structure[i]='('
-    structure[j]=')'
-structure = "".join(structure)
+    # read model
+    structures = map(rna.parseRNAStructureBps,structures)
 
-for (i,j) in bpairs:
-    cluster = ct.add_root_cluster([i,j])
-    #ct.add_constraint( cluster, ir.ComplConstraint(i,j) ) 
-    ct.add_function( cluster, SoftComplConstr(i,j, w_C) ) 
-    #ct.add_function( cluster, ir.BPEnergy(i,j, w_E) ) 
-    ct.add_function( cluster, ir.CGControl(i, w_CG) )
-    ct.add_function( cluster, ir.CGControl(j, w_CG) )
+    ## build constraint network
+    cn = irm.RNAConstraintNetworkBasePair( seqlen, structures, args.weight, args.gcweight )
 
-paired = set( [ i for (i,j) in bpairs ] + [ j for (i,j) in bpairs ] )
+    ## make tree decomposition
+    td = irm.RNATreeDecomposition( cn, strategy=args.strategy )
 
-for i in range(0,seqlen):
-    if i in paired: continue
-    cluster = ct.add_root_cluster([i])
-    ct.add_function( cluster, ir.CGControl(i, w_CG) )
+    treewidth = max(map(len,td.bags))-1
+    print("Treewidth:",treewidth)
+    
+    ## make cluster tree
+    ct = td.construct_cluster_tree()
 
-ct.evaluate()
+    ## evaluate
+    ct.evaluate()
 
-## statistics
-counters=[Counter() for i in range(0,seqlen)]
+    ## sample
 
-print(structure)
-for x in range(0,20):
-    sample = ct.sample()
-    seq = values2seq(sample.values())
-    print(seq)
+    # for statistics
+    counters=[Counter() for i in range(0,seqlen)]
 
-    ## statistics
-    for i in range(0,seqlen):
-        counters[i][seq[i]] += 1
+    for x in range(0,args.number):
+        sample = ct.sample()
+        seq = irm.values2seq(sample.values())
+        print(seq)
+
+        ## statistics
+        for i in range(seqlen):
+            counters[i][seq[i]] += 1
+
+    if args.verbose:
+        print(sum(counters[1:],counters[0]))
 
 
-print(sum(counters[1:],counters[0]))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Generate training data')
+    parser.add_argument('infile', help="Input file")
+    parser.add_argument('--strategy', default="2", help="Strategy for tree decomposition (integer code; passed to TDlib)")
+    parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
+    parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
 
+    parser.add_argument('--gcweight', type=float, default=1, help="GC weight")
+    parser.add_argument('-w','--weight', type=float, action="append", help="Structure weight")
 
+    args=parser.parse_args()
 
-# class SimpleBPEnergy(ir.Function):
-#     def __init__(self,i,j):
-#         self.i = i
-#         self.j = j
-
-#     def eval(self, a):
-#         if a[i] == 3-a[j]: return 0
-#         else: return 1e-4
-
+    main(args)

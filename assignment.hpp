@@ -14,6 +14,7 @@
 #include <vector>
 #include <limits>
 #include <cassert>
+#include <iostream>
 
 namespace ired {
 
@@ -25,7 +26,7 @@ namespace ired {
 
         using var_idx_t = int;
         using var_value_t = int;
-        static const int Undetermined = std::numeric_limits<int>::max();
+        static const int Undetermined = -1;
 
         //! @brief construct 'empty' with size
         Assignment(int size)
@@ -49,10 +50,9 @@ namespace ired {
         void
         reset(std::vector<var_idx_t> &vars) {
             for (auto var : vars) {
-                values_[var] = var_value_t();
+                values_[var] = Undetermined;
             }
         }
-
 
         // Iterate over possible assignments
         // assignment iterator works destructively on parent assignment!
@@ -63,9 +63,6 @@ namespace ired {
         public:
             using constraint_t = Constraint;
 
-            /**
-             * @see AssignmentIterator::reset()
-             */
             AssignmentIterator(assignment_t &a,
                                const std::vector<var_idx_t> &vars,
                                const std::vector<int> &domsizes,
@@ -73,9 +70,16 @@ namespace ired {
                 : a_(a),
                   vars_(vars),
                   domsizes_(domsizes),
-                  constraint_board_(create_constraint_board(constraints))
+                  top_( 0 )
             {
-                reset();
+                for (auto var : vars_) {
+                    a_[var] = Undetermined;
+                }
+                constraint_board_ = create_constraint_board(constraints);
+                
+                if ( vars_.size() > 0 ) {
+                    this -> operator ++();
+                }
             }
 
             // auto &
@@ -84,25 +88,25 @@ namespace ired {
             // }
 
 
-            /**
-             * @brief Reset iterator
-             *
-             * Resets the assignment such that the iteration starts again
-             *
-             * After reset, the valuation is not necessarily valid (use ++ operator!)
-             */
-            auto
-            reset() {
-                // the entries for vars_ in a are (ab)used as a stack
-                // top_ points to the next to be determined variable
-                // var=vars_[top_]; a_[var] is the next candidate
-                // value
-                for (auto var : vars_) {
-                    a_[var] = var_value_t();
-                }
-                top_ = 0;
-                return *this;
-            }
+            // /**
+            //  * @brief Reset iterator
+            //  *
+            //  * Resets the assignment such that the iteration starts again
+            //  *
+            //  * After reset, the valuation is not necessarily valid (use ++ operator!)
+            //  */
+            // auto
+            // reset() {
+            //     // the entries for vars_ in a are (ab)used as a stack
+            //     // top_ points to the next to be determined variable
+            //     // var=vars_[top_]; a_[var] is the next candidate
+            //     // value
+            //     for (auto var : vars_) {
+            //         a_[var] = Undetermined;
+            //     }
+            //     top_ = std::min(static_cast<int>(vars_.size())-1,0);
+            //     return *this;
+            // }
 
             //! check constraints for current top_ entry
             bool
@@ -118,47 +122,51 @@ namespace ired {
              *
              * Sets the assignemnt to the next valid valuation of
              * vars_
+             *
+             * Invariants:
+             *   top_ points to the next to be enumerated variable
+             *   top_==-1 means termination
+             *   otherwise a_[vars_[top_]] is valid, 
+             *     if a_[vars_[top_]] < domsize_[vars_[top_]],
              */
             auto
             operator ++ () {
-                if (top_<0) {
+                //terminate if stack is empty
+                if ( top_ < 0 ) {
                     return *this;
                 }
-
-                if (top_ == static_cast<int>(vars_.size())) {
-                    top_--;
-                    if (top_<0) {
-                        return *this;
-                    }
-                    a_[vars_[top_]]++;
-                }
-
-                while ( top_ < static_cast<int>(vars_.size()) ) {
-                    while( a_[vars_[top_]] < domsizes_[vars_[top_]] && !is_valid() ) {
-                        a_[vars_[top_]] ++;
-                    }
-                    if ( a_[vars_[top_]] < domsizes_[vars_[top_]] ) { // i.e. the current value is valid!
-                        top_++;
-                    } else {
-                        a_[vars_[top_]] = var_value_t();
-                        top_--;
-                        if (top_ < 0) break; // stack is empty -> termination
+                
+                while (top_ < static_cast<int>(vars_.size())) {
+                    assert(top_>=0);
+                    
+                    // determine the next valid candidate partial assignment
+                    do {
                         a_[vars_[top_]]++;
-                    }
+                
+                        while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
+                            a_[vars_[top_]] = Undetermined;
+                            top_ --;
+                            if ( top_ < 0 ) {
+                                // terminate if stack is empty
+                                return *this;
+                            }
+                            a_[vars_[top_]] ++;
+                        }
+                        //repeat until is_valid
+                    } while ( ! is_valid() );
+                    
+                    top_++;
                 }
-
+                
+                top_--;
+                assert( top_ == static_cast<int>(vars_.size())-1 );
+                
                 return *this;
             }
-
 
             /** @brief Check for termination
              */
             bool finished() {
-                if ( vars_.size()==0 && !empty_case_flag_) {
-                    empty_case_flag_=true;
-                    return false;
-                }
-
                 return top_ < 0;
             }
 
@@ -171,41 +179,52 @@ namespace ired {
             const std::vector<int> &domsizes_;
             constraint_board_t constraint_board_;
             int top_;
-            bool empty_case_flag_ = false;
-
 
             constraint_board_t
             create_constraint_board(const std::vector<const constraint_t *> &constraints) {
-
+                
                 // the constraint board cb holds a collection cb[i] of to-be-checked constraints
                 // for each variable i.
                 constraint_board_t cb(vars_.size());
 
-                for( decltype(auto) c : constraints ) {
+                // for each constraint
+                for( const auto &c : constraints ) {
 
                     // find 'last' variable of constraint c
+                    // by iterating over the variables of the constraint 
                     int last_idx = -1;
                     for ( auto var : c->vars() ) {
-                        // unless variable is assigned by a
+                        // skip determined variables of the constraint
                         if ( a_[var] != Undetermined ) continue;
 
-                        // determine maximum index
+                        // determine maximum index of this variable (in the order of the variables
+                        // of the assignment iterator)
+                        //    determine the index of the constraint variable in the iterator variables
                         auto idx = std::distance(vars_.begin(), find(vars_.begin(),vars_.end(),var));
+                        
+                        //    determine maximum as last_idx
                         last_idx = std::max(last_idx, static_cast<int>(idx));
                     }
 
                     if ( 0 <= last_idx && last_idx < static_cast<int>(vars_.size()) ) {
                         cb[last_idx].push_back( c );
                     }
+                    // std::cout << "Constraint on ";
+                    // std::copy(c->vars().begin(),c->vars().end(),std::ostream_iterator<int>(std::cout,","));
+                    // std::cout<<" last idx: "<<last_idx<<" of ";
+                    // std::copy(vars_.begin(),vars_.end(),std::ostream_iterator<int>(std::cout,", "));
+                    // for (auto var : c->vars()) { 
+                    //     if ( a_[var] != Undetermined ) 
+                    //         std::cout << "det " << var <<" = " << a_[var] << " ";
+                    // }
+                    // std::cout << std::endl;
+
                 }
 
                 return cb;
             }
-        };
+        }; // end AssignmentIterator
 
-        /**
-         * @see AssignmentIterator::reset()
-         */
         template<class Constraint>
         auto
         make_iterator(const std::vector<var_idx_t> &vars,

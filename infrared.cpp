@@ -70,10 +70,22 @@ struct FunctionWrap
     }
 };
 
+void
+seed(int x) {
+    srand(x);
+}
+
+
+
 BOOST_PYTHON_MODULE(infrared)
 {
     to_python_converter<std::vector<int>, vector_to_list<int> >();
     convert_vector_from_seq<int>();
+
+    to_python_converter<std::vector<double>, vector_to_list<double> >();
+    convert_vector_from_seq<double>();
+
+    def("seed",&seed);
 
     class_<Assignment>("Assignment", init<int>())
         .def("values", &Assignment::values,
@@ -102,11 +114,13 @@ BOOST_PYTHON_MODULE(infrared)
            boost::noncopyable>("ComplConstraint", init<int,int>())
        ;
 
-    class_<BPEnergy, std::shared_ptr<BPEnergy>, bases<Function<>>,
-           boost::noncopyable>("BPEnergy", init<int,int, double>());
+    class_<BPEnergy, std::shared_ptr<BPEnergy>, bases<Function<>>, boost::noncopyable>
+        ("BPEnergy", init<int,int, double>())
+        .def("set_energy_table", &BPEnergy::set_energy_table)
+        ;
 
-    class_<CGControl, bases<Function<>>,
-           boost::noncopyable>("CGControl", init<int, double>());
+    class_<GCControl, bases<Function<>>,
+           boost::noncopyable>("GCControl", init<int, double>());
 
     class_<ClusterTree<>>("ClusterTree", init<int,int>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)

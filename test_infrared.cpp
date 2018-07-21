@@ -42,7 +42,7 @@ main(int argc, char** argv) {
 
     double weightE = 5.0;
     double weightE2 = 10.0;
-    double weightCG = 0.5;
+    double weightGC = 0.5;
 
     // add clusters for base pairs
     for (auto p : basepairs) {
@@ -51,8 +51,8 @@ main(int argc, char** argv) {
         auto cluster = ct.add_root_cluster( {p.first,p.second} );
         ct.add_constraint( cluster, std::make_unique<ComplConstraint>(p.first, p.second) );
         ct.add_function( cluster, std::make_unique<BPEnergy>(p.first, p.second, weightE ) );
-        ct.add_function( cluster, std::make_unique<CGControl>(p.first, weightCG ) );
-        ct.add_function( cluster, std::make_unique<CGControl>(p.second, weightCG ) );
+        ct.add_function( cluster, std::make_unique<GCControl>(p.first, weightGC ) );
+        ct.add_function( cluster, std::make_unique<GCControl>(p.second, weightGC ) );
 
         added[p.first] = true;
         added[p.second] = true;
@@ -60,39 +60,39 @@ main(int argc, char** argv) {
         // hack in some extra constraints! (second target structure)
         if (p.second==14) {
             auto cluster2 = ct.add_child_cluster( cluster, {14,20} );
-            ct.add_function( cluster2, std::make_unique<CGControl>(20, weightCG ) );
+            ct.add_function( cluster2, std::make_unique<GCControl>(20, weightGC ) );
             ct.add_constraint( cluster2, std::make_unique<ComplConstraint>(14,20) );
             ct.add_function( cluster2, std::make_unique<BPEnergy>(14, 20, weightE2) );
             added[20] = true;
 
             auto cluster3 = ct.add_child_cluster( cluster, {14,25,27,29} );
             // 14 25
-            ct.add_function( cluster3, std::make_unique<CGControl>(25, weightCG ) );
+            ct.add_function( cluster3, std::make_unique<GCControl>(25, weightGC ) );
             ct.add_constraint( cluster3, std::make_unique<ComplConstraint>(14,25) );
             ct.add_function( cluster3, std::make_unique<BPEnergy>(14, 25, weightE2) );
             added[25] = true;
 
             // 25 27
-            ct.add_function( cluster3, std::make_unique<CGControl>(27, weightCG ) );
+            ct.add_function( cluster3, std::make_unique<GCControl>(27, weightGC ) );
             ct.add_constraint( cluster3, std::make_unique<ComplConstraint>(25,27) );
             ct.add_function( cluster3, std::make_unique<BPEnergy>(25, 27, weightE2) );
             added[27] = true;
 
             // 27 29
-            ct.add_function( cluster3, std::make_unique<CGControl>(29, weightCG ) );
+            ct.add_function( cluster3, std::make_unique<GCControl>(29, weightGC ) );
             ct.add_constraint( cluster3, std::make_unique<ComplConstraint>(29,27) );
             ct.add_function( cluster3, std::make_unique<BPEnergy>(29, 27, weightE2) );
             added[29] = true;
 
             // 14 29
-            ct.add_function( cluster3, std::make_unique<CGControl>(29, weightCG ) );
+            ct.add_function( cluster3, std::make_unique<GCControl>(29, weightGC ) );
             ct.add_constraint( cluster3, std::make_unique<ComplConstraint>(14,29) );
             ct.add_function( cluster3, std::make_unique<BPEnergy>(14, 29, weightE2) );
 
             // generate a further child cluster with more overlap --> message size 4^3
             auto cluster4 = ct.add_child_cluster( cluster3, {14,25,28,29} );
             added[28] = true;
-            ct.add_function( cluster4, std::make_unique<CGControl>(28, weightCG ) );
+            ct.add_function( cluster4, std::make_unique<GCControl>(28, weightGC ) );
             ct.add_constraint( cluster4, std::make_unique<ComplConstraint>(25,28) );
             ct.add_function( cluster4, std::make_unique<BPEnergy>(25, 28, weightE2) );
             ct.add_constraint( cluster4, std::make_unique<ComplConstraint>(28,29) );
@@ -101,7 +101,7 @@ main(int argc, char** argv) {
 
         if (p.second==13) {
             auto cluster2 = ct.add_child_cluster( cluster, {13,21} );
-            ct.add_function( cluster2, std::make_unique<CGControl>(21, weightCG ) );
+            ct.add_function( cluster2, std::make_unique<GCControl>(21, weightGC ) );
             ct.add_constraint( cluster2, std::make_unique<ComplConstraint>(13,21) );
             ct.add_function( cluster2, std::make_unique<BPEnergy>(13, 21, weightE2) );
             added[21] = true;
@@ -114,7 +114,7 @@ main(int argc, char** argv) {
         if (added[i]) continue;
 
         auto cluster = ct.add_root_cluster({i});
-        ct.add_function( cluster, std::make_unique<CGControl>(i, weightCG ) );
+        ct.add_function( cluster, std::make_unique<GCControl>(i, weightGC ) );
     }
 
     // write dot bracket
