@@ -12,6 +12,7 @@
  */
 
 #include <vector>
+#include <unordered_map>
 #include <memory>
 
 #include "assignment.hpp"
@@ -62,27 +63,27 @@ namespace ired {
         ~Function() {}
     };
 
-    template<class FunValue, class UnderlyingFunction>
-    class DynamicFunction : public Function<FunValue> {
-    public:
-        using self_t = DynamicFunction<FunValue,UnderlyingFunction>;
-        using parent_t = Function<FunValue>;
-        using base_t = typename parent_t::base_t;
-        using var_idx_t = typename parent_t::var_idx_t;
-        using assignment_t = typename parent_t::assignment_t;
-        using fun_value_t = FunValue;
+    // template<class FunValue, class UnderlyingFunction>
+    // class DynamicFunction : public Function<FunValue> {
+    // public:
+    //     using self_t = DynamicFunction<FunValue,UnderlyingFunction>;
+    //     using parent_t = Function<FunValue>;
+    //     using base_t = typename parent_t::base_t;
+    //     using var_idx_t = typename parent_t::var_idx_t;
+    //     using assignment_t = typename parent_t::assignment_t;
+    //     using fun_value_t = FunValue;
 
 
-        template<class F>
-        DynamicFunction(const std::vector<var_idx_t> &vars, const F &f) : parent_t(vars), f_(f) {}
+    //     template<class F>
+    //     DynamicFunction(const std::vector<var_idx_t> &vars, const F &f) : parent_t(vars), f_(f) {}
 
-        fun_value_t
-        operator () (const assignment_t & a) const override { return f_(a); }
+    //     fun_value_t
+    //     operator () (const assignment_t & a) const override { return f_(a); }
 
-    private:
-        using function_t = UnderlyingFunction;
-        const function_t f_;
-    };
+    // private:
+    //     using function_t = UnderlyingFunction;
+    //     const function_t f_;
+    // };
 
     //! MaterializedFunction is used for the computed messages (DP
     //! matrices)
@@ -91,22 +92,40 @@ namespace ired {
     //! choose to use a sparse data structure like
     //! Container=std::unordered_map<FunValue>
     //
-    template<class FunValue, class Container=std::vector<FunValue> >
+    struct mapS {};
+    struct vecS {};
+    template<class FunValue, class T>
+    struct container_selector {
+        using type = T;
+    };
+    template<class FunValue>
+    struct container_selector<FunValue,vecS> {
+        using type = std::vector<FunValue>;
+    };
+    template<class FunValue>
+    struct container_selector<FunValue,mapS> {
+        using type = std::unordered_map<int,FunValue>;
+    };
+
+    template< class FunValue, class ContainerS=vecS >
     class MaterializedFunction : public Function<FunValue> {
     public:
-        using self_t = MaterializedFunction<FunValue,Container>;
+        using self_t = MaterializedFunction<FunValue,ContainerS>;
         using parent_t = Function<FunValue>;
         using base_t = typename parent_t::base_t;
 
         using var_idx_t = typename parent_t::var_idx_t;
         using assignment_t = typename parent_t::assignment_t;
         using fun_value_t = FunValue;
-        using data_t = Container;
+        
+        using data_t = typename container_selector<FunValue,ContainerS>::type;        
 
-        MaterializedFunction(const std::vector<var_idx_t> &vars, const std::vector<int> &domsizes) :
+        MaterializedFunction(const std::vector<var_idx_t> &vars,
+                             const std::vector<int> &domsizes, 
+                             const fun_value_t &zero = fun_value_t()) :
             parent_t(vars),
             domsizes_(domsizes),
-            data_( calc_size() )
+            data_( calc_size(), zero )
         {
         }
 
@@ -151,8 +170,8 @@ namespace ired {
 
     using Constraint = Function<bool>;
 
-    template<class FunValue, class UnderlyingFunction>
-    using DynamicConstraint = DynamicFunction<bool, UnderlyingFunction>;
+    // template<class FunValue, class UnderlyingFunction>
+    // using DynamicConstraint = DynamicFunction<bool, UnderlyingFunction>;
 }
 
 #endif

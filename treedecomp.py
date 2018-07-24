@@ -94,7 +94,7 @@ def writeTD(out,bags,edges,offset=0):
     out.write("\n\n")
 
     for (x,y) in edges:
-        edgelabel = " ".join( [ str(x+1) for x in bagdifference(bags[x-1],bags[y-1] )] )
+        edgelabel = " ".join( [ str(x) for x in bagdifference(bags[x],bags[y] )] )
         out.write( "\tbag{} -- bag{}  [label=\"{}\"]\n".format(x+1,y+1,edgelabel) )
 
     out.write("\n}\n")

@@ -19,6 +19,10 @@ def read_inp(inpfh):
 
     return structures
 
+def is_complementary(x,y):
+    compls=set(["AU","CG","GU"])
+    return x+y in compls or y+x in compls
+
 def parseRNAStructure(structure):
     """Parse RNA structure including pseudoknots
     @param structure
@@ -50,6 +54,23 @@ def parseRNAStructureBps(structure):
         if i != -1 and i<j:
             bps.append( (i,j) )
     return bps
+
+def is_valid(seq, struc):
+    """Check if sequence satisfies complementarity constraints due to structure"""
+    return invalid_bps(seq,struc) == [] 
+
+def invalid_bps(seq, struc):
+    """Basepairs violating the complementarity constraints"""
+    if type(struc)==str:
+        bps = parseRNAStructureBps(struc)
+    else:
+        bps = struc
+    invalids = []    
+    for (i,j) in bps:
+        if not is_complementary(seq[i],seq[j]):
+            invalids.append((i,j))
+
+    return invalids
 
 
 def unique_edges(xs):

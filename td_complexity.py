@@ -40,7 +40,7 @@ import timeit
 import os
 
 import treedecomp as td 
-import rna
+import rnastuff as rna
 
 str_to_dep = { "basepair": rna.structure_to_basepair_dependencies,
                "stacking": rna.structure_to_stacking_dependencies
@@ -57,17 +57,19 @@ def process_instance(infh,keep_graphs,plot_graphs,strategy,models):
         for s in structures:
             sarray = rna.parseRNAStructure(s)
             str_to_dep[model](sarray,edges)
+            
+        seqlen = len(structures[0])
 
         edges = rna.unique_edges(edges)
 
         filename=model
 
         start_time = timeit.default_timer()
-        tdfilename = td.makeTDFile(edges, filename, strategy, keep_graphs, plot_graphs)
+        tdfilename = td.makeTDFile(edges, filename, strategy=strategy, keep_graphs=keep_graphs, plot_graphs=plot_graphs)
         time[model] = timeit.default_timer() - start_time
 
         with open(tdfilename,"r") as tdfh:
-            bags,edges = td.parseTD(tdfh)
+            bags,edges = td.parseTD(seqlen,tdfh)
             tw[model] = td.treewidth(bags)
             with open(tdfilename+".dot","w") as out:
                 td.writeTD(out,bags,edges)

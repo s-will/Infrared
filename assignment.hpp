@@ -47,17 +47,8 @@ namespace ired {
         auto
         is_det(var_idx_t i) {return values_[i] != Undetermined;}
 
-        void
-        reset(std::vector<var_idx_t> &vars) {
-            for (auto var : vars) {
-                values_[var] = Undetermined;
-            }
-        }
-
         // Iterate over possible assignments
         // assignment iterator works destructively on parent assignment!
-        //
-        // Special case: empty variable set: exactly one valid assignment
         template<class Constraint>
         class AssignmentIterator {
         public:
@@ -82,38 +73,11 @@ namespace ired {
                 }
             }
 
-            // auto &
-            // operator * () {
-            //     return a_;
-            // }
-
-
-            // /**
-            //  * @brief Reset iterator
-            //  *
-            //  * Resets the assignment such that the iteration starts again
-            //  *
-            //  * After reset, the valuation is not necessarily valid (use ++ operator!)
-            //  */
-            // auto
-            // reset() {
-            //     // the entries for vars_ in a are (ab)used as a stack
-            //     // top_ points to the next to be determined variable
-            //     // var=vars_[top_]; a_[var] is the next candidate
-            //     // value
-            //     for (auto var : vars_) {
-            //         a_[var] = Undetermined;
-            //     }
-            //     top_ = std::min(static_cast<int>(vars_.size())-1,0);
-            //     return *this;
-            // }
-
             //! check constraints for current top_ entry
             bool
             is_valid() const {
                 //check all constraints at top_
                 auto constraints = constraint_board_[top_];
-
                 return all_of( constraints.begin(), constraints.end(),
                                [&](auto c) { return (*c)(a_); } );
             }
@@ -134,8 +98,7 @@ namespace ired {
                 //terminate if stack is empty
                 if ( top_ < 0 ) {
                     return *this;
-                }
-                
+                }                
                 while (top_ < static_cast<int>(vars_.size())) {
                     assert(top_>=0);
                     
@@ -154,13 +117,24 @@ namespace ired {
                         }
                         //repeat until is_valid
                     } while ( ! is_valid() );
-                    
                     top_++;
                 }
-                
                 top_--;
                 assert( top_ == static_cast<int>(vars_.size())-1 );
                 
+                // for (auto x: vars_) {
+                //     std::cout << x << ":" <<a_[x] << " ";
+                // }
+                // std::cout << std::endl;
+                // for (auto constraints: constraint_board_) {
+                //     for (auto c: constraints) {
+                //         std::copy(c->vars().begin(),
+                //                   c->vars().end(),
+                //                   std::ostream_iterator<int>(std::cout,","));
+                //         std::cout << " c=" << (*c)(a_) << " " << std::endl;
+                //     }
+                // }
+
                 return *this;
             }
 
@@ -208,17 +182,17 @@ namespace ired {
 
                     if ( 0 <= last_idx && last_idx < static_cast<int>(vars_.size()) ) {
                         cb[last_idx].push_back( c );
-                    }
-                    // std::cout << "Constraint on ";
-                    // std::copy(c->vars().begin(),c->vars().end(),std::ostream_iterator<int>(std::cout,","));
-                    // std::cout<<" last idx: "<<last_idx<<" of ";
-                    // std::copy(vars_.begin(),vars_.end(),std::ostream_iterator<int>(std::cout,", "));
-                    // for (auto var : c->vars()) { 
-                    //     if ( a_[var] != Undetermined ) 
-                    //         std::cout << "det " << var <<" = " << a_[var] << " ";
-                    // }
-                    // std::cout << std::endl;
 
+                        // std::cout << "Constraint on ";
+                        // std::copy(c->vars().begin(),c->vars().end(),std::ostream_iterator<int>(std::cout,","));
+                        // std::cout<<" last idx: "<<last_idx<<" of ";
+                        // std::copy(vars_.begin(),vars_.end(),std::ostream_iterator<int>(std::cout,", "));
+                        // for (auto var : c->vars()) { 
+                        //     if ( a_[var] != Undetermined ) 
+                        //         std::cout << "det " << var <<" = " << a_[var] << " ";
+                        // }
+                        // std::cout << std::endl;
+                    }
                 }
 
                 return cb;

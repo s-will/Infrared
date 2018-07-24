@@ -38,9 +38,7 @@ namespace ired {
         using constraint_t = typename constraint_network_t::constraint_t;
         using function_t = typename constraint_network_t::function_t;
 
-
-        using message_t = MaterializedFunction<fun_value_t>;
-
+        using message_t = MaterializedFunction<fun_value_t,vecS>;
 
         struct vertex_info_t {
             cluster_t cluster;
@@ -178,30 +176,22 @@ namespace ired {
             void
             operator ()(Edge e, Graph &graph) {
 
-                auto parent = graph[ source(e, graph) ].cluster;
-                auto child =  graph[ target(e, graph) ].cluster;
+                const auto &parent = graph[ source(e, graph) ].cluster;
+                const auto &child =  graph[ target(e, graph) ].cluster;
 
                 // compute the message from cluster child to cluster parent
 
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
 
-                auto message = std::make_unique<message_t>(sep, cn_.domsizes());
+                auto message = std::make_unique<message_t>(sep, cn_.domsizes(), EvaluationPolicy::zero());
 
                 auto a = Assignment(cn_.num_vars());
-
-                // std::cout<<"Make iterator sep ";
-                // std::copy(sep.begin(),sep.end(),std::ostream_iterator<int>(std::cout, ","));
-                // std::cout << std::endl;
                 
                 for(auto it = a.make_iterator(sep, cn_.domsizes(), child.constraints()); ! it.finished() ; ++it ) {
                     fun_value_t x = EvaluationPolicy::zero();
 
-                    // std::cout<<"Make iterator diff ";
-                    // std::copy(diff.begin(),diff.end(),std::ostream_iterator<int>(std::cout, ","));
-                    // std::cout << std::endl;
-
-                    for( auto it2 = a.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it2.finished(); ++it2 ) {
+                    for(auto it2 = a.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it2.finished(); ++it2) {
                         fun_value_t p = EvaluationPolicy::one();
                         for ( auto f : child.functions() ) {
                             p = EvaluationPolicy::multiplies(p, (*f)(a) );
@@ -214,7 +204,8 @@ namespace ired {
                 // register message in cn, such that it persists!
                 auto msg = cn_.add_function(std::move(message));
                 // then, register in cluster parent
-                parent.add_function(msg);
+                tree_[ source(e, graph) ].cluster.add_function(msg);
+                
                 // ... and as edge property
                 tree_[e].message = msg;
             }
@@ -232,22 +223,23 @@ namespace ired {
             template <class Edge, class Graph>
             void
             operator ()(Edge e, Graph &graph) {
-                auto parent = graph[ source(e, graph) ].cluster;
-                auto child =  graph[ target(e, graph) ].cluster;
+                const auto &parent = graph[ source(e, graph) ].cluster;
+                const auto &child =  graph[ target(e, graph) ].cluster;
 
                 auto diff = child.diff_vars(parent);
 
-                auto message = graph[e].message;
+                const auto &message = graph[e].message;
 
                 double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
 
                 auto x = EvaluationPolicy::zero();
                 for( auto it = a_.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it.finished(); ++it ) {
                     fun_value_t p = EvaluationPolicy::one();
+                    
                     for ( auto f : child.functions() ) {
                         p = EvaluationPolicy::multiplies(p, (*f)(a_) );
                     }
-
+                    
                     x = EvaluationPolicy::plus(x, p);
 
                     if ( x > r ) {

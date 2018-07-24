@@ -4,7 +4,7 @@ import itertools
 import infrared as ir
 
 import treedecomp
-import rna
+import rnastuff as rna
 
 def val2nucl(x):
     return "ACGU"[x]
@@ -20,29 +20,26 @@ def set_bpenergy_table(tab):
 class RNAConstraintNetwork:
     def __init__(self, seqlen, structures, weights, gcweight):
         self.seqlen = seqlen
-        self.structures = structures
-        self.weights = weights
+        self.structures = list(structures)
+        self.weights = list(weights)
         self.gcweight = gcweight
-
+        
     def generate_dependencies(self):
         self.dependencies = list()
                 
         bps = set()
         for s in self.structures:
-            bps_of_s = s
-            for bp in bps_of_s:
+            for bp in s:
                 bps.add(bp)
         bps = list(bps)
 
         self.dependencies = [ [i,j] for (i,j) in bps ]
-
 
 class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 
     def __init__(self, seqlen, structures, weights, gcweight):
         super().__init__(seqlen, structures, weights, gcweight)
         self.generate_cn_basepair_model()
-
 
     ## generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
@@ -51,12 +48,13 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
         # generate constraints and functions; assign them to bags
         self.constraints = [ ([i,j], [ir.ComplConstraint(i,j)]) for [i,j] in self.dependencies ]
         self.functions = list()
+        
         for k,structure in enumerate(self.structures):
             self.functions.extend( [ ( [i,j], [ir.BPEnergy(i,j,self.weights[k])] ) for (i,j) in structure ] )
 
-        self.functions.extend( [ ( [i], [ir.GCControl(i,self.gcweight)] ) for i in range(self.seqlen) ] )
-
-
+        gc_control_funs = [ ( [i], [ir.GCControl(i,self.gcweight)] ) for i in range(self.seqlen) ]
+        self.functions.extend( gc_control_funs )
+        
 class RNATreeDecomposition:
     def __init__(self, cn, *, strategy):
         self.cn = cn
@@ -106,7 +104,6 @@ class RNATreeDecomposition:
                 toposort_helper(i)
         return sorted[::-1]
 
-
     def construct_cluster_tree(self):
         bagconstraints = self.assign_to_bags(self.cn.constraints)
         bagfunctions = self.assign_to_bags(self.cn.functions)
@@ -120,7 +117,7 @@ class RNATreeDecomposition:
 
         sorted_bags = self.toposort(len(self.bags),adj)
 
-        children = set()
+        children = set() # keep record of all non-root nodes (which have been seen as children)
         for bagidx in sorted_bags:
             if not bagidx in children:
                 # enumerate subtree
@@ -137,6 +134,8 @@ class RNATreeDecomposition:
                         ct.add_constraint(cluster, xcon)
                     for xfun in bagfunctions[i]:
                         ct.add_function(cluster, xfun)
+
+                    #print(self.bags[i],list(map(lambda x:x.vars(),bagconstraints[i])))
 
                     for j in adj[i]:
                         children.add(j)

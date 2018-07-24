@@ -38,7 +38,6 @@ struct vector_to_list
     }
 };
 
-
 template<typename containedType>
 struct convert_vector_from_seq{
 	convert_vector_from_seq(){ converter::registry::push_back(&convertible,&construct,type_id<std::vector<containedType> >()); }
@@ -98,6 +97,8 @@ BOOST_PYTHON_MODULE(infrared)
             boost::noncopyable >
         ("Constraint", init<const std::vector<int> &>())
         .def("__call__", pure_virtual(&Constraint::operator ()))
+        .def("vars", &Constraint::vars,
+             return_value_policy<copy_const_reference>())
         ;
 
     class_< FunctionWrap<>,
@@ -105,6 +106,8 @@ BOOST_PYTHON_MODULE(infrared)
             boost::noncopyable >
         ("Function", init<const std::vector<int> &>())
         .def("__call__", pure_virtual(&Function<>::operator ()))
+        .def("vars", &Function<>::vars,
+             return_value_policy<copy_const_reference>())
         ;
 
     implicitly_convertible< std::shared_ptr<FunctionWrap<>>,

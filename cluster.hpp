@@ -78,7 +78,7 @@ namespace ired {
         }
 
         auto
-        sep_vars(const Cluster &parent) {
+        sep_vars(const Cluster &parent) const {
             auto vars = std::vector<var_idx_t>();
             const auto &pvars = parent.vars();
             for ( auto &var : vars_ ) {
@@ -91,7 +91,7 @@ namespace ired {
         }
 
         auto
-        diff_vars(const Cluster &parent) {
+        diff_vars(const Cluster &parent) const {
             auto vars = std::vector<var_idx_t>();
             const auto &pvars = parent.vars();
             for ( auto &var : vars_ ) {
