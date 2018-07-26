@@ -16,11 +16,12 @@
 #include "infrared.hpp"
 #include "rnadesign.hpp"
 
-#include <memory>
+#include <vector>
 
 using namespace boost::python;
 
 using namespace ired;
+using namespace ired::rnadesign;
 
 using boost::python::object;
 
@@ -116,6 +117,15 @@ BOOST_PYTHON_MODULE(infrared)
     class_<ComplConstraint, bases<Constraint>,
            boost::noncopyable>("ComplConstraint", init<int,int>())
        ;
+
+    class_<SameComplClassConstraint, bases<Constraint>,
+           boost::noncopyable>("SameComplClassConstraint", init<int,int>())
+       ;
+
+    class_<DifferentComplClassConstraint, bases<Constraint>,
+           boost::noncopyable>("DifferentComplClassConstraint", init<int,int>())
+       ;
+
 
     class_<BPEnergy, std::shared_ptr<BPEnergy>, bases<Function<>>, boost::noncopyable>
         ("BPEnergy", init<int,int, double>())

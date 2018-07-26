@@ -1,10 +1,27 @@
 #!/usr/bin/env python3
 
-import infrared_module as irm
+############################### 
+# Redprint v2 based on InfraRed
+##-----------------------------
+# (C) Sebastian Will, 2018
+# 
+# This file is part of the InfraRed source code.
+# 
+# InfraRed provides a generic framework for tree decomposition-based
+# Boltzmann sampling over constraint networks
+#
+# Redprint provides Boltzmann sampling of sequences targeting multiple RNA structures.
+# 
+# This file defines the Redprint main function.
+# 
 
+
+import redprint_lib as rpl
+
+import random
 import argparse
 from collections import Counter
-from rnastuff import read_inp, parseRNAStructureBps, is_valid, invalid_bps
+from rna_support import read_inp, parseRNAStructureBps, is_valid, invalid_bps
 
 # importing Vienna package if not in path could require setting python path like
 # export PYTHONPATH=$HOME/Soft/ViennaRNA-2.4.8/lib/python3.6/site-packages
@@ -12,15 +29,11 @@ import RNA
 
 def main(args):
     ## init seed
-    irm.seed(1)
+    rpl.seed(random.randint(0,2**31))
 
-    INF = 1e6
-    energy_tab = [INF,INF,INF, -2,  #A
-                  INF,INF, -3,INF,  #C
-                  INF, -3,INF, -1,  #G
-                   -2,INF, -1,INF]  #U
-    
-    irm.set_bpenergy_table(energy_tab)
+    energy_tab = [ -2, -3, -1 ]
+
+    rpl.set_bpenergy_table(energy_tab)
 
     ## read instance
     with open(args.infile) as infh:
@@ -40,12 +53,15 @@ def main(args):
     bps = list(map(parseRNAStructureBps,structures))
 
     ## build constraint network
-    cn = irm.RNAConstraintNetworkBasePair( seqlen, bps, args.weight, args.gcweight )
+    cn = rpl.RNAConstraintNetworkBasePair( seqlen, bps, 
+                                           args.weight, args.gcweight )
 
     #print(sorted([ vars for (vars,c) in cn.constraints]))
 
     ## make tree decomposition
-    td = irm.RNATreeDecomposition( cn, strategy=args.strategy )
+    td = rpl.RNATreeDecomposition( cn, 
+                                   add_redundant_constraints = not args.no_redundant_constraints,
+                                   strategy=args.strategy )
 
     #print(td.bags)
 
@@ -65,7 +81,7 @@ def main(args):
 
     for x in range(0,args.number):
         sample = ct.sample()
-        seq = irm.values2seq(sample.values())
+        seq = rpl.values2seq(sample.values())
         print(seq,end='')
         if args.turner:
             for i,struc in enumerate(structures):
@@ -94,6 +110,8 @@ if __name__ == "__main__":
     parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
     parser.add_argument('--turner', action="store_true", help="Report Turner energies of the single structures for each sample")
     parser.add_argument('--checkvalid', action="store_true", help="Check base pair complementarity for each structure and for each sample")
+
+    parser.add_argument('--no_redundant_constraints', action="store_true", help="Do not add redundant constraints")
 
     parser.add_argument('--gcweight', type=float, default=1, help="GC weight")
     parser.add_argument('-w','--weight', type=float, action="append", help="Structure weight")

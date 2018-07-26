@@ -40,7 +40,7 @@ import timeit
 import os
 
 import treedecomp as td 
-import rnastuff as rna
+import rna_support as rna
 
 str_to_dep = { "basepair": rna.structure_to_basepair_dependencies,
                "stacking": rna.structure_to_stacking_dependencies
