@@ -115,39 +115,7 @@ namespace ired {
         private:
             double weight_;
         };
-
-
-        /**
-           The magic parameters used in the redprint paper
-        */
-
-        double GC_TERM = -0.09070;
-        double AU_TERM = 1.26630;
-        double GU_TERM = 0.78566;
-        double GC_IN = -2.10208;
-        double AU_IN = -0.52309;
-        double GU_IN = -0.88474;
-
-        double STACK_AUAU = -0.18826;
-        double STACK_AUCG = -1.13291;
-        double STACK_AUGC = -1.09787;
-        double STACK_AUGU = -0.38606;
-        double STACK_AUUA = -0.26510;
-        double STACK_AUUG = -0.62086;
-        double STACK_CGAU = -1.11752;
-        double STACK_CGCG = -2.23740;
-        double STACK_CGGC = -1.89434;
-        double STACK_CGGU = -1.22942;
-        double STACK_CGUA = -1.10548;
-        double STACK_CGUG = -1.44085;
-        double STACK_GUAU = -0.55066;
-        double STACK_GUCG = -1.26209;
-        double STACK_GUGC = -1.58478;
-        double STACK_GUGU = -0.72185;
-        double STACK_GUUA = -0.49625;
-        double STACK_GUUG = -0.68876;
-
-    
+  
         template<class T>
         class RNAEnergyFunction : public Function<double> {
         public:
@@ -176,24 +144,43 @@ namespace ired {
             static std::array<int, 16> bpindex_tab_;
         };
 
+        /**
+         * @brief base pair energy
+         *
+         * distinguishs stacked and terminal bps
+         */
         class BPEnergy : public RNAEnergyFunction<BPEnergy> {
         public:
             using parent_t = RNAEnergyFunction;
             using base_t = typename parent_t::base_t;
 
-            BPEnergy(int i, int j, double weight)
-                : parent_t({i,j} , weight) {
+            // BPEnergy(int i, int j, double weight)
+            //     : parent_t({i,j} , weight), is_terminal_(false) {
+            // }
+            
+            BPEnergy(int i, int j, bool is_terminal, double weight)
+                : parent_t({i,j}, weight), is_terminal_(is_terminal) {
             }
 
+            /** @brief set energy table
+             *
+             * order of the 6 parameters in the table: AU,CG,GU,AU_term,CG_term,GU_term
+             */
             static
             void
             set_energy_table(const std::vector<double> table) {
-                assert(table.size() == 3);
+                assert(table.size() == 6);
+                tab_.resize(6);
                 std::copy(table.begin(),table.end(),tab_.begin());
             }
 
             double 
             energy(const Assignment &a) const {
+                if (tab_.size()!=6) {
+                    std::cerr<<"Table of stacking energies has to be initialized before use."<<std::endl;
+                    exit(-1);
+                }
+
                 auto i = vars()[0];
                 auto j = vars()[1];
                 auto x = bpindex(a[i],a[j]);
@@ -204,11 +191,12 @@ namespace ired {
                 x=x/2;
             
                 return
-                    tab_[ x ];
+                    tab_[ x + (is_terminal_?3:0) ];
             }
-
+            
         private:
-            static std::array<double,3> tab_;
+            static std::vector<double> tab_;
+            bool is_terminal_;
         };
 
         class StackEnergy : public RNAEnergyFunction<StackEnergy> {
@@ -227,14 +215,14 @@ namespace ired {
             static
             void
             set_energy_table(const std::vector<double> table) {
-                assert(table.size()==36);
-                tab_.resize(36);
+                assert(table.size()==18);
+                tab_.resize(18);
                 std::copy(table.begin(),table.end(),tab_.begin());
             }
 
             double
             energy(const Assignment &a) const {
-                if (tab_.size()!=36) {
+                if (tab_.size()!=18) {
                     std::cerr<<"Table of stacking energies has to be initialized before use."<<std::endl;
                     exit(-1);
                 }
@@ -249,15 +237,21 @@ namespace ired {
                     return std::numeric_limits<double>::infinity();
                 }
             
-                return tab_[ x + 6 * y ];
+                if (x & 1) {
+                    std::swap(x,y);
+                    y ^= 1; //xor -> swap base pair order (AU->UA, etc)
+                }
+
+                return tab_[ y + 6*(x/2) ];
             }
 
         private:
             static std::vector<double> tab_;
         };
 
-        std::array<double,3> BPEnergy::tab_ = { -2, -3, -1 };
-    
+        std::vector<double> BPEnergy::tab_;
+        std::vector<double> StackEnergy::tab_;
+
         //index 0..5 in order AU, UA, CG, GC, GU, UG
         template<class T>
         std::array<int,16> RNAEnergyFunction<T>::

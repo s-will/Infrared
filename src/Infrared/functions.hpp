@@ -101,13 +101,26 @@ namespace ired {
     template<class FunValue>
     struct container_selector<FunValue,vecS> {
         using type = std::vector<FunValue>;
+        static void init(type &x, size_t size, const FunValue &zero) {
+            x.resize(size);
+            std::fill(x.begin(),x.end(),zero);
+        }
+        static const FunValue& get(const type &x, size_t i, const FunValue &zero) {return x[i];}
+        //static void set(type &x,size_t i, const FunValue &v) {x[i]=v;}
     };
     template<class FunValue>
     struct container_selector<FunValue,mapS> {
         using type = std::unordered_map<int,FunValue>;
+        static void init(type &x, size_t size, const FunValue &zero) {
+        }
+        static const FunValue& get(const type &x, size_t i, const FunValue &zero) {
+            auto it = x.find(i);
+            if (it != x.end()) return it->second; else return zero;
+        }
+        //static void set(type &x,size_t i, const FunValue &v) {x[i]=v;}
     };
 
-    template< class FunValue, class ContainerS=vecS >
+    template< class FunValue, class ContainerS=mapS >
     class MaterializedFunction : public Function<FunValue> {
     public:
         using self_t = MaterializedFunction<FunValue,ContainerS>;
@@ -125,28 +138,33 @@ namespace ired {
                              const fun_value_t &zero = fun_value_t()) :
             parent_t(vars),
             domsizes_(domsizes),
-            data_( calc_size(), zero )
+            data_(),
+            zero_(zero)
         {
+            container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
         }
 
         fun_value_t
-        operator () ( const assignment_t & a ) const override { return data_[ index_(a) ]; }
+        operator () ( const assignment_t & a ) const override {
+            return container_selector<FunValue,ContainerS>::get(data_, index(a), zero_);
+        }
 
         void
         set( const assignment_t & a, const fun_value_t &val) {
-            data_[ index_(a) ] = val;
+            data_[ index(a) ] = val;
         }
 
-        int
+        auto
         datasize() const {return data_.size();}
 
     private:
         const std::vector<int> domsizes_;
         data_t data_;
+        fun_value_t zero_;
 
-        int
-        index_( const assignment_t & a ) const {
-            int x = 0;
+        auto
+        index( const assignment_t & a ) const {
+            size_t x = 0;
 
             for ( auto var : this->vars()) {
                 x *= domsizes_[var];
@@ -158,7 +176,7 @@ namespace ired {
 
         auto
         calc_size() const {
-            int x=1;
+            size_t x=1;
 
             for ( auto var : this->vars()) {
                 x *= domsizes_[var];

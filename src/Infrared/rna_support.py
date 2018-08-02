@@ -72,7 +72,6 @@ def invalid_bps(seq, struc):
 
     return invalids
 
-
 def unique_edges(xs):
     d = { (min(x,y),max(x,y)):1 for (x,y) in xs }
     return list(d.keys())
@@ -83,7 +82,6 @@ def structure_to_basepair_dependencies(structure,edges=[]):
     for (i,j) in enumerate(structure):
         if i<j:
             edges.append((i,j))
-    
 
 def structure_to_stacking_dependencies(structure,edges=[]):
     """Convert structure to list of edges in stacking model; node indices are 0-based!"""

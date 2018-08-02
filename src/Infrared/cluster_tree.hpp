@@ -38,7 +38,7 @@ namespace ired {
         using constraint_t = typename constraint_network_t::constraint_t;
         using function_t = typename constraint_network_t::function_t;
 
-        using message_t = MaterializedFunction<fun_value_t,vecS>;
+        using message_t = MaterializedFunction<fun_value_t,mapS>;
 
         struct vertex_info_t {
             cluster_t cluster;
