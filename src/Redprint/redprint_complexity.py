@@ -99,7 +99,7 @@ if __name__ == "__main__":
     ## init seed
     seed(random.randint(0,2**31))
 
-    parser = argparse.ArgumentParser(description='Generate training data')
+    parser = argparse.ArgumentParser(description='Report details on redprints complexity')
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--keep_graphs', action="store_true",
                         help="Keep the generated graphs and tree decompositions")

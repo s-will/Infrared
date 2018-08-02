@@ -468,7 +468,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate training data')
+    parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; othwerwise pass to TDlib as strategy)")

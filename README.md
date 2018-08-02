@@ -51,7 +51,7 @@ usage: redprint.py [-h] [--method METHOD] [-n NUMBER] [-v] [--model MODEL]
                    [--gcweight GCWEIGHT] [-w WEIGHT] [--plot_td]
                    infile
 
-Generate training data
+Boltzmann sampling for RNA design with multiple target structures
 
 positional arguments:
   infile                Input file
