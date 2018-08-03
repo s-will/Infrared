@@ -77,6 +77,16 @@ namespace ired {
             funs_.push_back(f);
         }
 
+        /**
+         * @brief Separator variables
+         *
+         * @params parent parent cluster of this object 
+         * @return vector of the indices of the separator variables
+         *
+         * The separator variables are the variables of this object
+         * that are already present in the parent. In other terms, the
+         * cut set of the variables of this and the parent cluster
+         */
         auto
         sep_vars(const Cluster &parent) const {
             auto vars = std::vector<var_idx_t>();
@@ -90,6 +100,15 @@ namespace ired {
             return vars;
         }
 
+        /** 
+         * @brief Difference variables
+         *
+         * @params parent parent cluster of this object 
+         * @return vector of the indices of the difference variables
+         *
+         * The difference variables are the variables of this object that
+         * are *not* already present in the parent.
+         */
         auto
         diff_vars(const Cluster &parent) const {
             auto vars = std::vector<var_idx_t>();
@@ -107,7 +126,7 @@ namespace ired {
         std::vector<var_idx_t> vars_;
         std::vector<const constraint_t *> constrs_;
         std::vector<const function_t *> funs_;
-    };
+    }; // end class Cluster
 }
 
 #endif

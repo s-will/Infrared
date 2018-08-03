@@ -160,8 +160,8 @@ namespace ired {
 
         vertex_descriptor root_;
 
-        // insert pseudo root to connect trees of the forest (if necessary)
-        // @returns (potentially new) root
+        // insert pseudo root to connect trees of the forest (unless already done)
+        // @returns new root
         auto
         single_root();
 
@@ -184,19 +184,31 @@ namespace ired {
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
 
-                auto message = std::make_unique<message_t>(sep, cn_.domsizes(), EvaluationPolicy::zero());
+                auto message = std::make_unique<message_t>(sep, cn_.domsizes(),
+                                                           EvaluationPolicy::zero());
 
                 auto a = Assignment(cn_.num_vars());
                 
-                for(auto it = a.make_iterator(sep, cn_.domsizes(), child.constraints()); ! it.finished() ; ++it ) {
+                auto it = a.make_iterator(sep, cn_.domsizes(),
+                                          child.constraints(),
+                                          child.functions(),
+                                          EvaluationPolicy(),
+                                          a.eval_determined(child.functions(), EvaluationPolicy()) //evaluate 0-ary functions
+                                          );
+
+                for(; ! it.finished() ; ++it ) {
                     fun_value_t x = EvaluationPolicy::zero();
 
-                    for(auto it2 = a.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it2.finished(); ++it2) {
-                        fun_value_t p = EvaluationPolicy::one();
-                        for ( auto f : child.functions() ) {
-                            p = EvaluationPolicy::multiplies(p, (*f)(a) );
-                        }
-                        x = EvaluationPolicy::plus(x, p);
+                    auto it2 = a.make_iterator(diff, cn_.domsizes(),
+                                               child.constraints(),
+                                               child.functions(),
+                                               EvaluationPolicy(),
+                                               it.value()
+                                               );
+                    for(;
+                        ! it2.finished(); ++it2) {
+                        
+                        x = EvaluationPolicy::plus( x, it2.value() );
                     }
                     message->set(a, x);
                 }
@@ -229,19 +241,23 @@ namespace ired {
                 auto diff = child.diff_vars(parent);
 
                 const auto &message = graph[e].message;
-
+                
                 double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
 
-                auto x = EvaluationPolicy::zero();
-                for( auto it = a_.make_iterator(diff, cn_.domsizes(), child.constraints()); ! it.finished(); ++it ) {
-                    fun_value_t p = EvaluationPolicy::one();
-                    
-                    for ( auto f : child.functions() ) {
-                        p = EvaluationPolicy::multiplies(p, (*f)(a_) );
-                    }
-                    
-                    x = EvaluationPolicy::plus(x, p);
+                assert ( a_.eval_determined(child.constraints(), StdEvaluationPolicy<bool>()) );
+                
+                a_.set_undet(diff);
 
+                auto x = EvaluationPolicy::zero();
+                auto it = a_.make_iterator(diff, cn_.domsizes(),
+                                           child.constraints(),
+                                           child.functions(),
+                                           EvaluationPolicy(),
+                                           a_.eval_determined(child.functions(), EvaluationPolicy())
+                                           );
+                for( ; ! it.finished(); ++it ) {
+                    x = EvaluationPolicy::plus( x, it.value() );
+                    
                     if ( x > r ) {
                         break;
                     }
@@ -285,6 +301,7 @@ namespace ired {
 
         single_rooted_ = true;
         root_ = new_root;
+        
         return root_;
     }
 

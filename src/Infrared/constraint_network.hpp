@@ -130,6 +130,8 @@ namespace ired {
     class StdEvaluationPolicy {
     public:
         using fun_value_t = FunValue;
+        using constraint_t = Function<bool>;
+        using function_t = Function<fun_value_t>;
 
         static
         fun_value_t
@@ -154,7 +156,39 @@ namespace ired {
         zero() {
             return fun_value_t();
         }
-
     };
+
+    template<>
+    class StdEvaluationPolicy<bool> {
+    public:
+        using fun_value_t = bool;
+        using constraint_t = Constraint;
+        using function_t = Constraint;
+
+        static
+        fun_value_t
+        plus(const fun_value_t &x, const fun_value_t &y) {
+            return x || y;
+        }
+
+        static
+        fun_value_t
+        multiplies(const fun_value_t &x, const fun_value_t &y) {
+            return x && y;
+        }
+
+        static
+        fun_value_t
+        one() {
+            return true;
+        }
+
+        static
+        fun_value_t
+        zero() {
+            return false;
+        }
+    };
+
 }
 #endif

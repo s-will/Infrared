@@ -63,28 +63,6 @@ namespace ired {
         ~Function() {}
     };
 
-    // template<class FunValue, class UnderlyingFunction>
-    // class DynamicFunction : public Function<FunValue> {
-    // public:
-    //     using self_t = DynamicFunction<FunValue,UnderlyingFunction>;
-    //     using parent_t = Function<FunValue>;
-    //     using base_t = typename parent_t::base_t;
-    //     using var_idx_t = typename parent_t::var_idx_t;
-    //     using assignment_t = typename parent_t::assignment_t;
-    //     using fun_value_t = FunValue;
-
-
-    //     template<class F>
-    //     DynamicFunction(const std::vector<var_idx_t> &vars, const F &f) : parent_t(vars), f_(f) {}
-
-    //     fun_value_t
-    //     operator () (const assignment_t & a) const override { return f_(a); }
-
-    // private:
-    //     using function_t = UnderlyingFunction;
-    //     const function_t f_;
-    // };
-
     //! MaterializedFunction is used for the computed messages (DP
     //! matrices)
     //!
@@ -187,9 +165,6 @@ namespace ired {
     };
 
     using Constraint = Function<bool>;
-
-    // template<class FunValue, class UnderlyingFunction>
-    // using DynamicConstraint = DynamicFunction<bool, UnderlyingFunction>;
 }
 
 #endif

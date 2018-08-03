@@ -23,6 +23,30 @@ AM_INIT_AUTOMAKE([1.11])
 dnl use the C++ compiler for the following checks
 AC_LANG([C++])
 
+
+dnl --------------------
+dnl Debug option
+dnl
+AC_MSG_CHECKING([whether to build with debug information])
+debug_it=no
+AC_ARG_ENABLE([debug],
+    AC_HELP_STRING(
+        [--enable-debug],
+        [enable debug data generation (def=no)]
+    ),
+    debug_it="$enableval"
+)
+AC_MSG_RESULT([$debug_it])
+if test "$debug_it" = "yes"; then
+    AC_DEFINE([DEBUG],1,[Turn on debugging])
+    AM_CXXFLAGS="$AM_CXXFLAGS -g"
+else
+    AC_DEFINE([NDEBUG],1,[Turn off debugging])
+fi
+
+AM_CXXFLAGS="$AM_CXXFLAGS -Wall -pedantic"
+
+
 dnl ensure we are using c14 C++ standard
 AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 

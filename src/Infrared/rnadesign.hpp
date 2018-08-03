@@ -106,10 +106,10 @@ namespace ired {
             double
             operator ()(const Assignment &a) const override {
 
-                static std::array<double,4> tab = {0,-1,-1,0};
+                static std::array<double,4> tab = {1,weight_,weight_,1};
 
                 return
-                    pow ( weight_, - tab[ a[vars()[0]] ] );
+                    tab[ a[vars()[0]] ];
             }
 
         private:
