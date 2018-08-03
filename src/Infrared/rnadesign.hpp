@@ -154,9 +154,9 @@ namespace ired {
             using parent_t = RNAEnergyFunction;
             using base_t = typename parent_t::base_t;
 
-            // BPEnergy(int i, int j, double weight)
-            //     : parent_t({i,j} , weight), is_terminal_(false) {
-            // }
+            BPEnergy(int i, int j, double weight)
+                : parent_t({i,j} , weight), is_terminal_(false) {
+            }
             
             BPEnergy(int i, int j, bool is_terminal, double weight)
                 : parent_t({i,j}, weight), is_terminal_(is_terminal) {

@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////
 //
-// Test usage of sample.so in C++
+// Test usage of infrared in C++
 //
 ////////////////////////////////////////////////////////////
 
@@ -9,11 +9,11 @@
 #include <array>
 #include <ctime>
 
-#include "infrared.hpp"
-#include "rnadesign.hpp"
+#include "../Infrared/infrared.hpp"
+#include "../Infrared/rnadesign.hpp"
 
 using namespace ired;
-
+using namespace ired::rnadesign;
 
 std::ostream &
 operator <<(std::ostream &out, const Assignment &a) {
@@ -24,11 +24,13 @@ operator <<(std::ostream &out, const Assignment &a) {
     return out << seq;
 }
 
-
 int
 main(int argc, char** argv) {
 
-    srand(time(0)); // just kidding ;)
+    srand(time(0)); // poor man's seeding
+
+    // initialize static energy table for all BPEnergy functions
+    BPEnergy::set_energy_table({-2,-3,-1,-2,-3,-1});
 
     int seqlen=30;
     int num_seqs=20;
