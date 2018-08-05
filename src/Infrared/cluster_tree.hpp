@@ -25,11 +25,15 @@ namespace ired {
      * Supports evaluation and sampling.
      *
      */
-    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
+    template<class FunValue=double>
     class ClusterTree {
 
     public:
         using constraint_network_t = ConstraintNetwork<FunValue>;
+
+        //! evaluation policy type
+        using evaluation_policy_t = typename constraint_network_t::evaluation_policy_t;
+
 
         using var_idx_t = typename constraint_network_t::var_idx_t;
         using cluster_t = typename constraint_network_t::cluster_t;
@@ -184,31 +188,28 @@ namespace ired {
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
 
-                auto message = std::make_unique<message_t>(sep, cn_.domsizes(),
-                                                           EvaluationPolicy::zero());
+                auto message = std::make_unique<message_t>(sep, cn_);
 
                 auto a = Assignment(cn_.num_vars());
                 
-                auto it = a.make_iterator(sep, cn_.domsizes(),
+                auto it = a.make_iterator(sep, cn_,
                                           child.constraints(),
                                           child.functions(),
-                                          EvaluationPolicy(),
-                                          a.eval_determined(child.functions(), EvaluationPolicy()) //evaluate 0-ary functions
+                                          a.eval_determined(child.functions(), evaluation_policy_t()) //evaluate 0-ary functions
                                           );
 
                 for(; ! it.finished() ; ++it ) {
-                    fun_value_t x = EvaluationPolicy::zero();
+                    fun_value_t x = evaluation_policy_t::zero();
 
-                    auto it2 = a.make_iterator(diff, cn_.domsizes(),
+                    auto it2 = a.make_iterator(diff, cn_,
                                                child.constraints(),
                                                child.functions(),
-                                               EvaluationPolicy(),
                                                it.value()
                                                );
                     for(;
                         ! it2.finished(); ++it2) {
                         
-                        x = EvaluationPolicy::plus( x, it2.value() );
+                        x = evaluation_policy_t::plus( x, it2.value() );
                     }
                     message->set(a, x);
                 }
@@ -248,15 +249,14 @@ namespace ired {
                 
                 a_.set_undet(diff);
 
-                auto x = EvaluationPolicy::zero();
-                auto it = a_.make_iterator(diff, cn_.domsizes(),
+                auto x = evaluation_policy_t::zero();
+                auto it = a_.make_iterator(diff, cn_,
                                            child.constraints(),
                                            child.functions(),
-                                           EvaluationPolicy(),
-                                           a_.eval_determined(child.functions(), EvaluationPolicy())
+                                           a_.eval_determined(child.functions(), evaluation_policy_t())
                                            );
                 for( ; ! it.finished(); ++it ) {
-                    x = EvaluationPolicy::plus( x, it.value() );
+                    x = evaluation_policy_t::plus( x, it.value() );
                     
                     if ( x > r ) {
                         break;
@@ -271,9 +271,9 @@ namespace ired {
 
     };
 
-    template<class ConstraintNetwork, class EvaluationPolicy>
+    template<class ConstraintNetwork>
     auto
-    ClusterTree<ConstraintNetwork, EvaluationPolicy>::single_root() {
+    ClusterTree<ConstraintNetwork>::single_root() {
         if (single_rooted_) {return root_;}
 
         // find all root nodes of the tree
@@ -305,9 +305,9 @@ namespace ired {
         return root_;
     }
 
-    template<class ConstraintNetwork, class EvaluationPolicy>
+    template<class ConstraintNetwork>
     void
-    ClusterTree<ConstraintNetwork,EvaluationPolicy>
+    ClusterTree<ConstraintNetwork>
     ::evaluate() {
 
         auto root = single_root();
@@ -319,9 +319,9 @@ namespace ired {
         evaluated_ = true;
     }
 
-    template<class ConstraintNetwork, class EvaluationPolicy>
+    template<class ConstraintNetwork>
     auto
-    ClusterTree<ConstraintNetwork,EvaluationPolicy>::sample() {
+    ClusterTree<ConstraintNetwork>::sample() {
 
         if (!evaluated_) {
             evaluate();

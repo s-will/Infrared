@@ -69,18 +69,16 @@ namespace ired {
          * on undetermined dependency on a variable in vars, where all
          * dependencies outside of vars are already determined.
          */
-        template<class EP> // EP=EvaluationPolicy
+        template<class ConstraintNetwork>
         auto
         make_iterator(const std::vector<var_idx_t> &vars,
-                      const std::vector<int> &domsizes,
-                      const std::vector<const typename EP::constraint_t *> &
+                      const ConstraintNetwork &cn,
+                      const std::vector<const typename ConstraintNetwork::constraint_t *> &
                       constraints,
-                      const std::vector<const typename EP::function_t *> &
+                      const std::vector<const typename ConstraintNetwork::function_t *> &
                       functions,
-                      const EP &,
-                      const typename EP::fun_value_t & initial_value = EP::one()
+                      const typename ConstraintNetwork::fun_value_t & initial_value
                       );
-
 
         /**
          * @brief evaluate constraints/functions where all variables
@@ -122,27 +120,27 @@ namespace ired {
      * Function values are combined via EvaluationPolicy::multiplies; partial products
      * are tracked on the enumeration stack.
      */
-    template<class EvaluationPolicy>
+    template<class ConstraintNetwork>
     class AssignmentIterator {
     public:
         using assignment_t = Assignment;
         using var_idx_t = assignment_t::var_idx_t;
         using var_value_t = assignment_t::var_value_t;
-        using ep = EvaluationPolicy;
+        using ep = typename ConstraintNetwork::evaluation_policy_t;
         using fun_value_t = typename ep::fun_value_t;
         using function_t = typename ep::function_t;
         using constraint_t = typename ep::constraint_t;
 
         AssignmentIterator(assignment_t &a,
                            const std::vector<var_idx_t> &vars,
-                           const std::vector<int> &domsizes,
+                           const ConstraintNetwork &cn,
                            const std::vector<const constraint_t *> &constraints,
                            const std::vector<const function_t *> &functions,
                            const fun_value_t &initial_value
                            )
             : a_(a),
               vars_(vars),
-              domsizes_(domsizes),
+              domsizes_(cn.domsizes()),
               top_( 0 )
         {
             for (auto var : vars_) {
@@ -157,7 +155,6 @@ namespace ired {
                 top_=-1;
                 return;
             }
-
 
             constraint_board_ = create_board<constraint_t>(constraints);
             function_board_ = create_board<function_t>(functions);
@@ -175,18 +172,30 @@ namespace ired {
             return value_stack_[vars_.size()];
         }
 
-        //! check constraints and value for current top_ entry
+        //! @brief check constraints for current top_ entry
         bool
-        is_valid_at_top() const {
+        constraints_valid_at_top() const {
             assert(top_ < (int)vars_.size());
-
-            if ( value_stack_[top_+1] == ep::zero() )
-                return false;
 
             //check all constraints at top_
             auto constraints = constraint_board_[top_];
             return all_of( constraints.begin(), constraints.end(),
                            [&](auto c) { return (*c)(a_); } );
+        }
+
+        //! @brief check functions for current top_ entry 
+        //!
+        //! @note here, 'valid' is used in the sloppy sense that no
+        //! function is 'guaranteed' to have zero value (@see
+        //! Function<>::guaranteed_zero())
+        bool
+        functions_valid_at_top() const {
+            assert(top_ < (int)vars_.size());
+
+            //check all constraints at top_
+            auto functions = function_board_[top_];
+            return all_of( functions.begin(), functions.end(),
+                           [&](auto f) { return ! f->guaranteed_zero(a_); } );
         }
 
         //! compute function value due to assignment of top variable;
@@ -242,10 +251,20 @@ namespace ired {
                         a_[vars_[top_]] ++;
                     }
 
-                    eval_at_top();
-
                     //repeat until the top variable has a valid value
-                } while ( ! is_valid_at_top() );
+
+                     if ( ! constraints_valid_at_top() )
+                         continue;
+
+                    if ( ! functions_valid_at_top() )
+                        continue;
+
+                     eval_at_top();
+                     if ( value_stack_[top_+1] == ep::zero() )
+                         continue;
+  
+                     break;
+                } while (true);
                 top_++;
             }
             top_--;
@@ -324,18 +343,17 @@ namespace ired {
 
     const int Assignment::Undetermined;
 
-    template<class EP>
+    template<class ConstraintNetwork>
     auto
     Assignment::make_iterator(const std::vector<var_idx_t> &vars,
-                              const std::vector<int> &domsizes,
-                              const std::vector<const typename EP::constraint_t *> &
+                              const ConstraintNetwork &cn,
+                              const std::vector<const typename ConstraintNetwork::constraint_t *> &
                               constraints,
-                              const std::vector<const typename EP::function_t *> &
+                              const std::vector<const typename ConstraintNetwork::function_t *> &
                               functions,
-                              const EP &,
-                              const typename EP::fun_value_t & initial_value
+                              const typename ConstraintNetwork::fun_value_t & initial_value
                               ) {
-        return AssignmentIterator<EP>(*this, vars, domsizes, constraints, functions, initial_value);
+        return AssignmentIterator<ConstraintNetwork>(*this, vars, cn, constraints, functions, initial_value);
     }
 
 }

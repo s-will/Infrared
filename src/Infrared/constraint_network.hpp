@@ -18,113 +18,6 @@
 #include "cluster.hpp"
 
 namespace ired {
-    /** A constraint network consists of sets of
-     *  - variables
-     *  - constraints
-     *  - functions
-     *
-     * @note The variables in a contraint network are indexed (0..n-1). Each variable has a domain of values 0..domsize
-     */
-    template<class FunValue=double>
-    class ConstraintNetwork {
-    public:
-        using var_idx_t = int;
-        using var_value_t = int;
-
-        using fun_value_t = FunValue;
-
-        using assignment_t = Assignment;
-        using function_t = Function<FunValue>;
-        using constraint_t = Constraint;
-
-        //! @brief suitable cluster type for the constraint network
-        using cluster_t = Cluster<fun_value_t>;
-
-        /**
-         * @brief Construct empty
-         */
-        ConstraintNetwork() {};
-
-        /**
-         * @brief Construct with domains
-         */
-        ConstraintNetwork(std::vector<int> &domsizes)
-            : domsizes_(domsizes) {
-        };
-
-        /**
-         * @brief Construct with uniform domains
-         */
-        ConstraintNetwork(int num_vars, int domsize)
-            : domsizes_(num_vars, domsize) {
-        };
-
-        /**
-         * @brief add variable with domain size
-         *
-         * @returns 0-based index of the new variable
-         */
-        var_idx_t
-        add_variable(int domainsize) {
-            domsizes_.push_back(domainsize);
-            return domsizes_.size()-1;
-        }
-
-        // /**
-        //  * @brief add constraint (cloning)
-        //  * @returns pointer to the new constraint
-        //  */
-        // auto
-        // add_constraint(const constraint_t &x) {
-        //     return add_constraint( x.clone() );
-        // }
-
-        // /**
-        //  * @brief add function
-        //  */
-        // auto
-        // add_function(const function_t &x)  {
-        //     return add_function( x.clone() );
-        // }
-
-        /**
-         * @brief add constraint (moving ownership)
-         */
-        auto
-        add_constraint(const std::shared_ptr<constraint_t> &x) {
-            constraints_.push_back( x );
-            return constraints_.back().get();
-        }
-
-        /**
-         * @brief add function
-         */
-        auto
-        add_function(const std::shared_ptr<function_t> &x) {
-            functions_.push_back( x );
-            return functions_.back().get();
-        }
-
-
-        int
-        num_vars() const {return domsizes_.size();}
-
-        const auto & domsizes() const {
-            return domsizes_;
-        }
-
-    private:
-        std::vector<int> domsizes_;
-
-        std::vector<std::shared_ptr<function_t>> functions_;
-        std::vector<std::shared_ptr<constraint_t>> constraints_;
-
-
-    };
-
-
-    //NOTE: it should be possible to directly (manually) construct a tree decomposition
-    // such that the cn is filled implicitely
 
     template<class FunValue>
     class StdEvaluationPolicy {
@@ -188,6 +81,101 @@ namespace ired {
         zero() {
             return false;
         }
+    };
+
+
+    /** A constraint network consists of sets of
+     *  - variables
+     *  - constraints
+     *  - functions
+     *
+     * @note The variables in a contraint network are indexed (0..n-1). Each variable has a domain of values 0..domsize
+     */
+    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
+    class ConstraintNetwork {
+    public:
+        using var_idx_t = int;
+        using var_value_t = int;
+
+        using fun_value_t = FunValue;
+
+        using assignment_t = Assignment;
+        using function_t = Function<FunValue>;
+        using constraint_t = Constraint;
+
+        using evaluation_policy_t = EvaluationPolicy;
+
+        //! @brief suitable cluster type for the constraint network
+        using cluster_t = Cluster<fun_value_t>;
+
+        /**
+         * @brief Construct empty
+         */
+        ConstraintNetwork() {};
+
+        /**
+         * @brief Construct with domains
+         */
+        ConstraintNetwork(std::vector<int> &domsizes)
+            : domsizes_(domsizes) {
+        };
+
+        /**
+         * @brief Construct with uniform domains
+         */
+        ConstraintNetwork(int num_vars, int domsize)
+            : domsizes_(num_vars, domsize) {
+        };
+
+        /**
+         * @brief add variable with domain size
+         *
+         * @returns 0-based index of the new variable
+         */
+        var_idx_t
+        add_variable(int domainsize) {
+            domsizes_.push_back(domainsize);
+            return domsizes_.size()-1;
+        }
+
+        /**
+         * @brief add constraint
+         */
+        auto
+        add_constraint(const std::shared_ptr<constraint_t> &x) {
+            constraints_.push_back( x );
+            return constraints_.back().get();
+        }
+
+        /**
+         * @brief add function
+         */
+        auto
+        add_function(const std::shared_ptr<function_t> &x) {
+            if ( x->auto_materialize() ) {
+                //materialize it
+                auto mx = std::make_shared<MaterializedFunction<typename function_t::fun_value_t, vecS>>(x.get(),*this);
+                functions_.push_back( mx );
+            } else {
+                functions_.push_back( x );
+            }
+            return functions_.back().get();
+        }
+
+        int
+        num_vars() const {return domsizes_.size();}
+
+        const auto & domsizes() const {
+            return domsizes_;
+        }
+
+    private:
+        std::vector<int> domsizes_;
+
+        std::vector<std::shared_ptr<function_t>> functions_;
+        std::vector<std::shared_ptr<constraint_t>> constraints_;
+
+
     };
 
 }
