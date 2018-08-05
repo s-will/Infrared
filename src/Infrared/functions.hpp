@@ -14,6 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <string>
 
 #include "assignment.hpp"
 
@@ -75,6 +76,10 @@ namespace ired {
         virtual
         bool
         auto_materialize() const { return true; }
+
+        virtual
+        std::string
+        name() const { return "Function"; }
 
         virtual
         ~Function() {}
@@ -222,6 +227,10 @@ namespace ired {
         virtual
         bool
         auto_materialize() const override { return false; }
+
+        virtual
+        std::string
+        name() const override { return "MaterializedFunction"; }
 
         auto
         datasize() const {return data_.size();}
