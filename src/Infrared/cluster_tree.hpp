@@ -160,14 +160,14 @@ namespace ired {
         tree_t tree_;
 
         bool evaluated_ = false;
-        bool single_rooted_ = false;
+        bool single_empty_rooted_ = false;
 
         vertex_descriptor root_;
 
         // insert pseudo root to connect trees of the forest (unless already done)
         // @returns new root
         auto
-        single_root();
+        single_empty_root();
 
         struct evaluate_finish_edge {
             using event_filter = boost::on_finish_edge;
@@ -235,7 +235,8 @@ namespace ired {
         struct sample_examine_edge {
             using event_filter = boost::on_examine_edge;
 
-            sample_examine_edge(constraint_network_t &cn,assignment_t &a) : cn_(cn), a_(a) {}
+            sample_examine_edge(constraint_network_t &cn,assignment_t &a) 
+                : cn_(cn), a_(a) {}
 
             template <class Edge, class Graph>
             void
@@ -277,9 +278,9 @@ namespace ired {
 
     template<class ConstraintNetwork>
     auto
-    ClusterTree<ConstraintNetwork>::single_root() {
-        if (single_rooted_) {return root_;}
-
+    ClusterTree<ConstraintNetwork>::single_empty_root() {
+        if (single_empty_rooted_) {return root_;}
+        
         // find all root nodes of the tree
         auto index = boost::get(boost::vertex_index, tree_);
 
@@ -295,16 +296,19 @@ namespace ired {
                 old_roots.push_back(*it);
             }
         }
-
-        // insert new root and point to all old roots
-        auto new_root = boost::add_vertex(tree_);
-
-        for (auto old_root : old_roots) {
-            boost::add_edge(new_root, old_root , tree_);
+        
+        if ( old_roots.size()==1 && tree_[ old_roots[0] ].cluster.empty() ) {
+            root_ = old_roots[0];
+        } else {
+            // insert new root and point to all old roots
+            root_ = boost::add_vertex(tree_);
+            
+            for (auto old_root : old_roots) {
+                boost::add_edge(root_, old_root , tree_);
+            }
         }
 
-        single_rooted_ = true;
-        root_ = new_root;
+        single_empty_rooted_ = true;
         
         return root_;
     }
@@ -314,7 +318,7 @@ namespace ired {
     ClusterTree<ConstraintNetwork>
     ::evaluate() {
 
-        auto root = single_root();
+        auto root = single_empty_root();
 
         auto cte_visitor = boost::make_dfs_visitor(evaluate_finish_edge(cn_,tree_));
 
@@ -335,7 +339,7 @@ namespace ired {
 
         auto sample_visitor = boost::make_dfs_visitor(sample_examine_edge(cn_,a));
 
-        boost::depth_first_search(tree_, visitor(sample_visitor).root_vertex(single_root()));
+        boost::depth_first_search(tree_, visitor(sample_visitor).root_vertex(single_empty_root()));
 
         return a;
     }

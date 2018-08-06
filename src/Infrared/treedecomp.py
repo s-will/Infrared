@@ -43,7 +43,7 @@ def writeTD(out, bags, edges, offset=0):
         
         lwidth = ceil( sqrt(len(bag)) )
         lnum   = ceil( len(bag) / lwidth )
-        xs = [str(i+offset) for i in bag]
+        xs = [str(i+offset) for i in sorted(bag)]
         lines=list()
         for i in range(0,lnum):
             lines.append(" ".join(xs[i*lwidth:(i+1)*lwidth]))

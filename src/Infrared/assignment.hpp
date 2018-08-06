@@ -255,6 +255,9 @@ namespace ired {
                     a_[vars_[top_]] ++;
 
                     while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
+                        
+                        // call hook after each complete enum of stage2
+                        // (i.e. at return to stage1)
                         if (top_ == stage1_size_) {
                             finish_stage2_hook_();
                         }
@@ -285,6 +288,12 @@ namespace ired {
                 } while (true);
                 top_++;
             }
+            
+            // this test is required for the case where diff.size()==0
+            if (top_ == stage1_size_) {
+                finish_stage2_hook_();
+            }
+            
             top_--;
             assert( top_ == static_cast<int>(vars_.size())-1 );
 

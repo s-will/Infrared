@@ -54,6 +54,11 @@ namespace ired {
         const std::vector<var_idx_t> &
         vars() const {return vars_;}
 
+        bool 
+        empty() const {
+            return vars_.empty();
+        }
+
         const auto &
         constraints() const {
             return constrs_;

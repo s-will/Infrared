@@ -1,5 +1,8 @@
-/** @brief Very simple python wrapper for treeedemposition using htd
+/** 
+ * @brief Very simple python wrapper for treeedemposition using htd
+ *
  * Wrapper written by Sebastian Will, 2018
+ * This file is part of Infrared.
  *
  * This module supports computing a tree decomposition from a graph
  * INPUT: The input graph is specified by number of nodes and list of (hyper)-edges.
@@ -31,6 +34,7 @@ namespace bpy = boost::python;
 template<class T>
 auto wrap_unique_ptr(T *x) { return std::unique_ptr<T>(x); }
 
+
 class HTD {
 public:
     HTD(int num_vertices, const std::vector<std::vector<int>> &in_edges)
@@ -61,19 +65,54 @@ public:
 
     // vertices are index 0,...,num_vertices-1 in input and output
     void
-    decompose() {
+    decompose() {        
+
         // Get the default tree decomposition algorithm
         htd::ITreeDecompositionAlgorithm * algorithm =
             manager_->treeDecompositionAlgorithmFactory().createInstance();
+
+        FitnessFunction fitnessFunction;
         
+        // operation to optimize over possible roots
+        htd::TreeDecompositionOptimizationOperation * operation =
+            new htd::TreeDecompositionOptimizationOperation(manager_.get(), 
+                                                            &fitnessFunction);
+
+        operation->setManagementInstance( manager_.get() );
+
+        //algorithm->addManipulationOperation(operation);
+        
+        algorithm->addManipulationOperation
+            (new htd::AddEmptyRootOperation(manager_.get()));
+
+        // control the size of diffs, makes sampling faster
+        // How does this work exactly??
+        algorithm->addManipulationOperation
+            (new htd::LimitMaximumForgottenVertexCountOperation(manager_.get(), 2));
+
+
+        // // call the tree decomposition algorithm
+        // htd::ITreeDecomposition * td =
+        //     algorithm->computeDecomposition( *graph_.get() );
+
+        auto iterative_algorithm = 
+            new htd::IterativeImprovementTreeDecompositionAlgorithm
+            (manager_.get(), algorithm, &fitnessFunction);
+
+        iterative_algorithm->setIterationCount(num_iterations_);
+        iterative_algorithm->setNonImprovementLimit(num_iterations_);
+
         // call the tree decomposition algorithm
         htd::ITreeDecomposition * td =
-            algorithm->computeDecomposition( *graph_.get() );
+            iterative_algorithm->computeDecomposition( *graph_.get() );
 
         // transform the td to lists of bags and edges
-        // @todo: actually this conversion is a detour; consider to pass the td object directly and expose
-        // methods root() and children()! Currently, the bags/edges representation requires to topo-sort
-        // again before we can construct the cluster tree.
+        //
+        // @todo: actually this conversion is a detour; consider to
+        // pass the td object directly and expose methods root() and
+        // children()! Currently, the bags/edges representation
+        // requires to topo-sort again before we can construct the
+        // cluster tree.
         //
         bags_.resize(td->vertexCount());
         
@@ -91,13 +130,26 @@ public:
             }
             bags_[v-1] = bag;
 
+            // // DEBUGGING
+            // std::cout << "Bag "<<(v-1)<<": ";
+            // for(const auto x: bags_[v-1]) {
+            //     std::cout << " "<< x;
+            // }
+            // std::cout << std::endl;
+
             const auto &cs = td->children(v);
             for (auto &c: cs) {
                 //make 0-based (and cast to signed)
-                edges_.push_back(std::vector<int>{ static_cast<int>(v-1), static_cast<int>(c-1) });
+                edges_.push_back(std::vector<int>
+                                 { static_cast<int>(v-1), static_cast<int>(c-1) });
                 stack.push(c);
             }
         }
+        
+        // quite weird: it seems not allowed to delete here again
+        //delete iterative_algorithm;
+        delete algorithm;
+        //delete operation;
     }
 
     //! @brief getter for the edges of the tree decomposition
@@ -119,6 +171,35 @@ private:
     using vec_vec_int_t = std::vector<std::vector<int>>;
     vec_vec_int_t edges_;
     vec_vec_int_t bags_;
+
+    // how hard we try:) @todo: make configurable
+    int num_iterations_ = 100;
+
+    /**
+     *  Fitness function which minimizes width and height of the decomposition.
+     *  Width is of higher priority than height, i.e., at first, the width is minimized
+     *  and if two decompositions have the same width, the one of lower height is chosen.
+     */
+    struct FitnessFunction : public htd::ITreeDecompositionFitnessFunction {
+            
+        htd::FitnessEvaluation*
+        fitness(const htd::IMultiHypergraph & graph,
+                const htd::ITreeDecomposition & decomposition) const {
+            HTD_UNUSED(graph);
+                    
+            /**
+             * Here we specify the fitness evaluation for a given decomposition.
+             * In this case, we select the maximum bag size and the height.
+             */
+            return new htd::FitnessEvaluation(2,
+                                              -(double)(decomposition.maximumBagSize()),
+                                              -(double)(decomposition.height()));
+        }
+
+        ITreeDecompositionFitnessFunction *
+        clone(void) const { return new FitnessFunction(); }
+    };
+
 };
 
 BOOST_PYTHON_MODULE(libhtdwrap)
