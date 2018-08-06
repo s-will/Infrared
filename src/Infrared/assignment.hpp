@@ -36,10 +36,10 @@ namespace ired {
         {
         }
 
-        decltype(auto)
+        const auto &
         operator [](var_idx_t i) const {return values_[i];}
 
-        decltype(auto)
+        auto &
         operator [](var_idx_t i) {return values_[i];}
 
         const auto &
@@ -165,7 +165,7 @@ namespace ired {
             }
         }
 
-        fun_value_t
+        auto
         value() {
             assert(top_>=0);
             assert( ( top_==0 && vars_.size()==0 )
@@ -179,7 +179,7 @@ namespace ired {
             assert(top_ < (int)vars_.size());
 
             //check all constraints at top_
-            auto constraints = constraint_board_[top_];
+            const auto &constraints = constraint_board_[top_];
             return all_of( constraints.begin(), constraints.end(),
                            [&](auto c) { return (*c)(a_); } );
         }
@@ -194,7 +194,7 @@ namespace ired {
             assert(top_ < (int)vars_.size());
 
             //check all constraints at top_
-            auto functions = function_board_[top_];
+            const auto &functions = function_board_[top_];
             return all_of( functions.begin(), functions.end(),
                            [&](auto f) { return ! f->guaranteed_zero(a_); } );
         }
@@ -241,8 +241,8 @@ namespace ired {
          *
          *   value_stack_[0] is always ep::one()
          */
-        auto
-        operator ++ () {
+        const auto &
+        operator ++() {
             //terminate if stack is empty
             if ( top_ < 0 ) {
                 return *this;
@@ -252,7 +252,7 @@ namespace ired {
 
                 // determine the next valid candidate partial assignment
                 do {
-                    a_[vars_[top_]]++;
+                    a_[vars_[top_]] ++;
 
                     while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
                         if (top_ == stage1_size_) {
@@ -365,17 +365,22 @@ namespace ired {
 
     const int Assignment::Undetermined;
 
-    template<class ConstraintNetwork>
+    template<class CN>
     auto
     Assignment::make_iterator(const std::vector<var_idx_t> &vars,
-                              const ConstraintNetwork &cn,
-                              const std::vector<const typename ConstraintNetwork::constraint_t *> &
+                              const CN &cn,
+                              const std::vector<const typename CN::constraint_t *> &
                               constraints,
-                              const std::vector<const typename ConstraintNetwork::function_t *> &
+                              const std::vector<const typename CN::function_t *> &
                               functions,
-                              const typename ConstraintNetwork::fun_value_t & initial_value
+                              const typename CN::fun_value_t & initial_value
                               ) {
-        return AssignmentIterator<ConstraintNetwork>(*this, vars, cn, constraints, functions, initial_value);
+        return AssignmentIterator<CN>(*this,
+                                      vars,
+                                      cn,
+                                      constraints,
+                                      functions,
+                                      initial_value);
     }
 
 }

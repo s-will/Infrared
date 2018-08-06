@@ -209,7 +209,7 @@ namespace ired {
 
                 it.register_finish_stage2_hook
                     (sep.size(),
-                     [&] () { 
+                     [&message,&a,&x] () { 
                         message->set(a, x);
                         x = evaluation_policy_t::zero();
                     } );
