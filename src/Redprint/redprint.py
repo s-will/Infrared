@@ -120,18 +120,21 @@ class RNAConstraintNetwork:
 
         visited = set()
 
-        other_ends = accumulate_dict(self.bpdependencies + list( map(list,map(reversed,self.bpdependencies)) ))
-
+        other_ends = accumulate_dict(self.bpdependencies
+                                     + list( map(list,map(reversed,self.bpdependencies)) ))
         color = 1
 
         for x in range(self.seqlen):
             if x in visited: continue
-            if x not in other_ends: continue # if there is no base pair
 
             ## new component, color it
-            stack = [x]
             self.compl_classes[x] = color
             color+=1
+
+            if x not in other_ends:
+                continue # if there is no base pair
+
+            stack = [x]
 
             while stack:
                 x = stack.pop()
@@ -443,7 +446,8 @@ def main(args):
 
 
     treewidth = max(map(len,td.bags))-1
-    print("Treewidth:",treewidth)
+    if args.verbose:
+        print("Treewidth:",treewidth)
 
     ## make cluster tree
     ct = td.construct_cluster_tree()
@@ -484,8 +488,9 @@ def main(args):
         print()
 
     if args.verbose:
-        print("----------")
-        print("Summary: ",end='')
+        if features:
+            print("----------")
+            print("Summary: ",end='')
 
         def mean(xs):
             xs = list(xs)
