@@ -188,30 +188,34 @@ namespace ired {
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
 
+                // concat sep + diff
+                auto sep_diff = sep;
+                sep_diff.insert(sep_diff.end(),diff.begin(),diff.end());
+
                 auto message = std::make_unique<message_t>(sep, cn_);
 
                 auto a = Assignment(cn_.num_vars());
                 
-                auto it = a.make_iterator(sep, cn_,
-                                          child.constraints(),
-                                          child.functions(),
-                                          a.eval_determined(child.functions(), evaluation_policy_t()) //evaluate 0-ary functions
-                                          );
+                auto it = a.make_iterator
+                    (sep_diff,
+                     cn_,
+                     child.constraints(),
+                     child.functions(),
+                     //evaluate 0-ary functions
+                     a.eval_determined(child.functions(), evaluation_policy_t()) 
+                     );
+
+                fun_value_t x = evaluation_policy_t::zero();
+
+                it.register_finish_stage2_hook
+                    (sep.size(),
+                     [&] () { 
+                        message->set(a, x);
+                        x = evaluation_policy_t::zero();
+                    } );
 
                 for(; ! it.finished() ; ++it ) {
-                    fun_value_t x = evaluation_policy_t::zero();
-
-                    auto it2 = a.make_iterator(diff, cn_,
-                                               child.constraints(),
-                                               child.functions(),
-                                               it.value()
-                                               );
-                    for(;
-                        ! it2.finished(); ++it2) {
-                        
-                        x = evaluation_policy_t::plus( x, it2.value() );
-                    }
-                    message->set(a, x);
+                    x = evaluation_policy_t::plus( x, it.value() );
                 }
 
                 // register message in cn, such that it persists!

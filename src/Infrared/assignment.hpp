@@ -141,7 +141,8 @@ namespace ired {
             : a_(a),
               vars_(vars),
               domsizes_(cn.domsizes()),
-              top_( 0 )
+              top_( 0 ),
+              stage1_size_( -1 ) // init without staging
         {
             for (auto var : vars_) {
                 a_[var] = assignment_t::Undetermined;
@@ -210,6 +211,18 @@ namespace ired {
             value_stack_[top_+1] = x;
         }
 
+        /**
+         * @register hook to run after finishing stage 2 enumeration
+         * @param stage1_size number of variables in stage 1
+         * @param hook function to be called after finishing stage 2 enumeration
+         */
+        void
+        register_finish_stage2_hook(int stage1_size, const std::function<void()> &hook) {
+            stage1_size_ = stage1_size;
+            finish_stage2_hook_ = hook;
+        }
+        
+
         /** @brief Next valid valuation
          *
          * Sets the assignment to the next valid valuation of
@@ -242,12 +255,17 @@ namespace ired {
                     a_[vars_[top_]]++;
 
                     while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
+                        if (top_ == stage1_size_) {
+                            finish_stage2_hook_();
+                        }
+                        
                         a_[vars_[top_]] = assignment_t::Undetermined;
                         top_ --;
                         if ( top_ < 0 ) {
                             // terminate if stack is empty
                             return *this;
                         }
+                        
                         a_[vars_[top_]] ++;
                     }
 
@@ -291,6 +309,10 @@ namespace ired {
         int top_;
 
         std::vector<fun_value_t> value_stack_;
+
+        int stage1_size_;
+        std::function<void()> finish_stage2_hook_;
+
 
         /**
          * @brief create the functions board
