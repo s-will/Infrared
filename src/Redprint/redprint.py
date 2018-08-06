@@ -18,7 +18,7 @@
 
 import random
 import argparse
-from collections import Counter
+import collections
 import itertools
 import os
 
@@ -358,6 +358,18 @@ class RNATreeDecomposition:
 ## END Redprint Library
 ############################################################
 
+def GCcontent(seq):
+    c = collections.Counter(seq)
+
+    gc = 0
+    for x in ['C','G']:
+        if x in c:
+            gc += c[x]
+
+    gc = gc  / len(seq)
+
+    return gc*100
+
 def main(args):
     ## init seed
     ir.seed(random.randint(0,2**31))
@@ -439,18 +451,30 @@ def main(args):
     ## evaluate
     ct.evaluate()
 
-    ## sample
-
     # for statistics
-    counters=[Counter() for i in range(0,seqlen)]
+    features = dict()
+    def register_feature(feat_id,val):
+        if feat_id not in features:
+            features[feat_id] = []
+        features[feat_id].append(val)
 
+    ## sample
     for x in range(0,args.number):
         sample = ct.sample()
         seq = values2seq(sample.values())
         print(seq,end='')
         if args.turner:
             for i,struc in enumerate(structures):
-                print(" E_{}={:3.2f}".format(i+1,RNA.energy_of_struct(seq,struc)),end='')
+                eos = RNA.energy_of_struct(seq,struc)
+                feat_id = "E_{}".format(i+1)
+                register_feature(feat_id,eos)
+                print(" {}={:3.2f}".format(feat_id,eos),end='')
+
+        if args.gc:
+            gc = GCcontent(seq)
+            feat_id = "GC"
+            register_feature(feat_id,gc)
+            print(" GC={:3.2f}".format(gc),end='')
 
         if args.checkvalid:
             for i,struc in enumerate(structures):
@@ -459,13 +483,20 @@ def main(args):
 
         print()
 
-        ## statistics
-        for i in range(seqlen):
-            counters[i][seq[i]] += 1
-
     if args.verbose:
-        print(sum(counters[1:],counters[0]))
+        print("----------")
+        print("Summary: ",end='')
 
+        def mean(xs):
+            xs = list(xs)
+            return sum(xs)/len(xs)
+
+        for fid in features:
+            mu = mean(features[fid])
+            std = (mean(map(lambda x: x**2,features[fid])) - mu**2 )**0.5
+
+            print(" {}={:3.2f} +/-{:3.2f}".format(fid,mu,std),end='')
+        print()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
@@ -478,6 +509,9 @@ if __name__ == "__main__":
                         help="Energy model used for sampling [bp=base pair model,stack=stacking model]")
     parser.add_argument('--turner', action="store_true",
                         help="Report Turner energies of the single structures for each sample")
+    parser.add_argument('--gc', action="store_true",
+                        help="Report GC contents of the single structures for each sample")
+
     parser.add_argument('--checkvalid', action="store_true",
                         help="Check base pair complementarity for each structure and for each sample")
 
