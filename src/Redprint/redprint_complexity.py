@@ -39,7 +39,7 @@ import os
 import random
 from libinfrared import seed
 
-import treedecomp as td 
+import treedecomp as td
 import rna_support as rna
 
 str_to_dep = { "basepair": rna.structure_to_basepair_dependencies,
@@ -57,7 +57,7 @@ def process_instance(infh,keep_graphs,plot_graphs,method,models):
         for s in structures:
             sarray = rna.parseRNAStructure(s)
             str_to_dep[model](sarray,edges)
-            
+
         seqlen = len(structures[0])
 
         in_edges = rna.unique_edges(edges)
@@ -73,7 +73,7 @@ def process_instance(infh,keep_graphs,plot_graphs,method,models):
                 td.dotfile_to_pdf(dotfilename)
             if not keep_graphs:
                 os.remove(dotfilename)
-        
+
         ## compute decomposition and measure run time
         start_time = timeit.default_timer()
         bags,edges = td.makeTD(seqlen, in_edges,
@@ -92,7 +92,7 @@ def process_instance(infh,keep_graphs,plot_graphs,method,models):
                 td.dotfile_to_pdf(dotfilename)
             if not keep_graphs:
                 os.remove(dotfilename)
-        
+
     return  [ str(tw[model]) for model in models ] + [ str(time[model]) for model in models ] ;
 
 if __name__ == "__main__":

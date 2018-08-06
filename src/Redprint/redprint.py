@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-############################### 
+###############################
 # Redprint v2 based on InfraRed
 ##-----------------------------
 # (C) Sebastian Will, 2018
-# 
+#
 # This file is part of the InfraRed source code.
-# 
+#
 # InfraRed provides a generic framework for tree decomposition-based
 # Boltzmann sampling over constraint networks
 #
 # Redprint provides Boltzmann sampling of sequences targeting multiple RNA structures.
-# 
+#
 # This file defines the Redprint main function.
-# 
+#
 
 
 import random
@@ -123,7 +123,7 @@ class RNAConstraintNetwork:
         other_ends = accumulate_dict(self.bpdependencies + list( map(list,map(reversed,self.bpdependencies)) ))
 
         color = 1
-        
+
         for x in range(self.seqlen):
             if x in visited: continue
             if x not in other_ends: continue # if there is no base pair
@@ -140,12 +140,12 @@ class RNAConstraintNetwork:
                 for y in other_ends[x]:
                     self.compl_classes[y]= -self.compl_classes[x]
                     stack.append(y)
-    
-    # add the functions for gc-content control to self.functions 
+
+    # add the functions for gc-content control to self.functions
     def add_gc_control(self):
         gc_control_funs = [ ( [i], [ir.GCControl(i,self.gcweight)] ) for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
-        
+
     # add the complementarity constraints to self.constraints
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
@@ -166,9 +166,9 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
         super().__init__(seqlen, structures, weights, gcweight)
 
         self.generate_cn_basepair_model()
-        
+
         self.compute_compl_classes()
-        
+
 
     ## generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
@@ -178,11 +178,11 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
         self.constraints = self.compl_constraints()
 
         self.functions = list()
-        
+
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
             self.functions.extend( [ ( [i,j],
-                                       [ir.BPEnergy(i,j, not (i-1,j+1) in structureset, self.weights[k])] ) 
+                                       [ir.BPEnergy(i,j, not (i-1,j+1) in structureset, self.weights[k])] )
                                      for (i,j) in structure ] )
 
         self.add_gc_control()
@@ -194,9 +194,9 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
         super().__init__(seqlen, structures, weights, gcweight)
 
         self.generate_cn_stacking_model()
-        
+
         self.compute_compl_classes()
-        
+
 
     ## generate constraint network for the base pair model
     def generate_cn_stacking_model(self):
@@ -207,11 +207,11 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
         self.constraints = self.compl_constraints()
 
         self.functions = list()
-        
+
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
             self.functions.extend( [ ( [i,j,i+1,j-1],
-                                       [ir.StackEnergy(i, j, self.weights[k])] ) 
+                                       [ir.StackEnergy(i, j, self.weights[k])] )
                                      for (i,j) in structure
                                      if (i+1,j-1) in structureset
             ] )
@@ -240,7 +240,7 @@ class RNATreeDecomposition:
             bindeps.extend( itertools.combinations(d,2) )
         return bindeps
 
-    
+
     ## get (first) index of bag that contains all variables
     def find_all_bags(self,bvars):
         return [ i for i,bag in enumerate(self.bags) if all( x in bag for x in bvars ) ]
@@ -364,23 +364,23 @@ def main(args):
 
     # set base pair energies ( AU,GC,GU in stems and terminal )
     set_bpenergy_table( [ AU_IN,
-                              GC_IN,
-                              GU_IN,
-                              AU_TERM,
-                              GC_TERM,
-                              GU_TERM ] )
+                          GC_IN,
+                          GU_IN,
+                          AU_TERM,
+                          GC_TERM,
+                          GU_TERM ] )
 
     set_stacking_energy_table( [ STACK_AUAU, STACK_AUUA,
-                                     STACK_AUCG, STACK_AUGC,
-                                     STACK_AUGU, STACK_AUUG,
-                                     
-                                     STACK_CGAU, STACK_CGUA,
-                                     STACK_CGCG, STACK_CGGC,
-                                     STACK_CGGU, STACK_CGUG,
-                                     
-                                     STACK_GUAU, STACK_GUUA,
-                                     STACK_GUCG, STACK_GUGC,
-                                     STACK_GUGU, STACK_GUUG ] )
+                                 STACK_AUCG, STACK_AUGC,
+                                 STACK_AUGU, STACK_AUUG,
+
+                                 STACK_CGAU, STACK_CGUA,
+                                 STACK_CGCG, STACK_CGGC,
+                                 STACK_CGGU, STACK_CGUG,
+
+                                 STACK_GUAU, STACK_GUUA,
+                                 STACK_GUCG, STACK_GUGC,
+                                 STACK_GUGU, STACK_GUUG ] )
 
     ## read instance
     with open(args.infile) as infh:
@@ -403,11 +403,11 @@ def main(args):
 
     ## build constraint network
     if args.model in ["bp","basepair"]:
-        cn = RNAConstraintNetworkBasePair( seqlen, bps, 
-                                               weights, args.gcweight )
+        cn = RNAConstraintNetworkBasePair( seqlen, bps,
+                                           weights, args.gcweight )
     elif args.model in ["stack","stacking"]:
-        cn = RNAConstraintNetworkStacking( seqlen, bps, 
-                                               weights, args.gcweight )
+        cn = RNAConstraintNetworkStacking( seqlen, bps,
+                                           weights, args.gcweight )
     else:
         print("Model",args.model,"unknown! Please see help for supported modules.")
         exit(-1)
@@ -415,7 +415,7 @@ def main(args):
     #print(sorted([ vars for (vars,c) in cn.constraints]))
 
     ## make tree decomposition
-    td = RNATreeDecomposition( cn, 
+    td = RNATreeDecomposition( cn,
                                add_redundant_constraints = not args.no_redundant_constraints,
                                method=args.method )
 
@@ -432,7 +432,7 @@ def main(args):
 
     treewidth = max(map(len,td.bags))-1
     print("Treewidth:",treewidth)
-    
+
     ## make cluster tree
     ct = td.construct_cluster_tree()
 
