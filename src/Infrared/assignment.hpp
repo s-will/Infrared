@@ -15,6 +15,7 @@
 #include <limits>
 #include <cassert>
 #include <iostream>
+#include <functional>
 
 namespace ired {
     template<class EvaluationPolicy>
