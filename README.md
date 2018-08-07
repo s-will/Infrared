@@ -62,6 +62,14 @@ make && make install
 To use tree decomposition based on the Java tool TDlib, please obtain
 a copy and set the Java CLASSPATH accordingly.
 
+## API documentation
+
+Generate html documentation of the Infrared API by
+```
+make doxygen-doc
+```
+Documentation will be generated in Doc/html; find the main page at Doc/html/index.html
+
 ## Running Redprint
 
 For running RNARedprint, one furthermore needs an installation of the
