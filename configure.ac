@@ -1,5 +1,5 @@
 AC_PREREQ([2.65])
-AC_INIT([InfraRed], [0.1], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
+AC_INIT([InfraRed], [0.2], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
 
 dnl minimal required version of the boost library 
 BOOST_REQUIRED_VERSION=1.50.0
@@ -22,6 +22,22 @@ AM_INIT_AUTOMAKE([1.11])
 
 dnl use the C++ compiler for the following checks
 AC_LANG([C++])
+
+dnl ----------------------------------------
+dnl generate doxygen documentation
+dnl
+
+DX_HTML_FEATURE(ON)
+DX_CHM_FEATURE(OFF)
+DX_CHI_FEATURE(OFF)
+DX_MAN_FEATURE(OFF)
+DX_RTF_FEATURE(OFF)
+DX_XML_FEATURE(OFF)
+DX_PDF_FEATURE(OFF)
+DX_PS_FEATURE(OFF)
+
+DX_INIT_DOXYGEN($PACKAGE_NAME, ["Doc/doxygen.cfg"], ["Doc"])
+dnl ----------------------------------------
 
 
 dnl --------------------
@@ -135,6 +151,7 @@ AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
 
 dnl files to generate via autotools (.am or .in source files)
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Doc/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/Infrared/Makefile])
 AC_CONFIG_FILES([src/Redprint/Makefile])

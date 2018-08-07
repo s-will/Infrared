@@ -11,6 +11,12 @@
  * Boltzmann sampling over constraint networks
  */
 
+/**
+ * @file
+ *
+ * @brief Defines assignments of the variables of a constraint network to values
+ */
+
 #include <vector>
 #include <limits>
 #include <cassert>
@@ -21,42 +27,111 @@ namespace ired {
     template<class EvaluationPolicy>
     class AssignmentIterator;
 
-    // (partial) assignment assigns cn variables to values
+    /** @brief A (partial) assignment of variables to values
+     *
+     * An object of Assignment associates values to a series of
+     * /finite domain/ variables (indexed 0..n-1); typically the
+     * variables belong to a constraint network CN (@see
+     * ConstraintNetwork).
+     *
+     * In an assignment for the CN, variables are associated to values
+     * in their finite integer domain (according to CN) or are
+     * undetermined (implemented as special value
+     * Undetermined=-1). Assignments are total, if no variable is
+     * undetermined.
+     *
+     * Partial assignments can be enumerated using objects of class
+     * AssignmentIterator. Such iterators are generated for an
+     * assignment using make_iterator; typically they are used to
+     * iterate over a subset of the variables in the CN while
+     * evaluating functions and checking constraints.
+     *
+     * An assignment is valid for a set of constraints, iff all the
+     * constraints are satisfied (evaluate to true).  The value of an
+     * assignment for a set of functions is the product (as defined by
+     * the EvaluationPolicy) of the function values for the
+     * assignment. Only assignments with non-zero (zero def'd by
+     * EvaluationPolicy) evaluation are valid for the functions.
+     */
     class Assignment {
     public:
 
+        //! assignment type
         using assignment_t = Assignment;
 
+        // variable index type
         using var_idx_t = int;
-        using var_value_t = int;
-        static const int Undetermined = -1;
 
-        //! @brief construct 'empty' with size
+        // variable value type
+        using var_value_t = int;
+
+    public:
+        /**
+         * @brief construct empty
+         *
+         * @param size number of variables
+         *
+         * after construction, all variables are undetermined
+         */
         Assignment(int size)
             :values_(size, Undetermined)
         {
         }
 
+        /**
+         * @brief get value of a variable (read only)
+         * @param i variable index
+         * @return value of variable i
+         */
         const auto &
         operator [](var_idx_t i) const {return values_[i];}
 
+        /**
+         * @brief get value of a variable (read/write)
+         * @param i variable index
+         * @return value of variable i
+         */
         auto &
         operator [](var_idx_t i) {return values_[i];}
 
+        /**
+         * @brief get values (read only)
+         */
         const auto &
         values() const { return values_; }
 
-        //! @brief is a variable determined by the assignment?
+        /**
+         * @brief get number of variables in assignment
+         */
+        auto
+        size() const { return values_.size(); }
+
+        /**
+         * @brief check whether variable is determined
+         * @param i variable index
+         */
         auto
         is_det(var_idx_t i) const {
             return values_[i] != Undetermined;
         }
 
-        //! @brief set variables to undetermined
+        /**
+         * @brief set variables to undetermined
+         * @param i index of variable
+         */
+        void
+        set_undet(var_idx_t i) {
+            values_[i] = Undetermined;
+        }
+
+        /**
+         * @brief set variables to undetermined
+         * @param xs vector of variable indices
+         */
         void
         set_undet(const std::vector<var_idx_t> &xs) {
             for (auto x: xs) {
-                values_[x] = Undetermined;
+                set_undet(x);
             }
         }
 
@@ -64,11 +139,10 @@ namespace ired {
          * @brief make sub-assignment iterator
          * @see class AssignmentIterator
          *
-         * During the iteration, constraints and functions are
-         * evaluated.  We evaluate only those constraints/functions
-         * that either have only dependencies on vars or have at least
-         * on undetermined dependency on a variable in vars, where all
-         * dependencies outside of vars are already determined.
+         * @param vars vector of indices of the to-be-enumerated variables
+         * @param cn constraint network, where everything takes place
+         * @param constraints check assignments
+         * @param functions check and evaluate assignments
          */
         template<class ConstraintNetwork>
         auto
@@ -84,6 +158,7 @@ namespace ired {
         /**
          * @brief evaluate constraints/functions where all variables
          * are already determined
+         *
          * @returns product of determined function values
          */
         template<class Function, class EP>
@@ -102,8 +177,17 @@ namespace ired {
         }
 
     private:
+        /**
+         * @brief special variable value signalling 'Undetermined'
+         */
+        static const int Undetermined = -1;
+
+        /**
+         * @brief vector holding a value (or Undetermined) for each
+         * variable
+         */
         std::vector<var_value_t> values_;
-    };  // end class Assignment
+    }; // end class Assignment
 
     /**
      * @brief Iterate over the assignments of a subset of variables
@@ -112,14 +196,14 @@ namespace ired {
      *
      * The job of the assignment iterator goes beyond pure enumeration
      * of the sub-assignments that are valid due to the domains of a
-     * subset of variables. It also checks constraints and evaluates
-     * functions (the latter is still @todo).
+     * subset of variables. It also checks validity due to constraints
+     * and functions and evaluates the functions.
      *
      * Constraints and functions are evaluated as soon as all their
      * variables are determined. For this purpose, the iterator
-     * precomputes tables ('boards').
-     * Function values are combined via EvaluationPolicy::multiplies; partial products
-     * are tracked on the enumeration stack.
+     * precomputes tables ('boards').  Function values are combined
+     * via EvaluationPolicy::multiplies; partial products are tracked
+     * on the enumeration stack.
      */
     template<class ConstraintNetwork>
     class AssignmentIterator {
@@ -132,6 +216,26 @@ namespace ired {
         using function_t = typename ep::function_t;
         using constraint_t = typename ep::constraint_t;
 
+        /**
+         * @brief constructor
+         *
+         * @param vars vector of indices of the to-be-enumerated variables
+         * @param cn constraint network, where everything takes place
+         * @param constraints check assignments
+         * @param functions check and evaluate assignments
+         *
+         * During the iteration, constraints and functions are
+         * evaluated.  We evaluate only those constraints/functions
+         * that have at least on undetermined dependency on a variable
+         * in vars, where all dependencies outside of vars are already
+         * determined.
+         *
+         * After construction with non-empty vars, the assignment is
+         * either set to the first valid assignment or finished() is
+         * true. After construction with empty vars, assignment is
+         * unchanged but finished() is false exactly, but will be true
+         * immediately after a call to operator ++()!
+         */
         AssignmentIterator(assignment_t &a,
                            const std::vector<var_idx_t> &vars,
                            const ConstraintNetwork &cn,
@@ -145,9 +249,7 @@ namespace ired {
               top_( 0 ),
               stage1_size_( -1 ) // init without staging
         {
-            for (auto var : vars_) {
-                a_[var] = assignment_t::Undetermined;
-            }
+            a_.set_undet(vars_);
 
             // set up value stack
             value_stack_.resize(vars_.size()+1);
@@ -166,6 +268,13 @@ namespace ired {
             }
         }
 
+        /**
+         * @brief get evaluation according to functions
+         *
+         * after initialization or a call of operator++, this yields
+         * the product of all functions on enumerated variables, where
+         * at least one variable is determined only by the enumeration
+         */
         auto
         value() {
             assert(top_>=0);
@@ -174,76 +283,45 @@ namespace ired {
             return value_stack_[vars_.size()];
         }
 
-        //! @brief check constraints for current top_ entry
-        bool
-        constraints_valid_at_top() const {
-            assert(top_ < (int)vars_.size());
-
-            //check all constraints at top_
-            const auto &constraints = constraint_board_[top_];
-            return all_of( constraints.begin(), constraints.end(),
-                           [&](auto c) { return (*c)(a_); } );
-        }
-
-        //! @brief check functions for current top_ entry 
-        //!
-        //! @note here, 'valid' is used in the sloppy sense that no
-        //! function is 'guaranteed' to have zero value (@see
-        //! Function<>::guaranteed_zero())
-        bool
-        functions_valid_at_top() const {
-            assert(top_ < (int)vars_.size());
-
-            //check all constraints at top_
-            const auto &functions = function_board_[top_];
-            return all_of( functions.begin(), functions.end(),
-                           [&](auto f) { return ! f->guaranteed_zero(a_); } );
-        }
-
-        //! compute function value due to assignment of top variable;
-        //! put result on stack
-        void
-        eval_at_top() {
-            assert(top_>=0);
-            auto x = value_stack_[top_];
-            for ( const auto f: function_board_[top_] ) {
-                x = ep::multiplies( x, (*f)(a_) );
-            }
-            value_stack_[top_+1] = x;
-        }
-
         /**
-         * @register hook to run after finishing stage 2 enumeration
+         * @brief register hook to run after finishing stage 2 enumeration
          * @param stage1_size number of variables in stage 1
          * @param hook function to be called after finishing stage 2 enumeration
+         *
+         * This is used in two-stage enumeration over two disjoint
+         * sets of variables; in the evaluation of a CN, this allows
+         * to marginalize over the second set and store the results as
+         * value of a function (the 'message') of the variables in the
+         * first set.
          */
         void
         register_finish_stage2_hook(int stage1_size, const std::function<void()> &hook) {
             stage1_size_ = stage1_size;
             finish_stage2_hook_ = hook;
         }
-        
 
-        /** @brief Next valid valuation
+
+        /** @brief Next valid partial assignment
          *
-         * Sets the assignment to the next valid valuation of
-         * vars_
-         *
-         * Invariants:
-         *   top_ points to the next to be enumerated variable in vars_
-         *   top_==-1 means termination
-         *   otherwise a_[vars_[top_]] is valid,
-         *     if a_[vars_[top_]] < domsize_[vars_[top_]],
-         *
-         *   value_stack_[i] is the product of all function
-         *   values, where the functions depend only on variables up
-         *   to and including vars_[i-1], for 1<=i<=top_. If
-         *   vars[top_] is undetermined, then value_stack_[top_+1] is undefined.
-         *
-         *   value_stack_[0] is always ep::one()
+         * Sets the assignment to the next valid assignment of vars_
          */
         const auto &
         operator ++() {
+            /*
+             * Invariants:
+             *   top_ points to the next to be enumerated variable in vars_
+             *   top_==-1 means termination
+             *   otherwise a_[vars_[top_]] is valid,
+             *     if a_[vars_[top_]] < domsize_[vars_[top_]],
+             *
+             *   value_stack_[i] is the product of all function
+             *   values, where the functions depend only on variables up
+             *   to and including vars_[i-1], for 1<=i<=top_. If
+             *   vars[top_] is undetermined, then value_stack_[top_+1] is undefined.
+             *
+             *   value_stack_[0] is always ep::one()
+             */
+
             //terminate if stack is empty
             if ( top_ < 0 ) {
                 return *this;
@@ -256,20 +334,20 @@ namespace ired {
                     a_[vars_[top_]] ++;
 
                     while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
-                        
+
                         // call hook after each complete enum of stage2
                         // (i.e. at return to stage1)
                         if (top_ == stage1_size_) {
                             finish_stage2_hook_();
                         }
-                        
-                        a_[vars_[top_]] = assignment_t::Undetermined;
+
+                        a_.set_undet(vars_[top_]);
                         top_ --;
                         if ( top_ < 0 ) {
                             // terminate if stack is empty
                             return *this;
                         }
-                        
+
                         a_[vars_[top_]] ++;
                     }
 
@@ -284,17 +362,17 @@ namespace ired {
                      eval_at_top();
                      if ( value_stack_[top_+1] == ep::zero() )
                          continue;
-  
+
                      break;
                 } while (true);
                 top_++;
             }
-            
+
             // this test is required for the case where diff.size()==0
             if (top_ == stage1_size_) {
                 finish_stage2_hook_();
             }
-            
+
             top_--;
             assert( top_ == static_cast<int>(vars_.size())-1 );
 
@@ -324,6 +402,44 @@ namespace ired {
         std::function<void()> finish_stage2_hook_;
 
 
+        //! @brief check constraints for current top_ entry
+        bool
+        constraints_valid_at_top() const {
+            assert(top_ < (int)vars_.size());
+
+            //check all constraints at top_
+            const auto &constraints = constraint_board_[top_];
+            return all_of( constraints.begin(), constraints.end(),
+                           [&](auto c) { return (*c)(a_); } );
+        }
+
+        //! @brief check functions for current top_ entry
+        //!
+        //! @note here, 'valid' is used in the sloppy sense that no
+        //! function is 'guaranteed' to have zero value (@see
+        //! Function<>::guaranteed_zero())
+        bool
+        functions_valid_at_top() const {
+            assert(top_ < (int)vars_.size());
+
+            //check all constraints at top_
+            const auto &functions = function_board_[top_];
+            return all_of( functions.begin(), functions.end(),
+                           [&](auto f) { return ! f->guaranteed_zero(a_); } );
+        }
+
+        //! compute function value due to assignment of top variable;
+        //! put result on stack
+        void
+        eval_at_top() {
+            assert(top_>=0);
+            auto x = value_stack_[top_];
+            for ( const auto f: function_board_[top_] ) {
+                x = ep::multiplies( x, (*f)(a_) );
+            }
+            value_stack_[top_+1] = x;
+        }
+
         /**
          * @brief create the functions board
          *
@@ -350,7 +466,7 @@ namespace ired {
                 int last_idx = -1;
                 for ( auto var : f->vars() ) {
                     // skip determined variables of f
-                    if ( a_[var] != assignment_t::Undetermined ) continue;
+                    if ( a_.is_det(var)  ) continue;
 
                     // determine maximum index of this variable (in the order of the variables
                     // of the assignment iterator)

@@ -30,16 +30,14 @@
  * The user can decided whether to transfer ownership (unique pointers) or require cloning.
  * Cloning must be implemented for the polymorph function and constraint classes.
  *
- * The ClusterTreeDecomposition holds a constraint network; when manually constructed, it autosyncs with its CN
- *
- * @todo [core][interface] write python bindings
- * @todo [interface] write demo python program
- * @todo [core] factorize code, distribute to files
- * @todo [core] distinguish function and constraints by tags and get rid of redundant methods
- * @todo [RNA design] write sequence-sampling spefific convenience classes/methods
- * @todo [RNA design] write C++ function classes for parametrizable base-pair and stacking model, Turner model
+ * The ClusterTreeDecomposition holds a constraint network; when
+ * manually constructed, it autosyncs with its CN
  */
 
+/**
+ * @file
+ * @brief Includes all headers of the (header-only) Infrared core library
+ */
 
 // package parts
 #include "assignment.hpp"

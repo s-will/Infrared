@@ -11,6 +11,19 @@
  * Boltzmann sampling over constraint networks
  */
 
+/**
+ * @file
+ * @brief Defines function and constraint base classes
+ *
+ * Custom functions and constraints inherit from the abstract classes
+ * Functions<FunVal> and Constraint and specialize by overriding (at
+ * least) operator ().
+ * 
+ * MaterializedFunction offers functions that tabulate their
+ * values. This is used for messages in the cluster tree
+ * evaluation and pre-computing of function values.
+ */
+
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -19,17 +32,12 @@
 #include "assignment.hpp"
 
 namespace ired {
-    
+
     template<class FunValue, class EP>
     class ConstraintNetwork;
-    
+
     /**
-     * Dependencies specify a dependency between variables
-     *
-     * @todo what does the engine need? Could we, e.g., rather offer
-     * only a depends_on(var_idx_t) than accessor vars()?  Currently,
-     * this almost requires functions to hold the vars as vector,
-     * which e.g. makes function definitions more ugly.
+     * @brief Dependencies specify a dependency between variables
      */
     class Dependency {
     public:
@@ -45,7 +53,7 @@ namespace ired {
     };
 
     /**
-     * Functions evaluate assignments of a subset of variables
+     * @brief Functions evaluate assignments of a subset of variables
      */
     template<class FunValue=double>
     class Function : public Dependency {
@@ -85,19 +93,34 @@ namespace ired {
         ~Function() {}
     };
 
-    //! MaterializedFunction is used for the computed messages (DP
-    //! matrices)
-    //!
-    //! @note via template parameter Container, one can
-    //! choose to use a sparse data structure like
-    //! Container=std::unordered_map<FunValue>
-    //
+    /**
+     * @brief map selector class
+     *
+     * for selecting a sparse table to represent
+     * materialized functions
+     */
     struct mapS {};
+
+    /**
+     * @brief vector selector class
+     *
+     * for selecting a non-sparse table to represent
+     * materialized functions
+     */
     struct vecS {};
+
+    /**
+     * @brief Switching containers in MaterializedFuntion
+     */
     template<class FunValue, class T>
     struct container_selector {
         using type = T;
     };
+    
+    /**
+     * @brief Class implementing the specializations to enable
+     * instantiation of non-sparse materialized function classes
+     */
     template<class FunValue>
     struct container_selector<FunValue,vecS> {
         using type = std::vector<FunValue>;
@@ -111,6 +134,11 @@ namespace ired {
         static const FunValue& get(const type &x, size_t i, const FunValue &zero) {return x[i];}
         static void set(type &x,size_t i, const FunValue &v, const FunValue &zero) {x[i]=v;}
     };
+
+    /**
+     * @brief Class implementing the specializations to enable
+     * instantiation of sparse materialized function classes
+     */
     template<class FunValue>
     struct container_selector<FunValue,mapS> {
         using type = std::unordered_map<int,FunValue>;
@@ -132,6 +160,17 @@ namespace ired {
         }
     };
 
+    /**
+     * @brief A materialized function
+     *
+     * A function that holds a table of function values. It is used to
+     * represent computed messages (DP matrices) during evalution of
+     * the cluster tree, or precomputed functions.
+     *
+     * Supports sparse and non-sparse representation of the function
+     * value table. The choice is made by a template mechanism using
+     * selector classes.
+     */
     template< class FunValue, class ContainerS=mapS >
     class MaterializedFunction : public Function<FunValue> {
     public:
@@ -144,7 +183,7 @@ namespace ired {
         using fun_value_t = FunValue;
         using function_t = Function<fun_value_t>;
 
-        using data_t = typename container_selector<FunValue,ContainerS>::type;        
+        using data_t = typename container_selector<FunValue,ContainerS>::type;
 
         /**
          * @brief construct 'empty' with variables, domains, and zero value
@@ -192,33 +231,48 @@ namespace ired {
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
 
             auto a = Assignment(cn.num_vars());
-            
+
             auto constraints = std::vector<const typename ConstraintNetwork::constraint_t *>();
             auto functions = std::vector<const typename ConstraintNetwork::function_t *> {function};
-            
+
             auto it = a.make_iterator(function->vars(),
                                       cn,
                                       constraints,
                                       functions,
                                       a.eval_determined(functions, ep()) //evaluate 0-ary functions
                                       );
-            
+
             for(; ! it.finished() ; ++it ) {
                 set( a, it.value() );
             }
         }
-        
 
+        /**
+         * @brief evaluate function
+         *
+         * @param a assignment where the function is evaluated
+         */
         fun_value_t
         operator () ( const assignment_t & a ) const override {
             return container_selector<FunValue,ContainerS>::get(data_, index(a), zero_);
         }
 
+        /**
+         * @brief set function value
+         *
+         * @param a assignment where the value is set
+         * @param value value to be set
+         */
         void
         set( const assignment_t & a, const fun_value_t &val) {
             return container_selector<FunValue,ContainerS>::set(data_, index(a), val, zero_);
         }
 
+        /**
+         * @brief check whether this object knows that some function value is zero
+         *
+         * @param a assignment where this is checked
+         */
         bool guaranteed_zero(const assignment_t &a) const override {
             return container_selector<FunValue,ContainerS>::guaranteed_zero(data_, index(a));
         }
@@ -228,10 +282,12 @@ namespace ired {
         bool
         auto_materialize() const override { return false; }
 
+        //! @brief name of the class
         virtual
         std::string
         name() const override { return "MaterializedFunction"; }
 
+        //! @brief number of stored function values
         auto
         datasize() const {return data_.size();}
 
@@ -240,6 +296,8 @@ namespace ired {
         data_t data_;
         fun_value_t zero_;
 
+        //! @brief unique index calculated from the values of the
+        //! function vars in the assignment
         auto
         index( const assignment_t & a ) const {
             size_t x = 0;
@@ -250,6 +308,8 @@ namespace ired {
             return x;
         }
 
+        //! @brief size required for (non-sparse) vector of function
+        //! values
         auto
         calc_size() const {
             size_t x=1;
@@ -260,6 +320,7 @@ namespace ired {
         }
     };
 
+    //! A constraint is simply a boolean-valued function
     using Constraint = Function<bool>;
 }
 

@@ -11,19 +11,44 @@
  * Boltzmann sampling over constraint networks
  */
 
+/**
+ * @file
+ *
+ * @brief Defines the cluster tree.
+ */
+
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
 
 #include "constraint_network.hpp"
 
 namespace ired {
-
-
     /**
      * @brief A tree of clusters (=variables, functions, constraints)
      *
-     * Supports evaluation and sampling.
+     * A cluster tree belongs to a constraint network and holds
+     * it. (The latter simplifies the usage in Infrared; however this
+     * means, we do not support several cluster trees for the same
+     * constraint network.)
      *
+     * The cluster tree supports evaluation and sampling. For this
+     * purpose, the cluster tree must satisfy the cluster tree
+     * properties
+     *
+     * 1) For each variable in the CN, there is one bag that contains
+     * the variable.
+     *
+     * 2) For each variable, the bags that contain this variable form
+     * a subtree.
+     *
+     * 3) For each function, there is exactly one bag that contains
+     * the function and its variables.
+     *
+     * 4) For each constraint, there is at least one bag that contains
+     * the function and its variables. Constraints are only assigned to bags
+     * that contain all of their variables.
+     *
+     * Ensuring those properties is the job of the user of this class!
      */
     template<class FunValue=double>
     class ClusterTree {
@@ -34,7 +59,6 @@ namespace ired {
         //! evaluation policy type
         using evaluation_policy_t = typename constraint_network_t::evaluation_policy_t;
 
-
         using var_idx_t = typename constraint_network_t::var_idx_t;
         using cluster_t = typename constraint_network_t::cluster_t;
         using assignment_t = typename constraint_network_t::assignment_t;
@@ -44,16 +68,24 @@ namespace ired {
 
         using message_t = MaterializedFunction<fun_value_t,mapS>;
 
+        //! @brief information at a vertex (=cluster/bag) of the tree
         struct vertex_info_t {
             cluster_t cluster;
         };
 
+        //! @brief information at an edge of the tree
         struct edge_info_t {
             Function<fun_value_t> *message;
         };
 
-        using tree_t = boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS, vertex_info_t, edge_info_t >;
+        //! @brief represent the cluster tree as boost::graph adjacency list
+        using tree_t = boost::adjacency_list< boost::vecS,
+                                              boost::vecS,
+                                              boost::directedS,
+                                              vertex_info_t,
+                                              edge_info_t >;
 
+        //! @brief type of identifiers of vertices (typically 'long int')
         using vertex_descriptor = typename boost::graph_traits<tree_t>::vertex_descriptor;
 
         /**
@@ -63,7 +95,10 @@ namespace ired {
         }
 
         /**
-         * @brief Construct with domains
+         * @brief Construct with variable domains
+         *
+         * @param domsizes vector of domain sizes for each variable;
+         * its length specifies the number of variables
          */
         ClusterTree(std::vector<int> &domsizes)
             : cn_(domsizes) {
@@ -71,6 +106,9 @@ namespace ired {
 
         /**
          * @brief Construct with uniform domains
+         *
+         * @param num_vars the number of variables in the underlying constraint network
+         * @param domsize uniform domain size of each variable
          */
         ClusterTree(int num_vars, int domsize)
             : cn_(num_vars, domsize) {
@@ -82,18 +120,16 @@ namespace ired {
             return cn_;
         }
 
-        //
-        // enum class TDMethod {
-        //     tdlib
-        // };
-        //
-        //  /** @brief construct from constraint network by some tree decomposition method
-        //  */
-        // ClusterTree(constraint_network_t &n, TDMethod td_method): cn_(cn) {
-        // }
-
-
-        // for 'manual' construction
+        /**
+         * @brief add new root cluster to the tree
+         *
+         * @param vars variables of the new cluster
+         * @return bag/cluster id
+         *
+         * Typically used when constructing the cluster tree. Typically, one
+         * adds functions and constraints to the new cluster that is
+         * created by this method (using the returned bag id).
+         */
         auto
         add_root_cluster(const std::vector<var_idx_t> &vars) {
             auto node = boost::add_vertex(tree_);
@@ -101,11 +137,17 @@ namespace ired {
             return node;
         }
 
-        // auto
-        // make_root_cluster_python(const boost::python::list &vars) {
-        //     return make_root_cluster(python_extract_list<var_idx_t>(vars));
-        // }
-
+        /**
+         * @brief add new child cluster to the tree
+         *
+         * @param parent the parent of this child
+         * @param vars variables of the new cluster
+         * @return bag/cluster id
+         *
+         * Typically used when constructing the cluster tree. Typically, one
+         * adds functions and constraints to the new cluster that is
+         * created by this method (using the returned bag id).
+         */
         auto
         add_child_cluster( vertex_descriptor parent, const std::vector<int> &vars) {
             auto node = boost::add_vertex(tree_);
@@ -115,43 +157,54 @@ namespace ired {
             return node;
         }
 
-        // auto
-        // make_child_cluster_python( vertex_descriptor parent, const boost::python::list &vars) {
-        //     return make_child_cluster(parent, python_extract_list<var_idx_t>(vars));
-        // }
-
-        //! @brief add variable to cluster
-        //!
-        //! synchronized between cluster and cn
-        auto
-        add_variable( vertex_descriptor node, var_idx_t var ) {
-            tree_[node].cluster.add_variable( var );
-        }
-
-        //! @brief add constraint to cluster
-        //!
-        //! synchronized between cluster and cn
-        auto
+        /**
+         * @brief add new constraint to cluster
+         *
+         * @param id identifier of cluster
+         * @param x (shared pointer to) constraint
+         *
+         * Typically used when constructing the cluster tree.
+         */
+        void
         add_constraint( vertex_descriptor node, const std::shared_ptr<constraint_t> &x ) {
             tree_[node].cluster.add_constraint( cn_.add_constraint(x) );
         }
 
-        //! @brief add function to cluster
-        //!
-        //! synchronized between cluster and cn
-        auto
+        /**
+         * @brief add new function to cluster
+         *
+         * @param id identifier of cluster
+         * @param x (shared pointer to) function
+         *
+         * Typically used when constructing the cluster tree.
+         */
+        void
         add_function( vertex_descriptor node, const std::shared_ptr<function_t> &x ) {
             tree_[node].cluster.add_function( cn_.add_function(x) );
         }
 
-        // run the dynamic programming evaluation
+        /**
+         * @brief Run the dynamic programming evaluation
+         *
+         * Call this once before generating samples with sample()
+         */
         void
         evaluate();
 
-        // generate one sample, using the DP tables
-        //
-        // this is a real 'sample' only if partition functions are
-        // computed due to the evaluation policy!
+        /**
+         * @brief Run the dynamic programming evaluation
+         *
+         * @return assignment ("sample")
+         *
+         * Generates one sample assignment; arbitrarily many samples
+         * can be generated after (a required!) precomputation by one
+         * call of evaluate().
+         *
+         * This is a real 'sample' only if partition functions are
+         * computed due to the evaluation policy! If used correctly
+         * (with functions that return Boltzmann weights), assignments
+         * are sampled from a Boltzmann distribution.
+         */
         auto
         sample();
 
@@ -169,6 +222,9 @@ namespace ired {
         auto
         single_empty_root();
 
+        // Define the method used for evaluating the tree. It will be
+        // called by boost::graph's depth first search algorithm at
+        // edges after leaving the corresponding subtree.
         struct evaluate_finish_edge {
             using event_filter = boost::on_finish_edge;
 
@@ -195,21 +251,21 @@ namespace ired {
                 auto message = std::make_unique<message_t>(sep, cn_);
 
                 auto a = Assignment(cn_.num_vars());
-                
+
                 auto it = a.make_iterator
                     (sep_diff,
                      cn_,
                      child.constraints(),
                      child.functions(),
                      //evaluate 0-ary functions
-                     a.eval_determined(child.functions(), evaluation_policy_t()) 
+                     a.eval_determined(child.functions(), evaluation_policy_t())
                      );
 
                 fun_value_t x = evaluation_policy_t::zero();
 
                 it.register_finish_stage2_hook
                     (sep.size(),
-                     [&message,&a,&x] () { 
+                     [&message,&a,&x] () {
                         message->set(a, x);
                         x = evaluation_policy_t::zero();
                     } );
@@ -222,7 +278,7 @@ namespace ired {
                 auto msg = cn_.add_function(std::move(message));
                 // then, register in cluster parent
                 tree_[ source(e, graph) ].cluster.add_function(msg);
-                
+
                 // ... and as edge property
                 tree_[e].message = msg;
             }
@@ -232,10 +288,13 @@ namespace ired {
             tree_t &tree_;
         };
 
+        // Define the method used for sampling from the tree. It will
+        // be called by boost::graph's depth first search algorithm at
+        // edges before entering the corresponding subtree.
         struct sample_examine_edge {
             using event_filter = boost::on_examine_edge;
 
-            sample_examine_edge(constraint_network_t &cn,assignment_t &a) 
+            sample_examine_edge(constraint_network_t &cn,assignment_t &a)
                 : cn_(cn), a_(a) {}
 
             template <class Edge, class Graph>
@@ -247,22 +306,24 @@ namespace ired {
                 auto diff = child.diff_vars(parent);
 
                 const auto &message = graph[e].message;
-                
+
                 double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
 
-                assert ( a_.eval_determined(child.constraints(), StdEvaluationPolicy<bool>()) );
-                
+                assert ( a_.eval_determined(child.constraints(),
+                                            StdEvaluationPolicy<bool>()) );
+
                 a_.set_undet(diff);
 
                 auto x = evaluation_policy_t::zero();
                 auto it = a_.make_iterator(diff, cn_,
                                            child.constraints(),
                                            child.functions(),
-                                           a_.eval_determined(child.functions(), evaluation_policy_t())
+                                           a_.eval_determined(child.functions(),
+                                                              evaluation_policy_t())
                                            );
                 for( ; ! it.finished(); ++it ) {
                     x = evaluation_policy_t::plus( x, it.value() );
-                    
+
                     if ( x > r ) {
                         break;
                     }
@@ -276,11 +337,15 @@ namespace ired {
 
     };
 
+    // return single empty cluster that roots the tree; if such a
+    // cluster exists or was generated before, simply return it;
+    // otherwise, construct a new empty cluster, connect it as parent
+    // to all existing roots, and return it.
     template<class ConstraintNetwork>
     auto
     ClusterTree<ConstraintNetwork>::single_empty_root() {
         if (single_empty_rooted_) {return root_;}
-        
+
         // find all root nodes of the tree
         auto index = boost::get(boost::vertex_index, tree_);
 
@@ -296,23 +361,25 @@ namespace ired {
                 old_roots.push_back(*it);
             }
         }
-        
+
         if ( old_roots.size()==1 && tree_[ old_roots[0] ].cluster.empty() ) {
             root_ = old_roots[0];
         } else {
             // insert new root and point to all old roots
             root_ = boost::add_vertex(tree_);
-            
+
             for (auto old_root : old_roots) {
                 boost::add_edge(root_, old_root , tree_);
             }
         }
 
         single_empty_rooted_ = true;
-        
+
         return root_;
     }
 
+    // evaluate by running a specialized depth first search via
+    // boost::graph; see struct evaluate_finish_edge
     template<class ConstraintNetwork>
     void
     ClusterTree<ConstraintNetwork>
@@ -327,6 +394,9 @@ namespace ired {
         evaluated_ = true;
     }
 
+    // sample by running a specialized depth first search via
+    // boost::graph; see struct sample_examine_edge
+
     template<class ConstraintNetwork>
     auto
     ClusterTree<ConstraintNetwork>::sample() {
@@ -339,7 +409,9 @@ namespace ired {
 
         auto sample_visitor = boost::make_dfs_visitor(sample_examine_edge(cn_,a));
 
-        boost::depth_first_search(tree_, visitor(sample_visitor).root_vertex(single_empty_root()));
+        boost::depth_first_search(tree_,
+                                  visitor(sample_visitor)
+                                  .root_vertex(single_empty_root()));
 
         return a;
     }

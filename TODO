@@ -1,24 +1,4 @@
-0) an apparent optimization is precomputation of pow(w,-e). Materializing
-   the result also for the non-messages should improve run time.
-
-1) Engine can be improved by running only over valid function inputs
-   (this could be supported including backtracking by a suitable tree
-   data structure---map/unordered_map is not suficiently
-   specialized). The DP would then only enumerate the new (diff)
-   variables and the variables of all message (in chain).  This saves
-   redundant constraint checks and allows even faster enumeration
-   (with essentially full propagation on the variables message within
-   each message---their can still be new dependencies between
-   variables of different messages....). Such optimizations also make
-   the system easier to use, since constraints (like the
-   complementarity constraint) can be inserted only once (again)
-   without taking a performance hit.
-
-2) Sparsify! If we are ok with not seeing rare samples at all, then
-   message values for very improbable valuations can be dropped! At
-   each node, we can calculate upper bounds and in this way control
-   the worst case error.  This strategy can save memory, which seems
-   to be the main limit for going beyond tw of about w=17! (Here,
-   sparse messages are already required, since otherwise we need
-   4^w+sizeof(double) space for the largest message(s))
-   How to know what is rare?
+* integrate Turner model for sampling
+* implement multi-dimensional Boltzmann sampling
+* extend redprint
+* devise new applications of infrared

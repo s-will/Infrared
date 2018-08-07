@@ -143,15 +143,16 @@ variables). It consists of bags (aka clusters) of variables,
 functions, and constraints. The bags are connected by edges to form a
 tree (or forest), such that the following properties hold
 
-1) for each variable in the CN, there is one bag that contains the variable
+1) For each variable in the CN, there is one bag that contains the variable.
 
-2) for each variable, the bags that contain this variable form a subtree
+2) For each variable, the bags that contain this variable form a subtree.
 
-3) for each function, there is exactly one bag that contains
-   the function and its variables
+3) For each function, there is exactly one bag that contains
+   the function and its variables.
 
-4) for each constraint, there is at least one bag that contains
-   the function and its variables
+4) For each constraint, there is at least one bag that contains the
+   function and its variables. Constraints are only assigned to bags
+   that contain all of their variables.
 
 The infrared core (namespace ired) defines the following classes
 ```

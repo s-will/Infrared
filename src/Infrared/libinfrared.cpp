@@ -1,3 +1,10 @@
+/**
+ * @file
+ * @brief The libinfrared module exposing infrared to Python
+ *
+ * This file specifies the python interface.
+ */
+
 /*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
@@ -7,7 +14,6 @@
  * InfraRed provides a generic framework for tree decomposition-based
  * Boltzmann sampling over constraint networks
  *
- * This file specifies the python interface.
  */
 
 #include <boost/python.hpp>
@@ -38,11 +44,16 @@ struct FunctionWrap
     }
 };
 
+/**
+ * @brief seed the random number generator (for sampling, as well as
+ * tree decomposition via libhtd)
+ */
 void
 seed(int x) {
     srand(x);
 }
 
+//! @brief The libinfrared module exposing infrared to Python
 BOOST_PYTHON_MODULE(libinfrared)
 {
     register_vector_conversions<int>();
@@ -53,7 +64,6 @@ BOOST_PYTHON_MODULE(libinfrared)
     bpy::class_<Assignment>("Assignment", bpy::init<int>())
         .def("values", &Assignment::values,
              bpy::return_value_policy<bpy::copy_const_reference>())
-        .def_readonly("undetermined", &Assignment::Undetermined)
         ;
 
     bpy::class_< FunctionWrap<bool>,

@@ -1,4 +1,5 @@
-/** 
+/**
+ * @file
  * @brief Very simple python wrapper for treeedemposition using htd
  *
  * Wrapper written by Sebastian Will, 2018
@@ -192,6 +193,9 @@ private:
 
 };
 
+/**
+ * @brief module wrapping (some form of) tree decomposition by libhtd 
+ */
 BOOST_PYTHON_MODULE(libhtdwrap)
 {
     register_vector_conversions<int>();

@@ -1,7 +1,7 @@
 #ifndef INFRARED_CLUSTER_HPP
 #define INFRARED_CLUSTER_HPP
 
-/* 
+/*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
  *
@@ -9,6 +9,12 @@
  *
  * InfraRed provides a generic framework for tree decomposition-based
  * Boltzmann sampling over constraint networks
+ */
+
+/**
+ * @file
+ *
+ * @brief Defines the clusters (=bags) of the cluster tree.
  */
 
 
@@ -19,12 +25,16 @@
 
 namespace ired {
     /**
-     * Cluster in the cluster tree decomposition
+     * @brief Cluster (or bag) in the cluster tree
      *
      * A cluster consists of collections
      *  - variables
      *  - constraints
      *  - functions
+     *
+     * Implicitly, a cluster belongs to a cluster tree and, thus, a
+     * constraint network CN. Variables are stored/identified by their unique
+     * indices in the CN.
      */
     template<class FunValue=double>
     class Cluster {
@@ -34,58 +44,75 @@ namespace ired {
         using constraint_t = Constraint;
         using assignment_t = Assignment;
 
-
+        /**
+         * @brief empty constructor
+        */
         Cluster() {
         }
 
+        /**
+         * @brief constructor with variables
+         *
+         * @param vars vector of indices of variables in the cluster
+         */
         Cluster(const std::vector<var_idx_t> &vars)
             : vars_(vars) {
         }
 
-        Cluster(const std::vector<var_idx_t> &vars,
-                const std::vector<constraint_t *> &constraints,
-                const std::vector<function_t *> &functions
-                )
-            : vars_(vars),
-              constrs_(constraints),
-              funs_(functions) {
-        }
-
+        /**
+         * @brief Get variables
+         *
+         * @return vector of indices of the variable in the cluster
+         */
         const std::vector<var_idx_t> &
         vars() const {return vars_;}
 
-        bool 
+        /**
+         * @brief Check whether cluster is empty
+         */
+        bool
         empty() const {
             return vars_.empty();
         }
 
+        /**
+         * @brief Get constraints
+         *
+         * @return vector of constraints assigned to the cluster
+         */
         const auto &
         constraints() const {
             return constrs_;
         }
 
+        /**
+         * @brief Get functions
+         *
+         * @return vector of functions assigned to the cluster
+         */
         const auto &
         functions() const {return funs_;}
 
-        void
-        add_variable(const var_idx_t &x) {
-            vars_.push_back(x);
-        }
-
+        /**
+         * @brief Assign constraint to this cluster
+         */
         void
         add_constraint(const constraint_t *c) {
             constrs_.push_back(c);
         }
 
+        /**
+         * @brief Assign function to this cluster
+         */
         void
         add_function(const function_t *f) {
             funs_.push_back(f);
         }
 
         /**
-         * @brief Separator variables
+         * @brief Calculate separator variables
          *
-         * @params parent parent cluster of this object 
+         * @params parent parent cluster of this object
          * @return vector of the indices of the separator variables
          *
          * The separator variables are the variables of this object
@@ -105,10 +132,10 @@ namespace ired {
             return vars;
         }
 
-        /** 
-         * @brief Difference variables
+        /**
+         * @brief Calculate difference variables
          *
-         * @params parent parent cluster of this object 
+         * @params parent parent cluster of this object
          * @return vector of the indices of the difference variables
          *
          * The difference variables are the variables of this object that

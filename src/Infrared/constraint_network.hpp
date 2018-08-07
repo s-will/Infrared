@@ -1,7 +1,7 @@
 #ifndef INFRARED_CONSTRAINT_NETWORK_HPP
 #define INFRARED_CONSTRAINT_NETWORK_HPP
 
-/* 
+/*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018
  *
@@ -11,6 +11,12 @@
  * Boltzmann sampling over constraint networks
  */
 
+/**
+ * @file
+ *
+ * @brief Defines constraint networks and standard evaluation
+ * policies.
+ */
 
 #include <vector>
 #include <memory>
@@ -19,6 +25,23 @@
 
 namespace ired {
 
+    /**
+     * @brief The standard evaluation policy to calculate partition
+     * functions.
+     *
+     * An evaluation policy defines an algebra with operations
+     * multiplies and plus, as well as respective neutral elements one
+     * and zero. The following must hold
+     *
+     * multiplies is associative and symmetric
+     * plus is associative and symmetric
+     * multiplies(one,x) == x
+     * multiplies(zero,x) == x
+     * plus(zero,x) == x
+     *
+     * In the standard policy multiplies corresponds to *, plus to +,
+     * zero to 0.0, and one to 1.0
+     */
     template<class FunValue>
     class StdEvaluationPolicy {
     public:
@@ -51,6 +74,11 @@ namespace ired {
         }
     };
 
+    /**
+     * @brief The evaluation policy to combine constraint values.  Here,
+     * multiplies corresponds to &&, plus to ||, one to true, and zero
+     * to false.
+     */
     template<>
     class StdEvaluationPolicy<bool> {
     public:
@@ -83,13 +111,19 @@ namespace ired {
         }
     };
 
-
-    /** A constraint network consists of sets of
+    /**
+     * @brief the constraint network
+     *
+     * A constraint network consists of sets of
      *  - variables
      *  - constraints
      *  - functions
      *
-     * @note The variables in a contraint network are indexed (0..n-1). Each variable has a domain of values 0..domsize
+     * The variables in a contraint network are indexed (0..n-1). Each
+     * variable has a domain of values 0..domsize.  A constraint
+     * network object holds shared pointers to the functions and
+     * constraints of the network. In this way, it guarantees their
+     * existence as long as the network exists.
      */
     template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
     class ConstraintNetwork {
@@ -140,6 +174,10 @@ namespace ired {
 
         /**
          * @brief add constraint
+         *
+         * @param x shared pointer to constraint
+         *
+         * The network holds a shared pointer to *x.
          */
         auto
         add_constraint(const std::shared_ptr<constraint_t> &x) {
@@ -149,6 +187,13 @@ namespace ired {
 
         /**
          * @brief add function
+         *
+         * @param x shared pointer to function
+         *
+         * If the virtual method x->auto_materialize() returns true,
+         * then the function *x is materialized as mx and the cn holds
+         * a shared pointer to *mx. Otherwise, the network holds a
+         * shared pointer to *x.
          */
         auto
         add_function(const std::shared_ptr<function_t> &x) {
@@ -162,10 +207,17 @@ namespace ired {
             return functions_.back().get();
         }
 
+        /**
+         * @brief Number of variables
+         */
         int
         num_vars() const {return domsizes_.size();}
 
-        const auto & domsizes() const {
+        /**
+         * @brief Get vector of domain sizes (read only)
+         */
+        const
+        auto & domsizes() const {
             return domsizes_;
         }
 
