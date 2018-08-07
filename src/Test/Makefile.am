@@ -1,4 +1,4 @@
-TESTS = test_infrared
+TESTS = test_infrared test_assignment
 
 check_PROGRAMS = test_infrared test_assignment
 
