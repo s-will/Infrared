@@ -4,6 +4,10 @@
 //
 ////////////////////////////////////////////////////////////
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <memory>
 #include <iostream>
 #include <array>

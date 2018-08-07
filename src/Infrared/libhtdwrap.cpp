@@ -21,6 +21,11 @@
  * [[0, 3], [3, 1], [1, 4], [4, 2]]
  */
 
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <boost/python.hpp>
 #include "boost_python_aux.hpp"
 
