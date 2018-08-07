@@ -69,7 +69,6 @@ AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 dnl ########################################
 dnl HTD tree decomposition library
 dnl ########################################
-HAS_HTD=false
 AC_ARG_WITH([htd],
     AC_HELP_STRING(
         [--with-htd=PREFIX],
@@ -77,29 +76,27 @@ AC_ARG_WITH([htd],
       )
 )
 
-AC_MSG_CHECKING([where to find the htd tree decomposition library])
-if test "$with_htd" = "" ; then
-  if test -d "/usr/local/include/htd" ; then
-    htd_prefix="/usr/local"
-  else
-    htd_prefix="/usr"
-  fi
-else
-  htd_prefix="$with_htd"
+if test "$HTD_PREFIX" = "" ; then
+    AC_MSG_CHECKING([where to find the htd tree decomposition library])
+    if test "$with_htd" = "" ; then
+      if test -d "/usr/local/include/htd" ; then
+        HTD_PREFIX="/usr/local"
+      else
+        HTD_PREFIX="/usr"
+      fi
+    else
+      HTD_PREFIX="$with_htd"
+    fi
+    AC_MSG_RESULT([$HTD_PREFIX])
 fi
-AC_MSG_RESULT([$htd_prefix])
 
-HTD_CPPFLAGS="-I$htd_prefix/include"
-HTD_LDFLAGS="-L$htd_prefix/lib"
+HTD_CPPFLAGS="-I$HTD_PREFIX/include"
+HTD_LDFLAGS="-L$HTD_PREFIX/lib"
 HTD_LIBS="-lhtd"
 
 AC_SUBST([HTD_CPPFLAGS])
 AC_SUBST([HTD_LDFLAGS])
 AC_SUBST([HTD_LIBS])
-
-dnl AM_CXXFLAGS="$HTD_CPPFLAGS $AM_CXXFLAGS"
-dnl AM_LDFLAGS="$HTD_LDFLAGS $AM_LDFLAGS"
-dnl LIBS="$LIBS $HTD_LIBS"
 
 dnl ##############################################################################
 dnl BOOST CHECK
