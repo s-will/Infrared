@@ -472,7 +472,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--method', type=int, default=0,
-                        help="Method for tree decomposition (0: use htd; othwerwise pass to TDlib as strategy)")
+                        help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
     parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
     parser.add_argument('--seed', type=int, default=None, help="Seed infrared's random number generator (def=auto)")
 

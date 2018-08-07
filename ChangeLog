@@ -1,2 +1,9 @@
+0.1
+	Optimize infrared evaluation/sampling engine
+	Optimize tree decomposition using libhtd
+	Cleanup treedecomp and redprint python code and add features
+	Bugfixes
+	Implement some tests
+
 0.0.1
 	Initial release
