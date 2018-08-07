@@ -85,16 +85,6 @@ public:
         algorithm->addManipulationOperation
             (new htd::AddEmptyRootOperation(manager_.get()));
 
-        // control the size of diffs, makes sampling faster
-        // How does this work exactly??
-        algorithm->addManipulationOperation
-            (new htd::LimitMaximumForgottenVertexCountOperation(manager_.get(), 2));
-
-
-        // // call the tree decomposition algorithm
-        // htd::ITreeDecomposition * td =
-        //     algorithm->computeDecomposition( *graph_.get() );
-
         auto iterative_algorithm = 
             new htd::IterativeImprovementTreeDecompositionAlgorithm
             (manager_.get(), algorithm, &fitnessFunction);
