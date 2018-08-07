@@ -3,6 +3,7 @@
 # some RNA related functions
 
 import re
+import collections
 
 def read_inp(inpfh):
     """read structures from inp file
@@ -89,6 +90,22 @@ def structure_to_stacking_dependencies(structure,edges=[]):
     for (i,j) in enumerate(structure):
         if i+1<j-1 and structure[i+1]==j-1:
             edges.extend([(i,j),(i+1,j-1),(i+1,j),(i,j-1),(i,i+1),(j,j-1)])
+
+
+def GC_content(seq):
+    """
+    Compute GC content in a sequence
+    """
+    c = collections.Counter(seq)
+
+    gc = 0
+    for x in ['C','G']:
+        if x in c:
+            gc += c[x]
+
+    gc = gc  / len(seq)
+
+    return gc
     
 if __name__ == "__main__":
     pass

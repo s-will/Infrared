@@ -4,12 +4,16 @@ lib_LTLIBRARIES = libinfrared.la libhtdwrap.la
 bin_SCRIPTS=treedecomp.py rna_support.py
 
 ########################################
+## infrared headers
+infrared_includedir=$(includedir)/Infrared
+infrared_include_HEADERS=assignment.hpp boost_python_aux.hpp	\
+	cluster.hpp cluster_tree.hpp constraint_network.hpp	\
+	functions.hpp infrared.hpp rnadesign.hpp
+
+########################################
 ## infrared module
 
-libinfrared_la_SOURCES = libinfrared.cpp assignment.hpp		\
-	boost_python_aux.hpp cluster.hpp cluster_tree.hpp	\
-	constraint_network.hpp functions.hpp infrared.hpp	\
-	rnadesign.hpp
+libinfrared_la_SOURCES = libinfrared.cpp $(infrared_include_HEADERS)
 
 ########################################
 ## htd wrapper module

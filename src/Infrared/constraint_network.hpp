@@ -18,6 +18,72 @@
 #include "cluster.hpp"
 
 namespace ired {
+
+    template<class FunValue>
+    class StdEvaluationPolicy {
+    public:
+        using fun_value_t = FunValue;
+        using constraint_t = Function<bool>;
+        using function_t = Function<fun_value_t>;
+
+        static
+        fun_value_t
+        plus(const fun_value_t &x, const fun_value_t &y) {
+            return x+y;
+        }
+
+        static
+        fun_value_t
+        multiplies(const fun_value_t &x, const fun_value_t &y) {
+            return x*y;
+        }
+
+        static
+        fun_value_t
+        one() {
+            return fun_value_t(1);
+        }
+
+        static
+        fun_value_t
+        zero() {
+            return fun_value_t();
+        }
+    };
+
+    template<>
+    class StdEvaluationPolicy<bool> {
+    public:
+        using fun_value_t = bool;
+        using constraint_t = Constraint;
+        using function_t = Constraint;
+
+        static
+        fun_value_t
+        plus(const fun_value_t &x, const fun_value_t &y) {
+            return x || y;
+        }
+
+        static
+        fun_value_t
+        multiplies(const fun_value_t &x, const fun_value_t &y) {
+            return x && y;
+        }
+
+        static
+        fun_value_t
+        one() {
+            return true;
+        }
+
+        static
+        fun_value_t
+        zero() {
+            return false;
+        }
+    };
+
+
     /** A constraint network consists of sets of
      *  - variables
      *  - constraints
@@ -25,7 +91,7 @@ namespace ired {
      *
      * @note The variables in a contraint network are indexed (0..n-1). Each variable has a domain of values 0..domsize
      */
-    template<class FunValue=double>
+    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
     class ConstraintNetwork {
     public:
         using var_idx_t = int;
@@ -36,6 +102,8 @@ namespace ired {
         using assignment_t = Assignment;
         using function_t = Function<FunValue>;
         using constraint_t = Constraint;
+
+        using evaluation_policy_t = EvaluationPolicy;
 
         //! @brief suitable cluster type for the constraint network
         using cluster_t = Cluster<fun_value_t>;
@@ -70,25 +138,8 @@ namespace ired {
             return domsizes_.size()-1;
         }
 
-        // /**
-        //  * @brief add constraint (cloning)
-        //  * @returns pointer to the new constraint
-        //  */
-        // auto
-        // add_constraint(const constraint_t &x) {
-        //     return add_constraint( x.clone() );
-        // }
-
-        // /**
-        //  * @brief add function
-        //  */
-        // auto
-        // add_function(const function_t &x)  {
-        //     return add_function( x.clone() );
-        // }
-
         /**
-         * @brief add constraint (moving ownership)
+         * @brief add constraint
          */
         auto
         add_constraint(const std::shared_ptr<constraint_t> &x) {
@@ -101,10 +152,15 @@ namespace ired {
          */
         auto
         add_function(const std::shared_ptr<function_t> &x) {
-            functions_.push_back( x );
+            if ( x->auto_materialize() ) {
+                //materialize it
+                auto mx = std::make_shared<MaterializedFunction<typename function_t::fun_value_t, vecS>>(x.get(),*this);
+                functions_.push_back( mx );
+            } else {
+                functions_.push_back( x );
+            }
             return functions_.back().get();
         }
-
 
         int
         num_vars() const {return domsizes_.size();}
@@ -122,39 +178,5 @@ namespace ired {
 
     };
 
-
-    //NOTE: it should be possible to directly (manually) construct a tree decomposition
-    // such that the cn is filled implicitely
-
-    template<class FunValue>
-    class StdEvaluationPolicy {
-    public:
-        using fun_value_t = FunValue;
-
-        static
-        fun_value_t
-        plus(const fun_value_t &x, const fun_value_t &y) {
-            return x+y;
-        }
-
-        static
-        fun_value_t
-        multiplies(const fun_value_t &x, const fun_value_t &y) {
-            return x*y;
-        }
-
-        static
-        fun_value_t
-        one() {
-            return fun_value_t(1);
-        }
-
-        static
-        fun_value_t
-        zero() {
-            return fun_value_t();
-        }
-
-    };
 }
 #endif

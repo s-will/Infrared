@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
 
-############################### 
+###############################
 # Redprint v2 based on InfraRed
 ##-----------------------------
 # (C) Sebastian Will, 2018
-# 
+#
 # This file is part of the InfraRed source code.
-# 
+#
 # InfraRed provides a generic framework for tree decomposition-based
 # Boltzmann sampling over constraint networks
 #
 # Redprint provides Boltzmann sampling of sequences targeting multiple RNA structures.
-# 
+#
 # This file defines the Redprint main function.
-# 
-
+#
 
 import random
 import argparse
-from collections import Counter
 import itertools
 import os
 
 import libinfrared as ir
 import treedecomp
 import rna_support as rna
-import treedecomp
 
 # importing Vienna package if not in path could require setting python path like
 # export PYTHONPATH=$HOME/Soft/ViennaRNA-2.4.8/lib/python3.6/site-packages
@@ -67,7 +64,7 @@ STACK_GUUG = -0.68876
 def val2nucl(x):
     return "ACGU"[x]
 def values2seq(xs):
-    return "".join(map(val2nucl,xs))
+    return "".join(map(val2nucl, xs))
 
 def set_bpenergy_table(tab):
     ir.BPEnergy.set_energy_table(tab)
@@ -76,7 +73,7 @@ def set_stacking_energy_table(tab):
     ir.StackEnergy.set_energy_table(tab)
 
 def accumulate_dict(xys):
-    d = { x:[] for x,y in xys }
+    d = {x:[] for x,y in xys}
     for (x,y) in xys:
         d[x].append(y)
     return d
@@ -87,10 +84,16 @@ class RNAConstraintNetwork:
         self.structures = list(structures)
         self.weights = list(weights)
         self.gcweight = gcweight
-
+        
+        # to be filled later
+        self.bpdependencies = []
+        self.constraints=[]
+        self.functions=[]
+        
+        
     ## generate the dependencies due to base pairs
     ## (makes dependencies unique)
-    def bp_dependencies(self):
+    def gen_bp_dependencies(self):
         bps = set()
         for structure in self.structures:
             for bp in structure:
@@ -120,18 +123,21 @@ class RNAConstraintNetwork:
 
         visited = set()
 
-        other_ends = accumulate_dict(self.bpdependencies + list( map(list,map(reversed,self.bpdependencies)) ))
-
+        other_ends = accumulate_dict(self.bpdependencies
+                                     + list( map(list,map(reversed,self.bpdependencies)) ))
         color = 1
-        
+
         for x in range(self.seqlen):
             if x in visited: continue
-            if x not in other_ends: continue # if there is no base pair
 
             ## new component, color it
-            stack = [x]
             self.compl_classes[x] = color
             color+=1
+
+            if x not in other_ends:
+                continue # if there is no base pair
+
+            stack = [x]
 
             while stack:
                 x = stack.pop()
@@ -140,12 +146,12 @@ class RNAConstraintNetwork:
                 for y in other_ends[x]:
                     self.compl_classes[y]= -self.compl_classes[x]
                     stack.append(y)
-    
-    # add the functions for gc-content control to self.functions 
+
+    # add the functions for gc-content control to self.functions
     def add_gc_control(self):
         gc_control_funs = [ ( [i], [ir.GCControl(i,self.gcweight)] ) for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
-        
+
     # add the complementarity constraints to self.constraints
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
@@ -166,23 +172,23 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
         super().__init__(seqlen, structures, weights, gcweight)
 
         self.generate_cn_basepair_model()
-        
+
         self.compute_compl_classes()
-        
+
 
     ## generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
-        self.bpdependencies = self.bp_dependencies()
+        self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.bpdependencies
 
         self.constraints = self.compl_constraints()
 
         self.functions = list()
-        
+
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
             self.functions.extend( [ ( [i,j],
-                                       [ir.BPEnergy(i,j, not (i-1,j+1) in structureset, self.weights[k])] ) 
+                                       [ir.BPEnergy(i,j, not (i-1,j+1) in structureset, self.weights[k])] )
                                      for (i,j) in structure ] )
 
         self.add_gc_control()
@@ -194,24 +200,24 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
         super().__init__(seqlen, structures, weights, gcweight)
 
         self.generate_cn_stacking_model()
-        
+
         self.compute_compl_classes()
-        
+
 
     ## generate constraint network for the base pair model
     def generate_cn_stacking_model(self):
-        self.bpdependencies = self.bp_dependencies()
+        self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.remove_redundant_dependencies( self.stacking_dependencies() + self.bpdependencies )
 
 
         self.constraints = self.compl_constraints()
 
         self.functions = list()
-        
+
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
             self.functions.extend( [ ( [i,j,i+1,j-1],
-                                       [ir.StackEnergy(i, j, self.weights[k])] ) 
+                                       [ir.StackEnergy(i, j, self.weights[k])] )
                                      for (i,j) in structure
                                      if (i+1,j-1) in structureset
             ] )
@@ -228,10 +234,9 @@ class RNATreeDecomposition:
         bindependencies  = self.expand_to_cliques(cn.dependencies)
 
         # generate tree decomposition -> bags, edges  (beware: translate between 0/1-based)
-        bags,edges = treedecomp.makeTD(cn.seqlen, bindependencies, method = method)
+        self.td = treedecomp.makeTD(cn.seqlen, bindependencies, method = method)
 
-        self.edges = edges
-        self.bags = list(map(set,bags))
+        self.bagsets = list(map(set,self.td.bags))
 
     @staticmethod
     def expand_to_cliques(dependencies):
@@ -240,10 +245,10 @@ class RNATreeDecomposition:
             bindeps.extend( itertools.combinations(d,2) )
         return bindeps
 
-    
+
     ## get (first) index of bag that contains all variables
     def find_all_bags(self,bvars):
-        return [ i for i,bag in enumerate(self.bags) if all( x in bag for x in bvars ) ]
+        return [ i for i,bag in enumerate(self.bagsets) if all( x in bag for x in bvars ) ]
 
     def find_bag(self,bvars):
         bags = self.find_all_bags(bvars)
@@ -255,13 +260,13 @@ class RNATreeDecomposition:
     # asisgn constraints or functions to bags
     # @returns list where constraints are placed at corresponding bag indices
     def assign_to_bags(self,constraints):
-        bagconstraints = { i:[]  for i in range(len(self.bags)) }
+        bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
         for (cvars,ccons) in constraints:
             bagconstraints[self.find_bag(cvars)].extend(ccons)
         return bagconstraints
 
     def assign_to_all_bags(self,constraints):
-        bagconstraints = { i:[]  for i in range(len(self.bags)) }
+        bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
         for (cvars,ccons) in constraints:
             for bidx in self.find_all_bags(cvars):
                 bagconstraints[bidx].extend(ccons)
@@ -277,7 +282,7 @@ class RNATreeDecomposition:
     ## avoids to add constraints which already exist
     def fillin_class_constraints(self, classes, existing_constraints, bagconstraints):
         existing = set( (vars[0],vars[1]) for (vars,constr) in existing_constraints )
-        for bagidx,bag in enumerate(self.bags):
+        for bagidx,bag in enumerate(self.bagsets):
             bagvars=sorted(list(bag))
             for j in bagvars[1:]:
                 if all( (i,j) not in existing for i in range(0,j) ):
@@ -289,22 +294,6 @@ class RNATreeDecomposition:
                         #print("Add diff:",i,j)
                         bagconstraints[bagidx].append(ir.DifferentComplClassConstraint(i,j))
 
-    @staticmethod
-    def toposort(n,adj):
-        visited = set()
-        sorted = list()
-
-        def toposort_helper(i):
-            visited.add(i)
-            for j in adj[i]:
-                if not j in visited:
-                    toposort_helper(j)
-            sorted.append(i)
-
-        for i in range(n):
-            if not i in visited:
-                toposort_helper(i)
-        return sorted[::-1]
 
     def construct_cluster_tree(self):
         if self.add_redundant_constraints:
@@ -319,37 +308,28 @@ class RNATreeDecomposition:
 
         ct = ir.ClusterTree(self.cn.seqlen, 4);
 
-        ## perform topological sort
-        adj = { i:[] for i in range(len(self.bags))}
-        for [i,j] in self.edges:
-            adj[i].append(j)
-
-        sorted_bags = self.toposort(len(self.bags),adj)
-
         children = set() # keep record of all non-root nodes (which have been seen as children)
-        for bagidx in sorted_bags:
+        for bagidx in self.td.toposorted_bag_indices():
             if not bagidx in children:
                 # enumerate subtree
                 stack = [(None,bagidx)]
                 while stack:
                     (p,i) = stack[-1]
                     stack = stack[:-1]
-                    bagvars = sorted(list(self.bags[i]))
+                    bagvars = sorted(list(self.bagsets[i]))
 
                     if p==None:
                         cluster = ct.add_root_cluster(bagvars)
                     else:
                         cluster = ct.add_child_cluster(p,bagvars)
 
-                    for xcon in bagconstraints[i]: #  + self.cn.gen_redundant_bpconstraints(bagvars)
-                        ct.add_constraint(cluster, xcon)
+                    for x in bagconstraints[i]: #  + self.cn.gen_redundant_bpconstraints(bagvars)
+                        ct.add_constraint(cluster, x)
 
-                    for xfun in bagfunctions[i]:
-                        ct.add_function(cluster, xfun)
+                    for x in bagfunctions[i]:
+                        ct.add_function(cluster, x)
 
-                    #print(self.bags[i],list(map(lambda x:x.vars(),bagconstraints[i])))
-
-                    for j in adj[i]:
+                    for j in self.td.adj[i]:
                         children.add(j)
                         stack.append((cluster,j))
         return ct
@@ -360,27 +340,30 @@ class RNATreeDecomposition:
 
 def main(args):
     ## init seed
-    ir.seed(random.randint(0,2**31))
+    if args.seed == None:
+        ir.seed(random.randint(0,2**31))
+    else:
+        ir.seed(args.seed)
 
     # set base pair energies ( AU,GC,GU in stems and terminal )
     set_bpenergy_table( [ AU_IN,
-                              GC_IN,
-                              GU_IN,
-                              AU_TERM,
-                              GC_TERM,
-                              GU_TERM ] )
+                          GC_IN,
+                          GU_IN,
+                          AU_TERM,
+                          GC_TERM,
+                          GU_TERM ] )
 
     set_stacking_energy_table( [ STACK_AUAU, STACK_AUUA,
-                                     STACK_AUCG, STACK_AUGC,
-                                     STACK_AUGU, STACK_AUUG,
-                                     
-                                     STACK_CGAU, STACK_CGUA,
-                                     STACK_CGCG, STACK_CGGC,
-                                     STACK_CGGU, STACK_CGUG,
-                                     
-                                     STACK_GUAU, STACK_GUUA,
-                                     STACK_GUCG, STACK_GUGC,
-                                     STACK_GUGU, STACK_GUUG ] )
+                                 STACK_AUCG, STACK_AUGC,
+                                 STACK_AUGU, STACK_AUUG,
+
+                                 STACK_CGAU, STACK_CGUA,
+                                 STACK_CGCG, STACK_CGGC,
+                                 STACK_CGGU, STACK_CGUG,
+
+                                 STACK_GUAU, STACK_GUUA,
+                                 STACK_GUCG, STACK_GUGC,
+                                 STACK_GUGU, STACK_GUUG ] )
 
     ## read instance
     with open(args.infile) as infh:
@@ -403,11 +386,11 @@ def main(args):
 
     ## build constraint network
     if args.model in ["bp","basepair"]:
-        cn = RNAConstraintNetworkBasePair( seqlen, bps, 
-                                               weights, args.gcweight )
+        cn = RNAConstraintNetworkBasePair( seqlen, bps,
+                                           weights, args.gcweight )
     elif args.model in ["stack","stacking"]:
-        cn = RNAConstraintNetworkStacking( seqlen, bps, 
-                                               weights, args.gcweight )
+        cn = RNAConstraintNetworkStacking( seqlen, bps,
+                                           weights, args.gcweight )
     else:
         print("Model",args.model,"unknown! Please see help for supported modules.")
         exit(-1)
@@ -415,69 +398,92 @@ def main(args):
     #print(sorted([ vars for (vars,c) in cn.constraints]))
 
     ## make tree decomposition
-    td = RNATreeDecomposition( cn, 
+    rtd = RNATreeDecomposition( cn,
                                add_redundant_constraints = not args.no_redundant_constraints,
                                method=args.method )
 
-    #print(td.bags)
+    #print(rtd.td.bags)
 
     ## optionally, write tree decomposition
     if args.plot_td:
         dotfilename = "treedecomp.dot"
         with open(dotfilename,"w") as dot:
-            treedecomp.writeTD(dot, td.bags, td.edges)
+            rtd.td.writeTD(dot)
         treedecomp.dotfile_to_pdf(dotfilename)
         os.remove(dotfilename)
 
+    if args.verbose:
+        print("Treewidth:",rtd.td.treewidth())
 
-    treewidth = max(map(len,td.bags))-1
-    print("Treewidth:",treewidth)
-    
     ## make cluster tree
-    ct = td.construct_cluster_tree()
+    ct = rtd.construct_cluster_tree()
 
     ## evaluate
     ct.evaluate()
 
-    ## sample
-
     # for statistics
-    counters=[Counter() for i in range(0,seqlen)]
+    features = dict()
+    def register_feature(feat_id,val):
+        if feat_id not in features:
+            features[feat_id] = []
+        features[feat_id].append(val)
 
+    ## sample
     for x in range(0,args.number):
         sample = ct.sample()
         seq = values2seq(sample.values())
         print(seq,end='')
         if args.turner:
             for i,struc in enumerate(structures):
-                print(" E_{}={:3.2f}".format(i+1,RNA.energy_of_struct(seq,struc)),end='')
+                eos = RNA.energy_of_struct(seq,struc)
+                feat_id = "E_{}".format(i+1)
+                register_feature(feat_id,eos)
+                print(" {}={:3.2f}".format(feat_id,eos),end='')
+
+        if args.gc:
+            gc = rna.GC_content(seq)
+            feat_id = "GC"
+            register_feature(feat_id,gc)
+            print(" GC={:3.2f}".format(gc*100),end='')
 
         if args.checkvalid:
             for i,struc in enumerate(structures):
                 if not rna.is_valid(seq, struc):
                     print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
-
         print()
 
-        ## statistics
-        for i in range(seqlen):
-            counters[i][seq[i]] += 1
-
     if args.verbose:
-        print(sum(counters[1:],counters[0]))
+        if features:
+            print("----------")
+            print("Summary: ",end='')
 
+        def mean(xs):
+            xs = list(xs)
+            return sum(xs)/len(xs)
+
+        for fid in features:
+            mu = mean(features[fid])
+            std = (mean(map(lambda x: x**2,features[fid])) - mu**2 )**0.5
+
+            print(" {}={:3.2f} +/-{:3.2f}".format(fid,mu,std),end='')
+        print()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--method', type=int, default=0,
-                        help="Method for tree decomposition (0: use htd; othwerwise pass to TDlib as strategy)")
+                        help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
     parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
+    parser.add_argument('--seed', type=int, default=None, help="Seed infrared's random number generator (def=auto)")
+
     parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
     parser.add_argument('--model', type=str, default="bp",
                         help="Energy model used for sampling [bp=base pair model,stack=stacking model]")
     parser.add_argument('--turner', action="store_true",
                         help="Report Turner energies of the single structures for each sample")
+    parser.add_argument('--gc', action="store_true",
+                        help="Report GC contents of the single structures for each sample")
+
     parser.add_argument('--checkvalid', action="store_true",
                         help="Check base pair complementarity for each structure and for each sample")
 
