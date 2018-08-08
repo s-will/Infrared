@@ -119,6 +119,7 @@ BOOST_PYTHON_MODULE(libinfrared)
            boost::noncopyable>("GCControl", bpy::init<int, double>());
 
     bpy::class_<ClusterTree<>>("ClusterTree", bpy::init<int,int>())
+        .def(bpy::init<const std::vector<int> &>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)
         .def("add_child_cluster", &ClusterTree<>::add_child_cluster)
         .def("add_constraint", &ClusterTree<>::add_constraint)

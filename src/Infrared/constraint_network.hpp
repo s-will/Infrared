@@ -150,7 +150,7 @@ namespace ired {
         /**
          * @brief Construct with domains
          */
-        ConstraintNetwork(std::vector<int> &domsizes)
+        ConstraintNetwork(const std::vector<int> &domsizes)
             : domsizes_(domsizes) {
         };
 

@@ -100,7 +100,7 @@ namespace ired {
          * @param domsizes vector of domain sizes for each variable;
          * its length specifies the number of variables
          */
-        ClusterTree(std::vector<int> &domsizes)
+        ClusterTree(const std::vector<int> &domsizes)
             : cn_(domsizes) {
         };
 
