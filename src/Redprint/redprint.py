@@ -523,7 +523,7 @@ def main(args):
         if args.gc:
             gc = rna.GC_content(seq)
             feat_id = "GC"
-            register_feature(feat_id,gc)
+            register_feature(feat_id,gc*100)
             print(" GC={:3.2f}".format(gc*100),end='')
 
         if args.checkvalid:
