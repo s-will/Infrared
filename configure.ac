@@ -148,7 +148,6 @@ AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
 
 dnl files to generate via autotools (.am or .in source files)
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([Doc/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/Infrared/Makefile])
 AC_CONFIG_FILES([src/Redprint/Makefile])
