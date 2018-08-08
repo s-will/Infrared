@@ -1,34 +1,56 @@
 #!/usr/bin/env python3
 
+
+# -----------------------------
+# (C) Sebastian Will, 2018
 #
-# Determine the tree width for instances to multi-target structure design
+# This file is part of the InfraRed source code.
 #
-# Author: Sebastian Will, Oct 2017
+# InfraRed provides a generic framework for tree decomposition-based
+# Boltzmann sampling over constraint networks
 #
-# Input is read from .inp files
-# USAGE: td_complexity.py <inpfile>
+# Redprint provides Boltzmann sampling of sequences targeting multiple RNA structures.
 #
-# Determine tree width after decomp with TDlib in two energy models
-#  -- (weighted) base pair energy model
-#  -- stacking energy model
-#
-# The execution time of TDlib is logged.
-#
-# RESULT:
-# writes tab-separated line
-# filename tw_bp tw_st time_bp time_st
-#
-#
-# INPUT FORMAT:
-# * inp files contain the structures in dot bracket notation, one per line
-# * structures must start with . or ( or )
-# * pseudoknots are supported; possible bracket symbols: (),[],{},<>
-# * file content after the first ; is ignored
-#
-# Side effects: (over)writes files basepair.* and stacking.* in current directory,
-# which are removed on correct termination
-# --> current directory MUST be writable
-#
+
+## @file
+## Inspecting RedPrint's dependency graphs and tree decompositions
+##
+## Calculates dependency graphs and tree decompositions for RedPrint's
+## energy models.  Reports tree widths and plot's the dependency
+## graphs and tree decompositions.
+##
+## Input is read from .inp files
+## USAGE: td_complexity.py <inpfile>
+##
+## Determine tree width after decomp with TDlib in two energy models
+##
+##  * (weighted) base pair energy model
+##
+##  * stacking energy model
+##
+## Without further options, writes tab-separated line
+## ```
+## filename    tw_bp    tw_st    time_bp    time_st
+## ```
+## where tw_bp, tw_st are the tree widths of the generated tree
+## decompositions for the base pair and stacking model; moreover,
+## time_bp and time_st are the respective run-times of the
+## decomposition algorithm.
+##
+## Input format (inp file format):
+##
+## * inp files contain the structures in dot bracket notation, one per line
+##
+## * structures must start with . or ( or )
+##
+## * pseudoknots are supported; by default recognized bracket symbols: (),[],{},<>
+##
+## * all file content after the first ';' is ignored
+##
+## Side effects: with arguments --keep_graphs and --plot_graphs, the
+## tool (over)writes files basepair.* and stacking.* in the current
+## directory, which are removed on correct termination --> current
+## directory MUST be writable
 
 
 import re
@@ -45,7 +67,28 @@ str_to_dep = { "basepair": rna.structure_to_basepair_dependencies,
                "stacking": rna.structure_to_stacking_dependencies
 }
 
-def process_instance(infh,models,args):
+## @brief process one RNA design problem instance
+##
+## @param infh input file handle (input must be in inp format)
+## @param args parsed command line arguments of the tool 
+def main(infh,args):
+    ## init seed
+    if args.seed == None:
+        libinfrared.seed(random.randint(0,2**31))
+    else:
+        libinfrared.seed(args.seed)
+
+    ## model
+    if args.model is None:
+        models = str_to_dep.keys()
+    elif args.model in ["bp","basepair"]:
+        models = ["basepair"]
+    elif args.model in ["stack","stacking"]:
+        models = ["stacking"]
+    else:
+        print("Model",args.model,"unknown! Please see help for supported modules.")
+        exit(-1)
+
     structures = rna.read_inp(infh)
 
     tw=dict()
@@ -103,32 +146,13 @@ if __name__ == "__main__":
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; othwerwise pass to TDlib as strategy)")
     parser.add_argument('--seed', type=int, default=None, help="Seed infrared's random number generator. Concerns only method=0 (def=auto)")
-
     parser.add_argument('--maxdiffsize', type=int, default=1,
                         help="Maximum size of diff sets (Concerns only method=0)")
-
-    parser.add_argument('--model', type=str, default="bp",
+    parser.add_argument('--model', type=str, default=None,
                         help="Energy model used for sampling [bp=base pair model,stack=stacking model]")
 
     args=parser.parse_args()
 
-    ## init seed
-    if args.seed == None:
-        libinfrared.seed(random.randint(0,2**31))
-    else:
-        libinfrared.seed(args.seed)
-
-    ## model
-    if args.model is None:
-        models = str_to_dep.keys()
-    elif args.model in ["bp","basepair"]:
-        models = ["basepair"]
-    elif args.model in ["stack","stacking"]:
-        models = ["stacking"]
-    else:
-        print("Model",args.model,"unknown! Please see help for supported modules.")
-        exit(-1)
-
     with open(args.infile) as infh:
-        results = process_instance(infh,models,args)
+        results = main(infh,args)
         print("\t".join([args.infile]+results))
