@@ -1,6 +1,10 @@
+0.2.1
+	Add/cleanup doxygen documentation of Python modules
+
 0.2
 	Improve program comments, support doxygen (make doxygen-doc)
 	Revise code, fix make check
+
 0.1
 	Optimize infrared evaluation/sampling engine
 	Optimize tree decomposition using libhtd
