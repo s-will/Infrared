@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS = subdir-objects
-SUBDIRS=Infrared Redprint Test
+SUBDIRS=Infrared Redprint Romy Test
