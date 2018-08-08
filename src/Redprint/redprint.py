@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-###############################
-# Redprint v2 based on InfraRed
-##-----------------------------
+# -----------------------------
 # (C) Sebastian Will, 2018
 #
 # This file is part of the InfraRed source code.
@@ -12,8 +10,18 @@
 #
 # Redprint provides Boltzmann sampling of sequences targeting multiple RNA structures.
 #
-# This file defines the Redprint main function.
-#
+
+###############################
+## @file
+## Redprint v2 based on InfraRed
+##
+## Defines the redprint library module and the redprint command line
+## tool
+##
+## @note Dependencies: the redprint tool needs ViennaRNA's RNA pyhton
+## module, which could require to set the python path like: export
+## PYTHONPATH=$VRNAVIENNA_HOME/lib/python3.6/site-packages. For
+## further dependencies see Infrared/treedecomp.py.
 
 import random
 import argparse
@@ -24,75 +32,83 @@ import libinfrared as ir
 import treedecomp
 import rna_support as rna
 
-# importing Vienna package if not in path could require setting python path like
-# export PYTHONPATH=$HOME/Soft/ViennaRNA-2.4.8/lib/python3.6/site-packages
-import RNA
 
-##############################
-# The magic parameters used in the redprint paper
-#
-GC_IN = -2.10208
-AU_IN = -0.52309
-GU_IN = -0.88474
-GC_TERM = -0.09070
-AU_TERM = 1.26630
-GU_TERM = 0.78566
-#
-STACK_AUAU = -0.18826
-STACK_AUCG = -1.13291
-STACK_AUGC = -1.09787
-STACK_AUGU = -0.38606
-STACK_AUUA = -0.26510
-STACK_AUUG = -0.62086
-STACK_CGAU = -1.11752
-STACK_CGCG = -2.23740
-STACK_CGGC = -1.89434
-STACK_CGGU = -1.22942
-STACK_CGUA = -1.10548
-STACK_CGUG = -1.44085
-STACK_GUAU = -0.55066
-STACK_GUCG = -1.26209
-STACK_GUGC = -1.58478
-STACK_GUGU = -0.72185
-STACK_GUUA = -0.49625
-STACK_GUUG = -0.68876
+## Parameters for the base pair model (magic params from the Redprint paper)
+params_bp={
+    "GC_IN": -2.10208,
+    "AU_IN": -0.52309,
+    "GU_IN": -0.88474,
+    "GC_TERM": -0.09070,
+    "AU_TERM": 1.26630,
+    "GU_TERM": 0.78566
+}
 
+## Parameters for the stacking model (magic params from the Redprint paper)
+params_stacking = {
+    "AUAU": -0.18826,
+    "AUCG": -1.13291,
+    "AUGC": -1.09787,
+    "AUGU": -0.38606,
+    "AUUA": -0.26510,
+    "AUUG": -0.62086,
+    "CGAU": -1.11752,
+    "CGCG": -2.23740,
+    "CGGC": -1.89434,
+    "CGGU": -1.22942,
+    "CGUA": -1.10548,
+    "CGUG": -1.44085,
+    "GUAU": -0.55066,
+    "GUCG": -1.26209,
+    "GUGC": -1.58478,
+    "GUGU": -0.72185,
+    "GUUA": -0.49625,
+    "GUUG": -0.68876
+}
 
 ############################################################
 ## Redprint Library
 
+## @brief Convert integer (variable value) to nucleotide
+## @note encoding A=0, C=1, G=2, U=3
 def val2nucl(x):
     return "ACGU"[x]
+
+## @brief Convert list of integers (variable values) to string
+## (sequence) of nucleotides
 def values2seq(xs):
     return "".join(map(val2nucl, xs))
 
+## @brief set the bp energy table for Infrared
 def set_bpenergy_table(tab):
     ir.BPEnergy.set_energy_table(tab)
 
+## @brief set the stacking energy table for Infrared
 def set_stacking_energy_table(tab):
     ir.StackEnergy.set_energy_table(tab)
 
-def accumulate_dict(xys):
-    d = {x:[] for x,y in xys}
-    for (x,y) in xys:
-        d[x].append(y)
-    return d
-
+## @brief A constraint network for multi-target RNA design
+##
+## 'Abstract' class, which provides some common functionality for
+## specific energy models
+##
+## The constraint network specifies the number of variables, the
+## specific dependencies, the constraints and functions of a
+## multi-target RNA design instance
 class RNAConstraintNetwork:
     def __init__(self, seqlen, structures, weights, gcweight):
         self.seqlen = seqlen
         self.structures = list(structures)
         self.weights = list(weights)
         self.gcweight = gcweight
-        
+
         # to be filled later
         self.bpdependencies = []
         self.constraints=[]
         self.functions=[]
-        
-        
-    ## generate the dependencies due to base pairs
-    ## (makes dependencies unique)
+
+    ## @brief Generate base pair dependencies
+    ##
+    ## @return unique binary dependencies due to base pairs as list of lists of indices;
     def gen_bp_dependencies(self):
         bps = set()
         for structure in self.structures:
@@ -100,8 +116,9 @@ class RNAConstraintNetwork:
                 bps.add(bp)
         return [ [i,j] for (i,j) in list(bps) ]
 
-    ## generate the dependencies due to base pairs
-    ## (makes dependencies unique)
+    ## @brief Generate stacking dependencies
+    ##
+    ## @return unique 4-ary dependencies due to stacks of base pairs as list of lists of indices
     def stacking_dependencies(self):
         stacked_bps = set()
         for structure in self.structures:
@@ -112,12 +129,21 @@ class RNAConstraintNetwork:
         return [ [i,j,i+1,j-1] for (i,j) in list(stacked_bps) ]
 
 
-    ## compute complementarity classes for each connected component,
+    ## @brief Compute complementarity classes
+    ##
+    ## Compute complementarity classes for each connected component,
     ## i.e. the components of the bipartitiion induced by the
     ## complementarity constraints on base pairs
     ##
-    ## @writes result in self.compl_classes
+    ## Returns result in self.compl_classes
     def compute_compl_classes(self):
+        ## Transform pairs into dict with keys=first and value=list of second components
+        def accumulate_dict(xys):
+            d = {x:[] for x,y in xys}
+            for (x,y) in xys:
+                d[x].append(y)
+            return d
+
         ## perform depth-first traversal
         self.compl_classes = dict()
 
@@ -147,16 +173,23 @@ class RNAConstraintNetwork:
                     self.compl_classes[y]= -self.compl_classes[x]
                     stack.append(y)
 
-    # add the functions for gc-content control to self.functions
+    ## @brief Add the functions for gc-content control to self.functions
     def add_gc_control(self):
         gc_control_funs = [ ( [i], [ir.GCControl(i,self.gcweight)] ) for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
 
-    # add the complementarity constraints to self.constraints
+    ## @brief Add the complementarity constraints to self.constraints
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
         return [ ([i,j], [ir.ComplConstraint(i,j)]) for [i,j] in self.bpdependencies ]
 
+    ## @brief Removes redundant dependencies
+    ##
+    ## @param deps list of dependencies (where a dependency is a list of indices)
+    ##
+    ## Removes all dependencies that are subsumed by other dependencies in deps
+    ##
+    ## @return pruned list of dependencies
     @staticmethod
     def remove_redundant_dependencies(deps):
         def sublist(xs,ys):
@@ -165,8 +198,14 @@ class RNAConstraintNetwork:
             return any( len(dep)<len(dep2) and sublist(dep,dep2) for dep2 in deps )
         return [ dep for dep in deps if not subsumed(dep,deps) ]
 
-
+## @brief Construct and hold constraint network for mult-target design based in the base pair energy model
 class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
+    ## @brief Constructor from sequence length, structures and weights
+    ##
+    ## @param seqlen length of sequences
+    ## @param structures list of target structures in dot bracket format
+    ## @param weights list of weights for the single structures
+    ## @param gcweight weight for GC-content
     def __init__(self, seqlen, structures, weights, gcweight):
 
         super().__init__(seqlen, structures, weights, gcweight)
@@ -175,8 +214,7 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 
         self.compute_compl_classes()
 
-
-    ## generate constraint network for the base pair model
+    ## @brief Generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
         self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.bpdependencies
@@ -193,8 +231,14 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 
         self.add_gc_control()
 
-
+## @brief Construct and hold constraint network for mult-target design based in the stacking energy model
 class RNAConstraintNetworkStacking(RNAConstraintNetwork):
+    ## @brief Constructor from sequence length, structures and weights
+    ##
+    ## @param seqlen length of sequences
+    ## @param structures list of target structures in dot bracket format
+    ## @param weights list of weights for the single structures
+    ## @param gcweight weight for GC-content
     def __init__(self, seqlen, structures, weights, gcweight):
 
         super().__init__(seqlen, structures, weights, gcweight)
@@ -203,8 +247,7 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 
         self.compute_compl_classes()
 
-
-    ## generate constraint network for the base pair model
+    ## @brief Generate constraint network for the stacking model
     def generate_cn_stacking_model(self):
         self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.remove_redundant_dependencies( self.stacking_dependencies() + self.bpdependencies )
@@ -224,8 +267,19 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 
         self.add_gc_control()
 
+## @brief Holds tree decomposition for RNA design, constructs RNA design cluster tree
+##
 class RNATreeDecomposition:
-    def __init__(self, cn, *, add_redundant_constraints=True, method):
+
+    ## @brief Constructor from constraint network
+    ##
+    ## @param cn the RNA design constraint network
+    ## @param add_redundant_constraints whether to insert redundant
+    ## constraints (in practice, one usually wants this for performance!)
+    ## @param method tree decomposition method
+    ##
+    ## Calls tree decomposition algorithm (according to method)
+    def __init__(self, cn, *, add_redundant_constraints=True, method=0):
         self.cn = cn
 
         self.add_redundant_constraints = add_redundant_constraints
@@ -238,6 +292,9 @@ class RNATreeDecomposition:
 
         self.bagsets = list(map(set,self.td.bags))
 
+    ## @brief Expand non-binary dependencies to cliques of binary deps
+    ## @param dependencies list of dependencies
+    ## @return list of binary dependencies
     @staticmethod
     def expand_to_cliques(dependencies):
         bindeps = list()
@@ -246,10 +303,15 @@ class RNATreeDecomposition:
         return bindeps
 
 
-    ## get (first) index of bag that contains all variables
+    ## @brief Get the indices of all bags that contain a set of variables
+    ## @param bvars the set of variables
+    ## @return list of indices of the bags that contain bvars
     def find_all_bags(self,bvars):
         return [ i for i,bag in enumerate(self.bagsets) if all( x in bag for x in bvars ) ]
 
+    ## @brief Find a bag that contains a set of variables
+    ## @param bvars the set of variables
+    ## @return index of first bag that contains bvars (or None if there is none)
     def find_bag(self,bvars):
         bags = self.find_all_bags(bvars)
         if len(bags)>0:
@@ -257,14 +319,27 @@ class RNATreeDecomposition:
         else:
             return None
 
-    # asisgn constraints or functions to bags
-    # @returns list where constraints are placed at corresponding bag indices
+    ## @brief assign constraints or functions to bags
+    ## @param constraints list of constraints
+    ## @return list where constraints are placed at corresponding bag indices
+    ##
+    ## Assigns such that each constraint/function is assigned to exactly one bag
+    ## that contains its dependencies
+    ##
+    ## @pre for each constraint/function there is one bag that contains its dependencies;
+    ## otherwise the constraint/function is not assigned
     def assign_to_bags(self,constraints):
         bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
         for (cvars,ccons) in constraints:
             bagconstraints[self.find_bag(cvars)].extend(ccons)
         return bagconstraints
 
+    ## @brief assign constraints or functions to all possible bags
+    ## @param constraints list of constraints
+    ## @return list where constraints are placed at corresponding bag indices
+    ##
+    ## Assigns constraint/function is to each bags that contains its
+    ## dependencies.
     def assign_to_all_bags(self,constraints):
         bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
         for (cvars,ccons) in constraints:
@@ -272,14 +347,15 @@ class RNATreeDecomposition:
                 bagconstraints[bidx].extend(ccons)
         return bagconstraints
 
+    ## @brief Fillin complementarity class constraints
+    ##
     ## Fills in constraints due to complementarity to all bags. Adds
     ## SameComplClass or DifferentComplClass constraints, wherever a
     ## variable would have to be enumerated unnconstrained otherwise
-    ## @param classes complementarity classes
-    ## @param existing_constraints
-    ## @param[in,out] bagconstraints
+    ## @param classes complementarity classes @param
+    ## existing_constraints @param[in,out] bagconstraints
     ##
-    ## avoids to add constraints which already exist
+    ## Avoids to add constraints which already exist
     def fillin_class_constraints(self, classes, existing_constraints, bagconstraints):
         existing = set( (vars[0],vars[1]) for (vars,constr) in existing_constraints )
         for bagidx,bag in enumerate(self.bagsets):
@@ -294,7 +370,7 @@ class RNATreeDecomposition:
                         #print("Add diff:",i,j)
                         bagconstraints[bagidx].append(ir.DifferentComplClassConstraint(i,j))
 
-
+    ## @brief Construct the cluster tree
     def construct_cluster_tree(self):
         if self.add_redundant_constraints:
             bagconstraints = self.assign_to_all_bags(self.cn.constraints)
@@ -335,10 +411,14 @@ class RNATreeDecomposition:
         return ct
 
 
-## END Redprint Library
-############################################################
+# END Redprint Library
+# ##########################################################
 
+## @brief Redprint command line tool definition
+## @param args command line arguments
 def main(args):
+    import RNA
+
     ## init seed
     if args.seed == None:
         ir.seed(random.randint(0,2**31))
@@ -346,24 +426,24 @@ def main(args):
         ir.seed(args.seed)
 
     # set base pair energies ( AU,GC,GU in stems and terminal )
-    set_bpenergy_table( [ AU_IN,
-                          GC_IN,
-                          GU_IN,
-                          AU_TERM,
-                          GC_TERM,
-                          GU_TERM ] )
+    set_bpenergy_table(
+        list(map(lambda x: params_bp[x],
+                 [ "AU_IN", "GC_IN", "GU_IN",
+                   "AU_TERM", "GC_TERM", "GU_TERM" ] )))
 
-    set_stacking_energy_table( [ STACK_AUAU, STACK_AUUA,
-                                 STACK_AUCG, STACK_AUGC,
-                                 STACK_AUGU, STACK_AUUG,
+    set_stacking_energy_table(
+        list(map(lambda x: params_stacking[x],
+                 [ "AUAU", "AUUA",
+                   "AUCG", "AUGC",
+                   "AUGU", "AUUG",
 
-                                 STACK_CGAU, STACK_CGUA,
-                                 STACK_CGCG, STACK_CGGC,
-                                 STACK_CGGU, STACK_CGUG,
+                   "CGAU", "CGUA",
+                   "CGCG", "CGGC",
+                   "CGGU", "CGUG",
 
-                                 STACK_GUAU, STACK_GUUA,
-                                 STACK_GUCG, STACK_GUGC,
-                                 STACK_GUGU, STACK_GUUG ] )
+                   "GUAU", "GUUA",
+                   "GUCG", "GUGC",
+                   "GUGU", "GUUG" ] )))
 
     ## read instance
     with open(args.infile) as infh:
@@ -469,6 +549,7 @@ def main(args):
         print()
 
 if __name__ == "__main__":
+    ## Redprint command line argument parser
     parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--method', type=int, default=0,

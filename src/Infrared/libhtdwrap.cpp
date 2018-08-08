@@ -36,7 +36,7 @@
 
 namespace bpy = boost::python;
 
-// helper to wrap plain pointer into unique ptr
+//! helper to wrap plain pointer into unique ptr
 template<class T>
 auto wrap_unique_ptr(T *x) { return std::unique_ptr<T>(x); }
 
@@ -46,10 +46,10 @@ public:
     HTD(int num_vertices, const std::vector<std::vector<int>> &in_edges)
     {
         manager_ = wrap_unique_ptr(htd::createManagementInstance(htd::Id::FIRST));
-        
+
         // Create a new graph instance which can handle (multi-)hyperedges.
         graph_ = wrap_unique_ptr(manager_->multiHypergraphFactory().createInstance());
-        
+
         /*
          *  Add vertices to the sample graph.  The vertices of a graph are
          *  numbered in ascending order starting from 1.
@@ -58,40 +58,40 @@ public:
 
         /* Add hyper edges */
         for (auto &edge : in_edges) {
-            
+
             std::vector<htd::vertex_t> htd_edge;
             for (const auto x : edge ) {
                 //make 1-based
                 htd_edge.push_back(x+1);
             }
-            
+
             graph_->addEdge( htd_edge );
         }
     };
 
     // vertices are index 0,...,num_vertices-1 in input and output
     void
-    decompose() {        
+    decompose() {
 
         // Get the default tree decomposition algorithm
         htd::ITreeDecompositionAlgorithm * algorithm =
             manager_->treeDecompositionAlgorithmFactory().createInstance();
 
         FitnessFunction fitnessFunction;
-        
+
         // operation to optimize over possible roots
         htd::TreeDecompositionOptimizationOperation * operation =
-            new htd::TreeDecompositionOptimizationOperation(manager_.get(), 
+            new htd::TreeDecompositionOptimizationOperation(manager_.get(),
                                                             &fitnessFunction);
 
         operation->setManagementInstance( manager_.get() );
 
         //algorithm->addManipulationOperation(operation);
-        
+
         algorithm->addManipulationOperation
             (new htd::AddEmptyRootOperation(manager_.get()));
 
-        auto iterative_algorithm = 
+        auto iterative_algorithm =
             new htd::IterativeImprovementTreeDecompositionAlgorithm
             (manager_.get(), algorithm, &fitnessFunction);
 
@@ -111,17 +111,17 @@ public:
         // cluster tree.
         //
         bags_.resize(td->vertexCount());
-        
+
         auto stack = std::stack<htd::vertex_t>();
         stack.push(td->root());
-        
+
         while(!stack.empty()) {
             auto v = stack.top();
             stack.pop();
-            
+
              // make 0-based
             std::vector<int> bag;
-            for(const auto x: td->bagContent(v)) { 
+            for(const auto x: td->bagContent(v)) {
                 bag.push_back(x-1);
             }
             bags_[v-1] = bag;
@@ -141,7 +141,7 @@ public:
                 stack.push(c);
             }
         }
-        
+
         // quite weird: it seems not allowed to delete here again
         //delete iterative_algorithm;
         delete algorithm;
@@ -177,12 +177,12 @@ private:
      *  and if two decompositions have the same width, the one of lower height is chosen.
      */
     struct FitnessFunction : public htd::ITreeDecompositionFitnessFunction {
-            
+
         htd::FitnessEvaluation*
         fitness(const htd::IMultiHypergraph & graph,
                 const htd::ITreeDecomposition & decomposition) const {
             HTD_UNUSED(graph);
-                    
+
             /**
              * Here we specify the fitness evaluation for a given decomposition.
              * In this case, we select the maximum bag size and the height.
@@ -199,14 +199,14 @@ private:
 };
 
 /**
- * @brief module wrapping (some form of) tree decomposition by libhtd 
+ * @brief module wrapping (some form of) tree decomposition by libhtd
  */
 BOOST_PYTHON_MODULE(libhtdwrap)
 {
     register_vector_conversions<int>();
     register_vector_conversions<std::vector<int>>();
 
-    bpy::class_<HTD, 
+    bpy::class_<HTD,
                 boost::noncopyable>
         ("HTD", bpy::init<int, const std::vector<std::vector<int>>>())
         .def("decompose",&HTD::decompose)

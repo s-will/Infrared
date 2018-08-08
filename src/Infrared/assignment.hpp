@@ -59,10 +59,10 @@ namespace ired {
         //! assignment type
         using assignment_t = Assignment;
 
-        // variable index type
+        //! variable index type
         using var_idx_t = int;
 
-        // variable value type
+        //! variable value type
         using var_value_t = int;
 
     public:

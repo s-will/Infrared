@@ -1,14 +1,33 @@
 #!/usr/bin/env python3
 
-##############################
-# Compute (by delegate) and handle tree decompositions
-# * generate tree decompositions usng libhtd (via python wrapper) or calling TDlib
-# * plot dependency graphs and tree decompositions using dot
 #
-# NOTE: in constrast to TDlib, libhtd does not need to write intermediary files to disk
-# ATTENTION: TDlib is *not* safe to use in distributed computations (@todo)
+# InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
+# (C) Sebastian Will, 2018
 #
-# for using TDlib, the Java class path needs to include the library!
+# This file is part of the InfraRed source code.
+#
+# InfraRed provides a generic framework for tree decomposition-based
+# Boltzmann sampling over constraint networks
+#
+
+## @file
+##
+## Storing and manipulating tree decompositions
+##
+## Supports computation by delegate
+##
+## * generate tree decompositions usng libhtd (via python wrapper) or calling TDlib
+##
+## * plot dependency graphs and tree decompositions using dot
+##
+## NOTE: TDlib writes files to disk, currently it is *not* safe to use
+## in distributed computations. In contrast, libhtd (default) does not
+## write to disk at all
+##
+## For using TDlib, it has to be in the Java class path (environment
+## variable CLASSPATH). The default tree decomposition by libhtd needs
+## to find the shared library libhtd.so; this could require to set
+## LD_LIBRARY_PATH manually.
 
 import os
 import subprocess
@@ -17,21 +36,34 @@ from math import sqrt,ceil
 
 import libhtdwrap as htd
 
-############################################################
-##
-## Storing and manipulating tree decompositions
-##
 
-## Class to hold a tree decomposition
+## @brief Class to hold a tree decomposition
 ##
 ## contains
-## bags   a list of 0-based indexed lists of vertices of the decomposed graph (or "variables")
-## edges  a list of edges; an edge is a list of bags (bag1, bag2)
-## adj    adjacency lists (as defined by edges)
+##
+## * bags   a list of 0-based indexed lists of vertices of the decomposed graph (or "variables")
+##
+## * edges  a list of edges; an edge is a list of bags (bag1, bag2)
+##
+## * adj    adjacency lists (as defined by edges)
 ##
 ## edges are directed, an edge from bag x to y is represented by (x,y)
-##
 class TreeDecomp:
+
+    ## @brief construct from bags and edges
+    ##
+    ## @param bags lists of indices of the variables (vertices) in the
+    ## bag
+    ##
+    ## @param edges list of edges between the bags; edges are
+    ## specified as pairs (x,y), where x is the index of the parent
+    ## bag and y, of the child bag (0-based indices according to
+    ## bags).
+    ##
+    ## Edges must be directed from root(s) to leaves. Typically the
+    ## bags and edges result from calling a tree decomposition
+    ## algorithm. The supported algorithms return correctly oriented
+    ## edges.
     def __init__(self,bags,edges):
         # copy bags
         self.bags = list(bags)
@@ -42,26 +74,28 @@ class TreeDecomp:
 
         self.update_adjacency_lists()
 
+    ## @brief Comute adjacency list representation
+    ##
+    ## @param n number of nodes
+    ## @param edges list of edges
     @staticmethod
     def adjacency_lists(n,edges):
-        """
-        compute adjacency lists
-        """
         adj = { i:[] for i in range(n)}
         for (i,j) in edges:
             adj[i].append(j)
         return adj
 
+    ## @brief Update the adjacency representation
+    ##
+    ## Updates the adjacency representation in adj according to the
+    ## number of bags and edges
     def update_adjacency_lists(self):
         self.adj = self.adjacency_lists(len(self.bags),self.edges)
 
+    ## @brief Toppological sort of bags
+    ##
+    ## @returns sorted list of bag indices
     def toposorted_bag_indices(self):
-        """
-        @brief perform topological sort
-        @param n number of nodes
-        @param adj adjacency lists
-        @returns sorted nodes
-        """
         n = len(self.bags)
 
         visited = set()
@@ -79,46 +113,39 @@ class TreeDecomp:
                 toposort_component(i)
         return sorted[::-1]
 
-    # difference set from bag xs to bag ys
+    ## @brief Difference set
+    ##
+    ## @param xs first list
+    ## @param ys second list
+    ##
+    ## @return ys setminus xs
+    ##
+    ## For bags xs and ys, this computes the introduced variable
+    ## indices when going from parent xs to child ys.
     @staticmethod
     def diff_set(xs,ys):
-        """
-        Compute directed difference between bags ys-xs
-        """
         return [ y for y in ys if y not in xs ]
 
-    # seperator set between bags xs and ys
+    ## @brief Separator set
+    ##
+    ## @param xs first list
+    ## @param ys second list
+    ##
+    ## @return overlap of xs and ys
+    ##
+    ## For bags xs and ys, this computes the 'separator' of xs and ys,
+    ## i.e. the common variables.
     @staticmethod
     def sep_set(xs,ys):
         return [ y for y in ys if y in xs ]
 
-    @staticmethod
-    def max_node(edges):
-        """
-        Maximum node occuring in a list of edges
-        """
-        maxnode=0
-        if len(edges)>0:
-            maxnode=max([ max(u,v) for (u,v) in edges ])
-            return maxnode
-
+    ## @brief Get tree width
     def treewidth(self):
-        """
-        Get tree width
-        """
         return max([len(bag) for bag in self.bags]) - 1
 
-    # def inc_edges():
-    #     """Make 0-based edges 1-based"""
-    #     self.edges = [ (i+1,j+1) for (i,j) in self.edges ]
-    #
-
+    ## @brief Write tree decomposition in dot format
+    ## @param out output file handle
     def writeTD(self, out):
-        """
-        Write tree decomposition in dot format
-        @param out output file handle
-        """
-
         def baglabel(bag):
             if len(bag)==0:
                 return ""
@@ -145,20 +172,26 @@ class TreeDecomp:
 
         out.write("\n}\n")
 
-    ## @brief expand tree decomposition to have a certain maximal diff
-    ## size
+    ## @brief Guarantee a certain maximal diff set size
     ##
-    ## the diff set is the set of variables in the child that do not
-    ## occur in the parent bag
+    ## @param maxdiffsize maximum size of diff sets after transformation
+    ##
+    ## @see diff_set()
     ##
     ## @pre the tree is connected
+    ##
+    ## Expands the tree by inserting a minimum number of in-between
+    ## bags whereever the diff set size exceeds maxdiffsize. This can
+    ## limit the complexity of certain algorithm based on the tree (in
+    ## particular sampling in Infrared).
+    ##
     def expand_treedecomposition(self, maxdiffsize=1):
-    
+
         def chunks(l, n):
             """Yield successive n-sized chunks from l."""
             for i in range(0, len(l), n):
                 yield l[i:i + n]
-        
+
         n = len(self.bags)
         root = self.toposorted_bag_indices()[0]
 
@@ -194,7 +227,7 @@ class TreeDecomp:
                     last_bag_idx = u
 
                     newbag = sep
-                    
+
                     for ext in chunks(diff[:-1],maxdiffsize):
                         newbag.extend(ext)
                         self.bags.append(newbag[:])
@@ -206,40 +239,38 @@ class TreeDecomp:
 
         self.update_adjacency_lists()
 
-############################################################
-## writing graphs to files in different formats
-##
+# ##########################################################
+# writing graphs to files in different formats
+#
 
+## @brief Plot graph
+##
+## @param graphfile file of graph in dot format
+##
+## The graph is plotted and written to a pdf file by calling
+## graphviz's dot tool on th dot file.
 def dotfile_to_pdf(graphfile):
-    """
-    Plot graph (written to a pdf file) by calling graphviz's dot tool
-    on a given dot file
-    """
     outfile = re.sub(r".dot$",".pdf",graphfile)
     subprocess.check_output(["dot","-Tpdf","-o",outfile,graphfile])
 
+## @brief Write graph in dgf format
+##
+##@param out output file handle
+##@param num_nodes number of nodes
+##@param edges the edges of the graph
 def write_dgf(out, num_nodes, edges):
-    """
-    Write graph in dgf format
-    @param out output file handle
-    @param num_nodes number of nodes
-    @param edges the edges of the graph
-    """
-
     edge_num=len(edges)
 
     out.write("p tw {} {}\n".format(num_nodes, edge_num))
     for (u,v) in sorted(edges):
         out.write("e {} {}\n".format(u+1,v+1))
 
+## @brief Write graph in dot format
+##
+## @param out output file handle
+## @param num_nodes number of nodes
+## @param edges the edges of the graph
 def write_dot(out, num_nodes, edges):
-    """
-    Write graph in dot format
-    @param out output file handle
-    @param num_nodes number of nodes
-    @param edges the edges of the graph
-    """
-
     edge_num=len(edges)
 
     out.write("graph G{\n\n")
@@ -253,23 +284,21 @@ def write_dot(out, num_nodes, edges):
     out.write("\n}\n")
 
 
-############################################################
-## Interface TDlib
-##
-## specific functions to call TDlib's tree decomposition tool
-## and parse the result
-##
+# ##########################################################
+# Interface TDlib
+#
+# specific functions to call TDlib's tree decomposition tool
+# and parse the result
+#
 
+## @brief Parse tree decomposition as written by TDlib
+##
+## @param tdfh file handle to tree decomposition in dot format
+## @param num_nodes number of nodes
+## @returns tree decomposition
+##
+## Assume file is in td format as written by the tool TDlib.
 def parseTD_TDlib(tdfh, num_nodes):
-    """
-    Parse tree decomposition as written by TDlib
-
-    @param tdfh file handle to tree decomposition in dot format
-    @param num_nodes number of nodes
-    @returns tree decomposition
-
-    assume td format as written by the TDlib program
-    """
 
     bags = list()
     edges = list()
@@ -314,24 +343,21 @@ def parseTD_TDlib(tdfh, num_nodes):
 
     return TreeDecomp(bags,edges)
 
-## make tree decomposition from file using TDlib
+## @brief Compute tree decomposition of a graph by TDlib
+##
+## Generates tree decomposition and writes the result to file.
+##
+## @param filename base name for input .dfg and output .td files
+## @param num_nodes number of nodes
+## @param edges specifies edges of a graph; nodes are indexed 0-based
+## @param strategy integer code of decomposition strategy:
+##   1) Permutation To Tree Decomposition with GreedyDegree
+##   2) Permutation To Tree Decomposition with GreedyFillIn
+##   3) Permutation To Tree Decomposition with Lex-BFS: Lexicographic Breadth First Search
+##   4) Permutation To Tree Decomposition with MCS; Maximum Cardinality Search Algorithm
+##   5) PermutationGuesser
 def makeTDFile_TDlib( filename, num_nodes, edges,
                       *, strategy=2 ):
-    """
-    Compute tree decomposition of a graph by TDlib
-
-    Generates tree decomposition and writes the result to file.
-
-    @param filename base name for input .dfg and output .td files
-    @param num_nodes number of nodes
-    @param edges specifies edges of a graph; nodes are indexed 0-based
-    @param strategy integer code of decomposition strategy:
-      1) Permutation To Tree Decomposition with GreedyDegree
-      2) Permutation To Tree Decomposition with GreedyFillIn
-      3) Permutation To Tree Decomposition with Lex-BFS: Lexicographic Breadth First Search
-      4) Permutation To Tree Decomposition with MCS; Maximum Cardinality Search Algorithm
-      5) PermutationGuesser
-    """
 
     inname = filename+".dgf"
     outname = filename+".td"
@@ -359,12 +385,16 @@ def makeTDFile_TDlib( filename, num_nodes, edges,
 
         return outname
 
+## @brief Make tree decomposition using TDlib
+##
+## @param num_nodes Number of nodes
+## @param edges list of edges
+## @param strategy TDlib's strategy (see help page of TDlib)
+##
+## @return tree decomposition (object of TreeDecomp)
+##
+## @todo generate unique / thread-safe tmp name
 def makeTD_TDlib(num_nodes, edges, *, strategy=2):
-    """
-    Make tree decomposition using TDlib
-
-    @todo generate unique / thread-safe tmp name
-    """
     tmpfile = "/tmp/treedecomp-tmp~"
     makeTDFile_TDlib( tmpfile, num_nodes, edges, strategy=strategy )
     tdfile = tmpfile+".td"
@@ -373,22 +403,22 @@ def makeTD_TDlib(num_nodes, edges, *, strategy=2):
     #os.remove(tdfile)
     return td
 
-## End of TDlib-specific functions
-##----------------------------------------------------------
+# End of TDlib-specific functions
+# ----------------------------------------------------------
 
-############################################################
-## Interface the htd library
-##
-## specific functions to interface libhtd
-##
+# ##########################################################
+# Interface the htd library
+#
+# specific functions to interface libhtd
+#
 
+## @brief Obtain tree decomposition using htd
+##
+## @param num_nodes number of nodes
+## @param edges specifies edges of a graph; nodes are indexed 0-based
+##
+## @return tree decomposition (object of TreeDecomp)
 def makeTD_htd(num_nodes, edges, maxdiffsize=1):
-    """
-    Obtain tree decomposition using htd
-    @param num_nodes number of nodes
-    @param edges specifies edges of a graph; nodes are indexed 0-based
-    """
-
     myhtd = htd.HTD(num_nodes,edges)
     myhtd.decompose()
     td = TreeDecomp(myhtd.bags(), myhtd.edges())
@@ -397,32 +427,33 @@ def makeTD_htd(num_nodes, edges, maxdiffsize=1):
 
     return td
 
-## End of libhtd-specific functions
-##----------------------------------------------------------
+# End of libhtd-specific functions
+# ----------------------------------------------------------
 
-############################################################
-## Interface tree demposition libraries
+# ###########################################################
+# Interface tree demposition libraries
 
+## @brief Obtain tree decomposition
+##
+## Dispatches to tree decomp libraries based on 'method'
+##
+## @param num_nodes number of nodes
+## @param edges specifies edges of a graph; nodes are indexed 0-based
+## @param method tree decomposition method
+##
+## The parameter method controls which tree decomposition algorithm is
+## used. Default 0 causes to call libhtd; otherwise TDlib is used with
+## strategy=method, see TDlib help page.
+##
+## @return tree decomposition (object of TreeDecomp)
 def makeTD(num_nodes, edges, *, method=0, **kwargs):
-
-    """
-    Obtain tree decomposition
-
-    Dispatches to tree decomp libraries based on 'method'
-
-    @param num_nodes number of nodes
-    @param edges specifies edges of a graph; nodes are indexed 0-based
-    @param method chooses tree decomposition method (0=libhtd; othw. use TDlib with strategy=method
-    @return bags,edges
-    """
-
     if str(method) == "0":
         return makeTD_htd(num_nodes, edges, **kwargs)
     else:
         return makeTD_TDlib(num_nodes, edges, strategy=method)
 
-## End of Interface tree demposition libraries
-##----------------------------------------------------------
+# End of Interface tree demposition libraries
+# ----------------------------------------------------------
 
 if __name__ == "__main__":
     pass
