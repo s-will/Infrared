@@ -674,7 +674,7 @@ class RedprintSampler(MultiDimensionalBoltzmannSampler):
         self.structures = list(map(rna.parseRNAStructureBps,structure_strings))
         
         def optarg(feat, default):
-            if hasattr(kwargs,feat):
+            if feat in kwargs:
                 return kwargs[feat]
             else:
                 return default
