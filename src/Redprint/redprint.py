@@ -35,36 +35,16 @@ import rna_support as rna
 import abc
 
 ## Parameters for the base pair model (magic params from the Redprint paper)
-params_bp = {
-    "GC_IN": -2.10208,
-    "AU_IN": -0.52309,
-    "GU_IN": -0.88474,
-    "GC_TERM": -0.09070,
-    "AU_TERM": 1.26630,
-    "GU_TERM": 0.78566
-}
+params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
+              "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
 
 ## Parameters for the stacking model (magic params from the Redprint paper)
-params_stacking = {
-    "AUAU": -0.18826,
-    "AUCG": -1.13291,
-    "AUGC": -1.09787,
-    "AUGU": -0.38606,
-    "AUUA": -0.26510,
-    "AUUG": -0.62086,
-    "CGAU": -1.11752,
-    "CGCG": -2.23740,
-    "CGGC": -1.89434,
-    "CGGU": -1.22942,
-    "CGUA": -1.10548,
-    "CGUG": -1.44085,
-    "GUAU": -0.55066,
-    "GUCG": -1.26209,
-    "GUGC": -1.58478,
-    "GUGU": -0.72185,
-    "GUUA": -0.49625,
-    "GUUG": -0.68876
-}
+params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
+                    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
+                    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
+                    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
+                    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
+                    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
 
 ############################################################
 ## Redprint Library
@@ -299,7 +279,7 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 ## @brief Base class for tree decomposition defining some more
 ## commonly useful methods
 ##
-class TreeDecompositionBase:
+class TreeDecomposition:
     def __init__(self, varnum, dependencies, *, method=0):
         self.varnum = varnum
 
@@ -310,7 +290,7 @@ class TreeDecompositionBase:
         self.td = treedecomp.makeTD(varnum, bindependencies, method = method)
 
         self.bagsets = list(map(set,self.td.bags))
-        
+
         self.domains = None
 
     @abc.abstractmethod
@@ -427,7 +407,7 @@ class TreeDecompositionBase:
 
 ## @brief Holds tree decomposition for RNA design, constructs RNA design cluster tree
 ##
-class RNATreeDecomposition(TreeDecompositionBase):
+class RNATreeDecomposition(TreeDecomposition):
 
     ## @brief Constructor from constraint network
     ##
@@ -488,14 +468,15 @@ class RNATreeDecomposition(TreeDecompositionBase):
                         bagconstraints[bagidx].append(ir.DifferentComplClassConstraint(i,j))
 
 ## @brief Feature in multi-dimensional Boltzmann sampling
-## 
+##
 ## A feature is one component of the sampling energy functions,
 ## which can be targeted due to a dedicated weight.
 class Feature:
-    def __init__(self, identifier, weight, target=None):
+    def __init__(self, identifier, weight, target=None, tolerance=None):
         self.identifier = identifier
         self.weight = weight
         self.target = target
+        self.tolerance = tolerance
 
     ## @brief Printable identifier
     def idstring(self):
@@ -505,16 +486,17 @@ class Feature:
     @abc.abstractmethod
     def eval(self, sample):
         return
-
+## @brief GC content feature
 class GCFeature(Feature):
-    def __init__(self, weight, target=None):
-        super().__init__( "GC", weight, target )
+    def __init__(self, weight, target=None, tolerance=None):
+        super().__init__( "GC", weight, target, tolerance)
     def eval(self, sample):
         return rna.GC_content(sample) * 100
 
+## @brief Turner energy feature
 class EnergyFeature(Feature):
-    def __init__(self, index, structure, weight, target=None):
-        super().__init__( ("E",index), weight, target )
+    def __init__(self, index, structure, weight, target=None, tolerance=None):
+        super().__init__( ("E",index), weight, target, tolerance )
         self.structure = structure
     def eval(self, sample):
         import RNA
@@ -524,53 +506,88 @@ class EnergyFeature(Feature):
 
 ## @brief Keeping statistics on features
 ##
-## @note keeps all recorded features in memory!
+## @param keep Keep all recorded features in memory
 class FeatureStatistics:
-    def __init__(self):
+    def __init__(self, keep=False):
+        self.keep = keep
+
+        self.idstring = dict()
+        self.count = dict()
+        self.sums = dict()
+        self.sqsums = dict()
         self.features = dict()
 
     def record(self, feature, sample):
-        feat_id = feature.idstring()
+        
+        if type(feature) == dict:
+            for k in feature:
+                fid, value = self.record(feature[k], sample)
+                feature[k].value = value
+            return feature
+        
+        fid = feature.identifier
         value   = feature.eval(sample)
-        if feat_id not in self.features:
-            self.features[feat_id] = []
-        self.features[feat_id].append(value)
 
-        return feat_id, value
-    
-    def hasReport(self):
-        return bool(self.features)
+        if fid not in self.count:
+            self.idstring[fid] = feature.idstring()
+            self.count[fid] = 0
+            self.sums[fid] = 0
+            self.sqsums[fid] = 0
+            if self.keep:
+                self.features[fid] = []
+
+        self.count[fid] += 1
+        self.sums[fid] += value
+        self.sqsums[fid] += value**2
+
+        if self.keep:
+            self.features[fid].append(value)
+
+        return feature.idstring(), value
+
+    def empty(self):
+        return not self.count
+
+    ## @brief means of recorded features
+    def means(self):
+        return { k : self.sums[k]/self.count[k] for k in self.sums }
+
+    ## @brief variances of recorded features
+    def variances(self):
+        means = self.means()
+        return { k : self.sqsums[k]/self.count[k] - means[k]**2 for k in self.sqsums }
+
+    ## @brief standard deviations of recorded features
+    def stds(self):
+        return { k:val**0.5 for k,val in self.variances().items() }
 
     def report(self):
-        def mean(xs):
-            xs = list(xs)
-            return sum(xs)/len(xs)
-
-        for fid in self.features:
-            mu = mean( self.features[fid] )
-            std = ( mean( map( lambda x: x**2, self.features[fid] ) ) - mu**2 )**0.5
-            print(" {}={:3.2f} +/-{:3.2f}".format(fid,mu,std),end='')
+        means = self.means()
+        stds= self.stds()
+        for fid in self.count:
+            print(" {}={:3.2f} +/-{:3.2f}"
+                  .format(self.idstring[fid],means[fid],stds[fid]),end='')
         print()
 
-## @brief Sampler (abstract base class)
-## 
+## @brief Boltzmann sampler (abstract base class)
+##
 ## derived classes must override gen_cluster_tree
-class Sampler:
+class BoltzmannSampler:
     def __init__(self, features):
         if type(features) == list:
             self.features = { f.identifier:f for f in features }
         else:
             self.features = features
 
+    def setup_engine(self):
         self.cn = self.gen_constraint_network(self.features)
         self.td = self.gen_tree_decomposition(self.cn)
         self.ct = self.gen_cluster_tree(self.td)
-        
         self.requires_evaluation = True
-        
+
     def get_features(self):
         return self.features
-    
+
     def plot_td(self, dotfilename):
         with open(dotfilename,"w") as dot:
             self.td.td.writeTD(dot)
@@ -584,7 +601,7 @@ class Sampler:
         if self.requires_evaluation:
             self.ct.evaluate()
             self.requires_evaluation = False
-        
+
         return self.ct.sample()
 
     ## @brief Generate the constraint network
@@ -609,14 +626,52 @@ class Sampler:
         ct = td.construct_cluster_tree()
         return ct
 
-## @brief Sampler for RedPrint
-class RedprintSampler(Sampler):
-    def __init__(self, seqlen, structure_strings, energy_weights,
-                 gcweight, **kwargs):
+## @brief Multi-dimenstional Boltzmann sampler (abstract base class)
+class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
+    def __init__(self, features):
+        super().__init__(features)
+        
+        self.samples_per_round = 100
+        self.tweak_base = 1.01
+        
+    ## @brief whether the sample is of good quality
+    ##
+    ## checks whether the sample approximately meets the targets
+    def is_good_sample(self, features):
+        for f in features.values():
+            if abs(f.value - f.target) > f.tolerance:
+                return False
+        return True
+        
+    def targeted_samples(self):
+        means=None
+        while True:
+            self.setup_engine()
+            fstats = FeatureStatistics()
+            for i in range(self.samples_per_round):
+                sample = self.sample()
+                returned_features = fstats.record( self.features, sample )
+                
+                if self.is_good_sample(returned_features):
+                    yield sample
+                
+            last_means=means
+            means = fstats.means()
+            
+            # modify weight of each feature
+            for fid,f in self.features.items():
+                f.weight = f.weight *  self.tweak_base**(means[fid] -f.target)
+                # print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
+               
+            # print("==============================")
 
-        #parse structures
-        self.structures = list(map(rna.parseRNAStructureBps,structure_strings))
+## @brief Sampler for RedPrint
+class RedprintSampler(MultiDimensionalBoltzmannSampler):
+    def __init__(self, seqlen, structure_strings, features, **kwargs):
+        super().__init__( features )
+
         self.seqlen = seqlen
+        self.structures = list(map(rna.parseRNAStructureBps,structure_strings))
         
         def optarg(feat, default):
             if hasattr(kwargs,feat):
@@ -628,19 +683,32 @@ class RedprintSampler(Sampler):
         self.model = optarg("model", "bp")
         self.no_red_constrs = optarg("no_red_constrs", False)
 
-        features = list()
-        features.extend( [ EnergyFeature(i,
-                                         structure_strings[i],
-                                         energy_weights[i]) 
-                           for i in range(len(energy_weights)) ] )
-        features.append( GCFeature(gcweight) )
+        self.setup_engine()
 
-        super().__init__( features )
-        
-        
+    ## @brief Generate feature record
+    @staticmethod
+    def gen_features( structure_strings,
+                      energy_weights, gcweight,
+                      energy_targets=None, gctarget=None,
+                      energy_tolerances=None, gctolerance=None ):
+        if energy_targets == None:
+            energy_targets = [None] * len(energy_weights)
+
+        if energy_tolerances == None:
+            energy_tolerances = [None] * len(energy_weights)
+
+        features = [ EnergyFeature(i,
+                                   structure_strings[i],
+                                   energy_weights[i],
+                                   energy_targets[i],
+                                   energy_tolerances[i])
+                     for i in range(len(energy_weights)) ]
+        features.append( GCFeature(gcweight, gctarget, gctolerance) )
+        return { f.identifier:f for f in features }
+
     ## @brief Generate constraint network
     def gen_constraint_network(self, features):
-        weights = [ features[("E",i)].weight for i in range(len(self.structures)) ] 
+        weights = [ features[("E",i)].weight for i in range(len(self.structures)) ]
         gcweight = features["GC"].weight
 
         ## build constraint network
@@ -652,10 +720,11 @@ class RedprintSampler(Sampler):
         elif self.model in ["stack", "stacking"]:
             cn = RNAConstraintNetworkStacking( self.seqlen,
                                                self.structures,
-                                               weights, 
+                                               weights,
                                                gcweight )
         else:
-            print("Model", self.model, "unknown! Please see help for supported modules.")
+            print("Model", self.model,
+                  "unknown! Please see help for supported modules.")
             exit(-1)
 
         return cn
@@ -669,8 +738,17 @@ class RedprintSampler(Sampler):
     def sample(self):
         return values2seq(super().sample().values())
 
+    ## @brief sample generator
+    def samples(self):
+        while(True):
+            yield values2seq(super().sample().values())
+
 # END Redprint Library
 # ##########################################################
+
+# ##########################################################
+# main
+#
 
 ## @brief command line tool definition
 ## @param args command line arguments
@@ -692,9 +770,19 @@ def main(args):
 
     weights=args.weight
     if weights is None: weights=[1]
-
     if len(weights) < len(structures):
         weights.extend([weights[-1]]*(len(structures)-len(weights)))
+
+    targets=args.target
+    if targets is None: targets=[0]
+    if len(targets) < len(structures):
+        targets.extend([targets[-1]]*(len(structures)-len(targets)))
+
+    tolerances=args.tolerance
+    if tolerances is None: tolerances=[1]
+    if len(tolerances) < len(structures):
+        tolerances.extend([tolerances[-1]]*(len(structures)-len(tolerances)))
+
 
     if len(structures) == 0:
         print("At least one structure is required in input")
@@ -702,8 +790,11 @@ def main(args):
 
     seqlen = len(structures[0])
 
-    sampler = RedprintSampler( seqlen, structures, weights,
-                               args.gcweight,
+    features = RedprintSampler.gen_features(structures, weights, args.gcweight,
+                                            targets, args.gctarget,
+                                            tolerances, args.gctolerance) 
+    
+    sampler = RedprintSampler( seqlen, structures, features,
                                method = args.method,
                                model = args.model,
                                no_red_constrs = args.no_red_constrs )
@@ -718,39 +809,49 @@ def main(args):
     fstats = FeatureStatistics()
 
     ## sample
-    for x in range(0,args.number):
-        seq = sampler.sample()
-        
+
+    if args.mdbs:
+        sample_generator = sampler.targeted_samples()
+    else:
+        sample_generator = sampler.samples()
+
+    sample_count = 0
+    for seq in sample_generator:
+
         print(seq,end='')
         if args.turner:
             for i,struc in enumerate(structures):
                 feat_id, value = fstats.record( sampler.features[("E",i)], seq )
                 print(" {}={:3.2f}".format(feat_id,value),end='')
                 
-        if args.gc:
-            feat_id, value = fstats.record( sampler.features["GC"], seq )
-            print(" GC={:3.2f}".format(value),end='')
+            if args.gc:
+                feat_id, value = fstats.record( sampler.features["GC"], seq )
+                print(" GC={:3.2f}".format(value),end='')
 
-        if args.checkvalid:
-            for i,struc in enumerate(structures):
-                if not rna.is_valid(seq, struc):
-                    print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
-        print()
-
+            if args.checkvalid:
+                for i,struc in enumerate(structures):
+                    if not rna.is_valid(seq, struc):
+                        print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
+            print()
+            sample_count += 1
+            if sample_count >= args.number:
+                break
+ 
     if args.verbose:
-        if fstats.hasReport():
+        if not fstats.empty():
             print("----------")
             print("Summary: ",end='')
         fstats.report()
 
 if __name__ == "__main__":
     ## command line argument parser
-    parser = argparse.ArgumentParser(description='Boltzmann sampling for RNA design with multiple target structures')
+    parser = argparse.ArgumentParser(description="Boltzmann sampling for RNA design with multiple target structures")
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
     parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
-    parser.add_argument('--seed', type=int, default=None, help="Seed infrared's random number generator (def=auto)")
+    parser.add_argument('--seed', type=int, default=None,
+                        help="Seed infrared's random number generator (def=auto)")
 
     parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
     parser.add_argument('--model', type=str, default="bp",
@@ -767,11 +868,23 @@ if __name__ == "__main__":
                         help="Do not add redundant constraints")
 
     parser.add_argument('--gcweight', type=float, default=1, help="GC weight")
-    parser.add_argument('-w','--weight', type=float, action="append", help="Structure weight (def=1; in case, use last weight for remaining structures)")
+    parser.add_argument('--weight', type=float, action="append",
+                        help="Energy weight (def=1; in case, use last weight for remaining structures)")
+
+    parser.add_argument('--mdbs', action="store_true",
+                        help="Perform multi-dim Boltzmann sampling to aim at targets")
+
+    parser.add_argument('--gctarget', type=float, default=50, help="GC target")
+    parser.add_argument('--target', type=float, action="append",
+                        help="Energy target (def=0; in case, use last target for remaining structures)")
+
+    parser.add_argument('--gctolerance', type=float, default=5, help="GC tolerance")
+    parser.add_argument('--tolerance', type=float, action="append",
+                        help="Energy tolerance (def=1; in case, use last tolerance for remaining structures)")
+
 
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")
-
 
     args=parser.parse_args()
 
