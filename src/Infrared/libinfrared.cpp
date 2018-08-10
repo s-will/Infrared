@@ -65,14 +65,14 @@ BOOST_PYTHON_MODULE(libinfrared)
 
     bpy::def("seed",&seed);
 
-    bpy::class_<Assignment>("Assignment", bpy::init<int>())
+    bpy::class_< Assignment >("Assignment", bpy::init<int>())
         .def("values", &Assignment::values,
              bpy::return_value_policy<bpy::copy_const_reference>())
         ;
 
     bpy::class_< FunctionWrap<bool>,
-            std::shared_ptr<FunctionWrap<bool>>,
-            boost::noncopyable >
+                 std::shared_ptr<FunctionWrap<bool>>,
+                 boost::noncopyable >
         ("Constraint", bpy::init<const std::vector<int> &>())
         .def("__call__", bpy::pure_virtual(&Constraint::operator ()))
         .def("vars", &Constraint::vars,
@@ -80,8 +80,8 @@ BOOST_PYTHON_MODULE(libinfrared)
         ;
 
     bpy::class_< FunctionWrap<>,
-            std::shared_ptr<FunctionWrap<>>,
-            boost::noncopyable >
+                 std::shared_ptr<FunctionWrap<>>,
+                 boost::noncopyable >
         ("Function", bpy::init<const std::vector<int> &>())
         .def("__call__", bpy::pure_virtual(&Function<>::operator ()))
         .def("vars", &Function<>::vars,
@@ -91,20 +91,22 @@ BOOST_PYTHON_MODULE(libinfrared)
     bpy::implicitly_convertible< std::shared_ptr<FunctionWrap<>>,
                                  std::shared_ptr<Function<>>      >();
 
-    bpy::class_<ComplConstraint, bpy::bases<Constraint>,
-           boost::noncopyable>("ComplConstraint", bpy::init<int,int>())
+    bpy::class_< ComplConstraint, bpy::bases<Constraint>,
+                 boost::noncopyable >
+        ("ComplConstraint", bpy::init<int,int>())
        ;
 
-    bpy::class_<SameComplClassConstraint, bpy::bases<Constraint>,
-           boost::noncopyable>("SameComplClassConstraint", bpy::init<int,int>())
+    bpy::class_< SameComplClassConstraint, bpy::bases<Constraint>,
+                 boost::noncopyable >
+        ("SameComplClassConstraint", bpy::init<int,int>())
        ;
 
     bpy::class_<DifferentComplClassConstraint, bpy::bases<Constraint>,
            boost::noncopyable>("DifferentComplClassConstraint", bpy::init<int,int>())
        ;
 
-    bpy::class_<BPEnergy, std::shared_ptr<BPEnergy>,
-                bpy::bases<Function<>>, boost::noncopyable>
+    bpy::class_< BPEnergy, std::shared_ptr<BPEnergy>,
+                 bpy::bases<Function<>>, boost::noncopyable >
         ("BPEnergy", bpy::init<int, int, bool, double>())
         .def("set_energy_table", &BPEnergy::set_energy_table)
         ;
@@ -115,10 +117,10 @@ BOOST_PYTHON_MODULE(libinfrared)
         .def("set_energy_table", &StackEnergy::set_energy_table)
         ;
 
-    bpy::class_<GCControl, bpy::bases<Function<>>,
+    bpy::class_< GCControl, bpy::bases<Function<> >,
            boost::noncopyable>("GCControl", bpy::init<int, double>());
 
-    bpy::class_<ClusterTree<>>("ClusterTree", bpy::init<int,int>())
+    bpy::class_< ClusterTree<> >("ClusterTree", bpy::init<int,int>())
         .def(bpy::init<const std::vector<int> &>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)
         .def("add_child_cluster", &ClusterTree<>::add_child_cluster)

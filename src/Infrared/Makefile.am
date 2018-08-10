@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libinfrared.la libhtdwrap.la
 
 ## install python modules
-bin_SCRIPTS=treedecomp.py rna_support.py
+bin_SCRIPTS=treedecomp.py rna_support.py infrared.py
 
 ########################################
 ## infrared headers
