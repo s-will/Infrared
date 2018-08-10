@@ -99,6 +99,11 @@ def set_stacking_energy_table(params):
 ## specific dependencies, the constraints and functions of a
 ## multi-target RNA design instance
 class RNAConstraintNetwork:
+    ## @brief Constructor
+    ## @param seqlen sequence length
+    ## @param structures structures as lists of base pairs
+    ## @param weights weights of energies
+    ## @param gcweight weight for GC control
     def __init__(self, seqlen, structures, weights, gcweight):
         self.seqlen = seqlen
         self.structures = list(structures)
@@ -280,6 +285,10 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 ## commonly useful methods
 ##
 class TreeDecomposition:
+    ## @brief Constructor
+    ## @param varnum number of variables
+    ## @param dependencies list of dependencies
+    ## @param method tree decomposition method
     def __init__(self, varnum, dependencies, *, method=0):
         self.varnum = varnum
 
@@ -293,6 +302,7 @@ class TreeDecomposition:
 
         self.domains = None
 
+    ## @brief Get assignments of functions and constraints to the bags
     @abc.abstractmethod
     def get_bag_assignments(self):
         pass
@@ -351,19 +361,10 @@ class TreeDecomposition:
                 bagconstraints[bidx].extend(ccons)
         return bagconstraints
 
-    ## @brief assign functions and constraints to bags
-    ##
-    ## @return bagconstraints, bagfuntions
-    ##
-    ## the function is called by construct_cluster_tree, must be overriden
-    @abc.abstractmethod
-    def make_bag_assignments(self):
-        pass
-
     ## @brief Construct the cluster tree
     ##
     ## Requires deriving classes to specialize self.domains and
-    ## self.make_bag_assignments()
+    ## self.get_bag_assignments()
     ##
     ## self.domains can either specify a uniform domain size, or a
     ## list of all domain sizes
@@ -469,8 +470,15 @@ class RNATreeDecomposition(TreeDecomposition):
 
 ## @brief Feature in multi-dimensional Boltzmann sampling
 ##
-## A feature is one component of the sampling energy functions,
-## which can be targeted due to a dedicated weight.
+## A feature is one component of the sampling energy functions, which
+## can be targeted due to a dedicated weight. It defines a method
+## value, which determines the feature's value for a sample.
+##
+## A feature defines weight, target value, and tolerance. The latter
+## two are used only in case of multi-dimenstional Boltzmann sampling,
+## which modifies the features weight based on the difference between
+## the estimated mean feature value and the target value.
+## 
 class Feature:
     def __init__(self, identifier, weight, target=None, tolerance=None):
         self.identifier = identifier
@@ -486,7 +494,10 @@ class Feature:
     @abc.abstractmethod
     def eval(self, sample):
         return
+
 ## @brief GC content feature
+##
+## Defines the feature 'GC content'
 class GCFeature(Feature):
     def __init__(self, weight, target=None, tolerance=None):
         super().__init__( "GC", weight, target, tolerance)
@@ -494,6 +505,15 @@ class GCFeature(Feature):
         return rna.GC_content(sample) * 100
 
 ## @brief Turner energy feature
+##
+## Defines the feature 'Turner energy'
+##
+## @note This feature exenplifies that the evaluation by the functions
+## that control the sampling together with the weight of this feature
+## does not have to be identical to the value of the feature: in
+## RedPrint, the functions evaluate to some simplified energy in the
+## base pair or stacking model, while the feature value is the Turner
+## energy of the sequence as computed by RNA.energy_of_struct.
 class EnergyFeature(Feature):
     def __init__(self, index, structure, weight, target=None, tolerance=None):
         super().__init__( ("E",index), weight, target, tolerance )
@@ -506,8 +526,12 @@ class EnergyFeature(Feature):
 
 ## @brief Keeping statistics on features
 ##
-## @param keep Keep all recorded features in memory
+## This class allows recording values of multiple features for a
+## series of samples; it can be queried for mean and standard
+## deviation (or the entire distribution) of each recored feature.
 class FeatureStatistics:
+    ## @brief constructor
+    ## @param keep Keep all recorded features in memory
     def __init__(self, keep=False):
         self.keep = keep
 
@@ -517,8 +541,11 @@ class FeatureStatistics:
         self.sqsums = dict()
         self.features = dict()
 
+    ## @brief Record feature values
+    ## @param feature a single feature or a dictionary of features
+    ## @param sample a sample that can be evaluated by the feature(s)
+    ## @return pair of feature id string and value
     def record(self, feature, sample):
-        
         if type(feature) == dict:
             for k in feature:
                 fid, value = self.record(feature[k], sample)
@@ -545,22 +572,28 @@ class FeatureStatistics:
 
         return feature.idstring(), value
 
+    ## @brief check whether any features have been recorded
+    ## @return whether empty (since no feature has been recorded)
     def empty(self):
         return not self.count
 
     ## @brief means of recorded features
+    ## @return dictionary of means  (at feature ids as keys)
     def means(self):
         return { k : self.sums[k]/self.count[k] for k in self.sums }
 
     ## @brief variances of recorded features
+    ## @return dictionary of variances (at feature ids as keys)
     def variances(self):
         means = self.means()
         return { k : self.sqsums[k]/self.count[k] - means[k]**2 for k in self.sqsums }
 
     ## @brief standard deviations of recorded features
+    ## @return dictionary of standard deviations (at feature ids as keys)
     def stds(self):
         return { k:val**0.5 for k,val in self.variances().items() }
 
+    ## @brief Report features to standard output
     def report(self):
         means = self.means()
         stds= self.stds()
@@ -573,36 +606,53 @@ class FeatureStatistics:
 ##
 ## derived classes must override gen_cluster_tree
 class BoltzmannSampler:
+
+    ## @brief Construct with features
+    ## @param features list or dictionary of the features 
     def __init__(self, features):
         if type(features) == list:
             self.features = { f.identifier:f for f in features }
         else:
             self.features = features
 
+    ## @brief Sets up the constraint network / cluster tree sampling
+    ## engine
     def setup_engine(self):
         self.cn = self.gen_constraint_network(self.features)
         self.td = self.gen_tree_decomposition(self.cn)
         self.ct = self.gen_cluster_tree(self.td)
         self.requires_evaluation = True
 
+    ## @brief Get the features
+    ## @return features
     def get_features(self):
         return self.features
 
+    ## @brief Plot the tree decomposition to pdf file
     def plot_td(self, dotfilename):
         with open(dotfilename,"w") as dot:
             self.td.td.writeTD(dot)
         treedecomp.dotfile_to_pdf(dotfilename)
         os.remove(dotfilename)
 
+    ## @brief Get tree width
+    ## @return tree width
     def treewidth(self):
         return self.td.td.treewidth()
 
+    ## @brief Compute next sample
+    ## @return sample
     def sample(self):
         if self.requires_evaluation:
             self.ct.evaluate()
             self.requires_evaluation = False
 
         return self.ct.sample()
+
+    ## @brief Sample generator
+    def samples(self):
+        while(True):
+            yield self.sample()
 
     ## @brief Generate the constraint network
     ## @param features the features (containing their weights)
@@ -631,10 +681,11 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     def __init__(self, features):
         super().__init__(features)
         
-        self.samples_per_round = 100
+        self.samples_per_round = 200
         self.tweak_base = 1.01
         
     ## @brief whether the sample is of good quality
+    ## @param features dictionary of features
     ##
     ## checks whether the sample approximately meets the targets
     def is_good_sample(self, features):
@@ -642,31 +693,56 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             if abs(f.value - f.target) > f.tolerance:
                 return False
         return True
-        
+    
+    ## @brief Generator of targeted samples
+    ##
+    ## Performs multi-dimensional Boltzmann sampling: every
+    ## self.samples_per_round many samples, the feature means are
+    ## estimated and the weights are recalibrated. Each generated
+    ## sample is tested for falling into target +/- tolerance for all
+    ## features, in which case it is yielded.
+    ##
+    ## self.tweak_base controls the speed of recalibration of weights due to
+    ## the formula 
+    ## ```
+    ## weight = weight * tweak_base**(mean -target)
+    ## ```
     def targeted_samples(self):
         means=None
+        
+        counter = 0
         while True:
             self.setup_engine()
             fstats = FeatureStatistics()
             for i in range(self.samples_per_round):
+                counter+=1
                 sample = self.sample()
                 returned_features = fstats.record( self.features, sample )
                 
                 if self.is_good_sample(returned_features):
+                    # print(counter)
                     yield sample
-                
+
             last_means=means
             means = fstats.means()
             
             # modify weight of each feature
             for fid,f in self.features.items():
                 f.weight = f.weight *  self.tweak_base**(means[fid] -f.target)
-                # print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
+                
+            #     print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
                
             # print("==============================")
 
 ## @brief Sampler for RedPrint
 class RedprintSampler(MultiDimensionalBoltzmannSampler):
+    ## @brief Constructor
+    ## @param seqlen sequence length
+    ## @param structure_strings structures as dot-bracket strings
+    ## @param features the features as list or dictionary
+    ## @param method method for tree decomposition (0: libhtd, 1-5: respective /strategy/ of TDlib)
+    ## @param model base pair or stacking model, sepcified as respective string "bp"/"basepair" or "stack"/"stacking"
+    ## @param no_red_constrs no redundant constraints flag (mainly for experimenting)
     def __init__(self, seqlen, structure_strings, features, **kwargs):
         super().__init__( features )
 
@@ -686,6 +762,13 @@ class RedprintSampler(MultiDimensionalBoltzmannSampler):
         self.setup_engine()
 
     ## @brief Generate feature record
+    ## @param structure_strings structures as dot bracket strings
+    ## @param energy_weights
+    ## @param gcweight
+    ## @param energy_targets
+    ## @param gctarget
+    ## @param energy_tolerances
+    ## @param gctolerance
     @staticmethod
     def gen_features( structure_strings,
                       energy_weights, gcweight,
@@ -707,6 +790,8 @@ class RedprintSampler(MultiDimensionalBoltzmannSampler):
         return { f.identifier:f for f in features }
 
     ## @brief Generate constraint network
+    ## @param features dictionary of features
+    ## @return constraint network
     def gen_constraint_network(self, features):
         weights = [ features[("E",i)].weight for i in range(len(self.structures)) ]
         gcweight = features["GC"].weight
@@ -729,19 +814,20 @@ class RedprintSampler(MultiDimensionalBoltzmannSampler):
 
         return cn
 
+    ## @brief Generate tree decomposition
+    ## @param cn constraint network
+    ## @return tree decomposition
     def gen_tree_decomposition(self, cn):
         ## make tree decomposition
         return RNATreeDecomposition( cn,
                                      add_red_constrs = not self.no_red_constrs,
                                      method=self.method )
 
+    ## @brief Calculate sample
+    ## @return sampled RNA sequence
     def sample(self):
         return values2seq(super().sample().values())
 
-    ## @brief sample generator
-    def samples(self):
-        while(True):
-            yield values2seq(super().sample().values())
 
 # END Redprint Library
 # ##########################################################
