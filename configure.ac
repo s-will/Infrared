@@ -1,5 +1,5 @@
 AC_PREREQ([2.65])
-AC_INIT([InfraRed], [0.2.1], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
+AC_INIT([InfraRed], [0.3], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
 
 dnl minimal required version of the boost library 
 BOOST_REQUIRED_VERSION=1.50.0

@@ -1,3 +1,10 @@
+0.3
+	Generalize Python classes for Boltzmann sampler construction and
+	provide them in Python module infrared for simpler use of the lib
+
+	Implement multi-dimensional Boltzmann sampling and provide this
+	functionality via module infrared
+
 0.2.1
 	Add/cleanup doxygen documentation of Python modules
 
