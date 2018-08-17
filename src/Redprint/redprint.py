@@ -31,18 +31,6 @@ import infrared as ir
 import treedecomp
 import rna_support as rna
 
-## Parameters for the base pair model (magic params from the Redprint paper)
-params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
-              "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
-
-## Parameters for the stacking model (magic params from the Redprint paper)
-params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
-                    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
-                    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
-                    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
-                    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
-                    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
-
 ############################################################
 ## Redprint Library
 
@@ -59,14 +47,12 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
     ## @brief Constructor
     ## @param seqlen sequence length
     ## @param structures structures as lists of base pairs
-    ## @param weights weights of energies
-    ## @param gcweight weight for GC control
-    def __init__(self, seqlen, structures, weights, gcweight):
+    ## @param features the features containing weights of energies and GC control
+    def __init__( self, seqlen, structures, features ):
         super().__init__()
         self.seqlen = seqlen
         self.structures = list(structures)
-        self.weights = list(weights)
-        self.gcweight = gcweight
+        self.features = features
 
         # to be filled later
         self.bpdependencies = []
@@ -143,28 +129,27 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
 
     ## @brief Add the functions for gc-content control to self.functions
     def add_gc_control(self):
-        gc_control_funs = [ ( [i], [ir.GCControl(i,self.gcweight)] )
+        gc_control_funs = [ ( [i], [ ir.GCControl( i, self.features["GC"].weight ) ] )
                             for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
 
     ## @brief Add the complementarity constraints to self.constraints
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
-        return [ ([i,j], [ir.ComplConstraint(i,j)]) for [i,j] in self.bpdependencies ]
+        return [ ( [i,j], [ ir.ComplConstraint(i,j) ] ) for [i,j] in self.bpdependencies ]
 
 
 ## @brief Construct and hold constraint network for mult-target design
 ## based in the base pair energy model
 class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
-    ## @brief Constructor from sequence length, structures and weights
+    ## @brief Constructor
     ##
     ## @param seqlen length of sequences
     ## @param structures list of target structures in dot bracket format
-    ## @param weights list of weights for the single structures
-    ## @param gcweight weight for GC-content
-    def __init__(self, seqlen, structures, weights, gcweight):
+    ## @param features the features containing weights of energies and GC control
+    def __init__( self, seqlen, structures, features ):
 
-        super().__init__(seqlen, structures, weights, gcweight)
+        super().__init__( seqlen, structures, features )
 
         self.generate_cn_basepair_model()
 
@@ -181,9 +166,9 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
-            self.functions.extend( [ ( [i,j],
-                                       [ir.BPEnergy(i,j, not (i-1,j+1) in structureset,
-                                                    self.weights[k])] )
+            self.functions.extend( [ ( [ i, j ],
+                                       [ ir.BPEnergy( i,j, not (i-1,j+1) in structureset,
+                                                      self.features[("E",k)].weight ) ] )
                                      for (i,j) in structure ] )
 
         self.add_gc_control()
@@ -191,22 +176,21 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 ## @brief Construct and hold constraint network for mult-target design
 ## based in the stacking energy model
 class RNAConstraintNetworkStacking(RNAConstraintNetwork):
-    ## @brief Constructor from sequence length, structures and weights
+    ## @brief Constructor
     ##
     ## @param seqlen length of sequences
     ## @param structures list of target structures in dot bracket format
-    ## @param weights list of weights for the single structures
-    ## @param gcweight weight for GC-content
-    def __init__(self, seqlen, structures, weights, gcweight):
+    ## @param features the features containing weights of energies and GC control
+    def __init__(self, seqlen, structures, features ):
 
-        super().__init__(seqlen, structures, weights, gcweight)
+        super().__init__( seqlen, structures, features )
 
         self.generate_cn_stacking_model()
 
         self.compute_compl_classes()
 
     ## @brief Generate constraint network for the stacking model
-    def generate_cn_stacking_model(self):
+    def generate_cn_stacking_model( self ):
         self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.remove_redundant_dependencies( self.stacking_dependencies() + self.bpdependencies )
 
@@ -217,8 +201,8 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
-            self.functions.extend( [ ( [i,j,i+1,j-1],
-                                       [ir.StackEnergy(i, j, self.weights[k])] )
+            self.functions.extend( [ ( [ i,j,i+1,j-1 ],
+                                       [ ir.StackEnergy( i, j, self.features[("E",k)].weight ) ] )
                                      for (i,j) in structure
                                      if (i+1,j-1) in structureset
             ] )
@@ -288,6 +272,35 @@ class RNATreeDecomposition(ir.TreeDecomposition):
                         bagconstraints[bagidx].append(ir.DifferentComplClassConstraint(i,j))
 
 
+## @brief GC content feature
+##
+## Defines the feature 'GC content'
+class GCFeature(ir.Feature):
+    def __init__(self, weight, target=None, tolerance=None):
+        super().__init__( "GC", weight, target, tolerance)
+    def eval(self, sample):
+        return rna.GC_content(sample) * 100
+
+## @brief Turner energy feature
+##
+## Defines the feature 'Turner energy'
+##
+## @note This feature exemplifies that the evaluation by the functions
+## that control the sampling together with the weight of this feature
+## does not have to be identical to the value of the feature: in
+## RedPrint, the functions evaluate to some simplified energy in the
+## base pair or stacking model, while the feature value is the Turner
+## energy of the sequence as computed by RNA.energy_of_struct.
+class EnergyFeature(ir.Feature):
+    def __init__(self, index, structure, weight, target=None, tolerance=None):
+        super().__init__( ("E",index), weight, target, tolerance )
+        self.structure = structure
+    def eval(self, sample):
+        import RNA
+        return RNA.energy_of_struct(sample, self.structure)
+    def idstring(self):
+        return "".join(map(str,self.identifier))
+
 ## @brief Sampler for RedPrint
 class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
     ## @brief Constructor
@@ -302,7 +315,7 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
 
         self.seqlen = seqlen
         self.structures = list(map(rna.parseRNAStructureBps,structure_strings))
-        
+
         def optarg(feat, default):
             if feat in kwargs:
                 return kwargs[feat]
@@ -334,33 +347,28 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
         if energy_tolerances == None:
             energy_tolerances = [None] * len(energy_weights)
 
-        features = [ ir.EnergyFeature(i,
-                                      structure_strings[i],
-                                      energy_weights[i],
-                                      energy_targets[i],
-                                      energy_tolerances[i])
+        features = [ EnergyFeature(i,
+                                   structure_strings[i],
+                                   energy_weights[i],
+                                   energy_targets[i],
+                                   energy_tolerances[i])
                      for i in range(len(energy_weights)) ]
-        features.append( ir.GCFeature(gcweight, gctarget, gctolerance) )
+        features.append( GCFeature(gcweight, gctarget, gctolerance) )
         return { f.identifier:f for f in features }
 
     ## @brief Generate constraint network
     ## @param features dictionary of features
     ## @return constraint network
     def gen_constraint_network(self, features):
-        weights = [ features[("E",i)].weight for i in range(len(self.structures)) ]
-        gcweight = features["GC"].weight
-
         ## build constraint network
         if self.model in ["bp", "basepair"]:
             cn = RNAConstraintNetworkBasePair( self.seqlen,
                                                self.structures,
-                                               weights,
-                                               gcweight)
+                                               self.features)
         elif self.model in ["stack", "stacking"]:
             cn = RNAConstraintNetworkStacking( self.seqlen,
                                                self.structures,
-                                               weights,
-                                               gcweight )
+                                               self.features )
         else:
             print("Model", self.model,
                   "unknown! Please see help for supported modules.")
@@ -380,7 +388,7 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
     ## @brief Calculate sample
     ## @return sampled RNA sequence
     def sample(self):
-        return ir.values2seq(super().sample().values())
+        return ir.values_to_sequence(super().sample().values())
 
 
 # END Redprint Library
@@ -401,8 +409,8 @@ def main(args):
     else:
         ir.seed(args.seed)
 
-    ir.set_bpenergy_table( params_bp )
-    ir.set_stacking_energy_table( params_stacking )
+    ir.set_bpenergy_table( ir.params_bp )
+    ir.set_stacking_energy_table( ir.params_stacking )
 
     ## read instance
     with open(args.infile) as infh:
@@ -432,8 +440,8 @@ def main(args):
 
     features = RedprintSampler.gen_features(structures, weights, args.gcweight,
                                             targets, args.gctarget,
-                                            tolerances, args.gctolerance) 
-    
+                                            tolerances, args.gctolerance)
+
     sampler = RedprintSampler( seqlen, structures, features,
                                method = args.method,
                                model = args.model,
@@ -463,20 +471,20 @@ def main(args):
             for i,struc in enumerate(structures):
                 feat_id, value = fstats.record( sampler.features[("E",i)], seq )
                 print(" {}={:3.2f}".format(feat_id,value),end='')
-                
-            if args.gc:
-                feat_id, value = fstats.record( sampler.features["GC"], seq )
-                print(" GC={:3.2f}".format(value),end='')
 
-            if args.checkvalid:
-                for i,struc in enumerate(structures):
-                    if not rna.is_valid(seq, struc):
-                        print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
-            print()
-            sample_count += 1
-            if sample_count >= args.number:
-                break
- 
+        if args.gc:
+            feat_id, value = fstats.record( sampler.features["GC"], seq )
+            print(" GC={:3.2f}".format(value),end='')
+
+        if args.checkvalid:
+            for i,struc in enumerate(structures):
+                if not rna.is_valid(seq, struc):
+                    print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
+        print()
+        sample_count += 1
+        if sample_count >= args.number:
+            break
+
     if args.verbose:
         if not fstats.empty():
             print("----------")

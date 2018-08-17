@@ -183,7 +183,7 @@ class TreeDecomposition:
 ## two are used only in case of multi-dimenstional Boltzmann sampling,
 ## which modifies the features weight based on the difference between
 ## the estimated mean feature value and the target value.
-## 
+##
 class Feature:
     def __init__(self, identifier, weight, target=None, tolerance=None):
         self.identifier = identifier
@@ -228,7 +228,7 @@ class FeatureStatistics:
                 fid, value = self.record(feature[k], sample)
                 feature[k].value = value
             return feature
-        
+
         fid = feature.identifier
         value   = feature.eval(sample)
 
@@ -285,7 +285,7 @@ class FeatureStatistics:
 class BoltzmannSampler:
 
     ## @brief Construct with features
-    ## @param features list or dictionary of the features 
+    ## @param features list or dictionary of the features
     def __init__(self, features):
         if type(features) == list:
             self.features = { f.identifier:f for f in features }
@@ -357,10 +357,10 @@ class BoltzmannSampler:
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     def __init__(self, features):
         super().__init__(features)
-        
+
         self.samples_per_round = 200
         self.tweak_base = 1.01
-        
+
     ## @brief whether the sample is of good quality
     ## @param features dictionary of features
     ##
@@ -370,7 +370,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             if abs(f.value - f.target) > f.tolerance:
                 return False
         return True
-    
+
     ## @brief Generator of targeted samples
     ##
     ## Performs multi-dimensional Boltzmann sampling: every
@@ -380,13 +380,13 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     ## features, in which case it is yielded.
     ##
     ## self.tweak_base controls the speed of recalibration of weights due to
-    ## the formula 
+    ## the formula
     ## ```
     ## weight = weight * tweak_base**(mean -target)
     ## ```
     def targeted_samples(self):
         means=None
-        
+
         counter = 0
         while True:
             self.setup_engine()
@@ -395,20 +395,20 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                 counter+=1
                 sample = self.sample()
                 returned_features = fstats.record( self.features, sample )
-                
+
                 if self.is_good_sample(returned_features):
                     # print(counter)
                     yield sample
 
             last_means=means
             means = fstats.means()
-            
+
             # modify weight of each feature
             for fid,f in self.features.items():
                 f.weight = f.weight *  self.tweak_base**(means[fid] -f.target)
-                
+
             #     print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
-               
+
             # print("==============================")
 
 
@@ -418,13 +418,25 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
 ## @brief Convert integer (variable value) to nucleotide
 ## @note encoding A=0, C=1, G=2, U=3
-def val2nucl(x):
+def value_to_nucleotide(x):
     return "ACGU"[x]
 
 ## @brief Convert list of integers (variable values) to string
 ## (sequence) of nucleotides
-def values2seq(xs):
-    return "".join(map(val2nucl, xs))
+def values_to_sequence(xs):
+    return "".join(map(value_to_nucleotide, xs))
+
+## Parameters for the base pair model (magic params from the Redprint paper)
+params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
+              "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
+
+## Parameters for the stacking model (magic params from the Redprint paper)
+params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
+                    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
+                    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
+                    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
+                    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
+                    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
 
 ## @brief set the bp energy table for Infrared
 ##
@@ -456,35 +468,3 @@ def set_stacking_energy_table(params):
                             "GUCG", "GUGC",
                             "GUGU", "GUUG" ] ))
     libir.StackEnergy.set_energy_table(params)
-
-
-
-## @brief GC content feature
-##
-## Defines the feature 'GC content'
-class GCFeature(Feature):
-    def __init__(self, weight, target=None, tolerance=None):
-        super().__init__( "GC", weight, target, tolerance)
-    def eval(self, sample):
-        return rna.GC_content(sample) * 100
-
-## @brief Turner energy feature
-##
-## Defines the feature 'Turner energy'
-##
-## @note This feature exenplifies that the evaluation by the functions
-## that control the sampling together with the weight of this feature
-## does not have to be identical to the value of the feature: in
-## RedPrint, the functions evaluate to some simplified energy in the
-## base pair or stacking model, while the feature value is the Turner
-## energy of the sequence as computed by RNA.energy_of_struct.
-class EnergyFeature(Feature):
-    def __init__(self, index, structure, weight, target=None, tolerance=None):
-        super().__init__( ("E",index), weight, target, tolerance )
-        self.structure = structure
-    def eval(self, sample):
-        import RNA
-        return RNA.energy_of_struct(sample, self.structure)
-    def idstring(self):
-        return "".join(map(str,self.identifier))
-
