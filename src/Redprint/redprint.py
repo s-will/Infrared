@@ -28,7 +28,6 @@ import itertools
 import os
 
 import infrared as ir
-import treedecomp
 import rna_support as rna
 
 ############################################################
