@@ -312,7 +312,6 @@ class FeatureStatistics:
 
 ## @brief Boltzmann sampler (abstract base class)
 class BoltzmannSampler:
-
     ## @brief Construct with features
     ## @param features list or dictionary of the features
     def __init__( self, features, td_factory = TreeDecompositionFactory() ):
@@ -380,6 +379,9 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         self.samples_per_round = 200
         self.tweak_base = 1.01
 
+        self.counter_total_samples = 0
+        self.counter_good_samples = 0
+
     ## @brief whether the sample is of good quality
     ## @param features dictionary of features
     ##
@@ -389,6 +391,13 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             if abs(f.value - f.target) > f.tolerance:
                 return False
         return True
+
+    def success_rate(self):
+        return self.counter_good_samples / float(self.counter_total_samples)
+
+    def reset_sample_counter(self):
+        self.counter_good_samples = 0
+        self.counter_total_samples = 0
 
     ## @brief Generator of targeted samples
     ##
@@ -406,17 +415,16 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     def targeted_samples(self):
         means=None
 
-        counter = 0
         while True:
             self.setup_engine()
             fstats = FeatureStatistics()
             for i in range(self.samples_per_round):
-                counter+=1
+                self.counter_total_samples += 1
                 sample = self.sample()
                 returned_features = fstats.record( self.features, sample )
 
                 if self.is_good_sample(returned_features):
-                    # print(counter)
+                    self.counter_good_samples += 1
                     yield sample
 
             last_means=means
@@ -429,5 +437,3 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             #     print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
 
             # print("==============================")
-
-

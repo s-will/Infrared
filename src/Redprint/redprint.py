@@ -501,7 +501,12 @@ def main(args):
             for i,struc in enumerate(structures):
                 if not rna.is_valid(seq, struc):
                     print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
+
+#        if args.mdbs:
+#            print("  SR={:3.2f}%".format(100.0*sampler.success_rate()),end='')
+
         print()
+
         sample_count += 1
         if sample_count >= args.number:
             break
