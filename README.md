@@ -95,7 +95,7 @@ Redprint reads the multiple RNA target structures from an 'inp'-file, e.g.
 A typical call to produce 20 Boltzmann samples with given weights looks like
 
 ```
-redprint.py test.inp  -n 20 --model bp --gcweight=0.15 -w5 --method 0 --turner
+redprint.py test.inp  -n 20 --model bp --gcweight=0.15 --weight 5 --method 0 --turner
 ```
 
 Moreover, redprint supports targeting specific gc-content and
