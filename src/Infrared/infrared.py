@@ -22,7 +22,7 @@ import rna_support as rna
 
 ## @brief Constraint network base class
 ##
-## The consraint network typically holds the problem instance-specific
+## The constraint network typically holds the problem instance-specific
 ## constraints and functions. The fields and methods of this class are
 ## up to the user; typically, one could define fields dependencies,
 ## functions, and constraints.
@@ -180,7 +180,7 @@ class TreeDecomposition:
 ## value, which determines the feature's value for a sample.
 ##
 ## A feature defines weight, target value, and tolerance. The latter
-## two are used only in case of multi-dimenstional Boltzmann sampling,
+## two are used only in case of multi-dimensional Boltzmann sampling,
 ## which modifies the features weight based on the difference between
 ## the estimated mean feature value and the target value.
 ##
@@ -205,7 +205,7 @@ class Feature:
 ##
 ## This class allows recording values of multiple features for a
 ## series of samples; it can be queried for mean and standard
-## deviation (or the entire distribution) of each recored feature.
+## deviation (or the entire distribution) of each recorded feature.
 class FeatureStatistics:
     ## @brief constructor
     ## @param keep Keep all recorded features in memory
@@ -352,7 +352,7 @@ class BoltzmannSampler:
         ct = td.construct_cluster_tree()
         return ct
 
-## @brief Multi-dimenstional Boltzmann sampler (abstract base class)
+## @brief Multi-dimensional Boltzmann sampler (abstract base class)
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     def __init__(self, features):
         super().__init__(features)
