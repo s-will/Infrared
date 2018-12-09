@@ -17,8 +17,8 @@
 ## multiple RNA structures.  This file defines the redprint library
 ## module and the redprint command line tool.
 ##
-## @note Dependencies: the redprint tool needs ViennaRNA's RNA pyhton
-## module, which could require to set the python path like: export
+## @note Dependencies: the redprint tool needs ViennaRNA's RNA Python
+## module, which could require to set the Python path like: export
 ## PYTHONPATH=$VRNAVIENNA_HOME/lib/python3.6/site-packages. For
 ## further dependencies see Infrared/treedecomp.py.
 
