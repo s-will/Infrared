@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # This file is a plug-in of the InfraRed to realise the sampling of module sequences using 
 # BayesPairing
 
