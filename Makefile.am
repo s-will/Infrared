@@ -5,4 +5,4 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS=src
 
 ## doxygen documentation
-include $(top_srcdir)/Doc/doxygen.am
+include $(top_srcdir)/src/doxygen.am
