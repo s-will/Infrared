@@ -151,6 +151,7 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/Infrared/Makefile])
 AC_CONFIG_FILES([src/Redprint/Makefile])
+AC_CONFIG_FILES([src/Bayes/Makefile])
 AC_CONFIG_FILES([src/Test/Makefile])
 
 dnl generate the final Makefile etc.
