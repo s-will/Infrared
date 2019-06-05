@@ -9,6 +9,17 @@
 # Boltzmann sampling over constraint networks
 #
 
+## @namespace infrared
+## InfraRed engine library for Python users
+##
+## InfraRed provides a generic framework for tree decomposition-based
+## Boltzmann sampling over constraint networks
+##
+## Usage:
+## @code{.py}
+## import infrared as ir
+## @endcode
+
 import itertools
 import os
 
@@ -26,6 +37,7 @@ import rna_support as rna
 ## constraints and functions. The fields and methods of this class are
 ## up to the user; typically, one could define fields dependencies,
 ## functions, and constraints.
+## @see redprint.RNAConstraintNetwork
 class ConstraintNetwork:
     def __init__(self):
         pass
@@ -194,19 +206,22 @@ class TreeDecomposition:
 ## two are used only in case of multi-dimenstional Boltzmann sampling,
 ## which modifies the features weight based on the difference between
 ## the estimated mean feature value and the target value.
-##
+## @see redprint.GCFeature, redprint.EnergyFeature
 class Feature:
     def __init__(self, identifier, weight, target=None, tolerance=None):
         self.identifier = identifier
         self.weight = weight
+	## target value
         self.target = target
         self.tolerance = tolerance
 
-    ## @brief Printable identifier
+    ## Printable identifier
     def idstring(self):
         return str(self.identifier)
 
-    ## @brief Evaluate feature for given sample
+    ## Evaluate feature for given sample.
+    ## Abstract method
+    ## @param sample a sampled sequence
     @abc.abstractmethod
     def eval(self, sample):
         return
@@ -216,17 +231,24 @@ class Feature:
 ##
 ## This class allows recording values of multiple features for a
 ## series of samples; it can be queried for mean and standard
-## deviation (or the entire distribution) of each recored feature.
+## deviation (or the entire distribution) of each recorded feature.
+##
+## All public attributes besides "keep" are a dictionary with feature ids as key
 class FeatureStatistics:
     ## @brief constructor
     ## @param keep Keep all recorded features in memory
     def __init__(self, keep=False):
         self.keep = keep
-
+	
+	## printable identifiers
         self.idstring = dict()
+	## record counting 
         self.count = dict()
+	## sums of each feature values
         self.sums = dict()
+	## square sums
         self.sqsums = dict()
+	## Store all recorded features if keep
         self.features = dict()
 
     ## @brief Record feature values
@@ -295,19 +317,36 @@ class FeatureStatistics:
 ## derived classes must override gen_cluster_tree
 class BoltzmannSampler:
 
-    ## @brief Construct with features
+    ## @brief Constructor with features
     ## @param features list or dictionary of the features
     def __init__(self, features):
         if type(features) == list:
             self.features = { f.identifier:f for f in features }
         else:
+	    ## dictionary of features with feature ids as key
             self.features = features
 
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
+    ##
+    ## The function builds, in the order, constraint network, tree decomposition, and the 
+    ## cluster tree from features using, respectively, 
+    ## \ref infrared.BoltzmannSampler.gen_constraint_network "self.gen_constraint_network",
+    ## \ref infrared.BoltzmannSampler.gen_tree_decomposition "self.gen_tree_decomposition",
+    ## and \ref infrared.BoltzmannSampler.gen_cluster_tree "self.gen_cluster_tree"
+    ##
+    ## @note The function sets up the sampling engine from the #infrared.ConstraintNetwork
+    ## defining the design problem, which is not a mandatory object. Therefore, user needs
+    ## to overwrite the function if any alternative way is used.
     def setup_engine(self):
+	## Optional. Constraint Network object
+	## @see infrared.ConstraintNetwork.
         self.cn = self.gen_constraint_network(self.features)
+	## Tree Decomposition object
+	## @see infrared.TreeDecomposition
         self.td = self.gen_tree_decomposition(self.cn)
+	## Cluster Tree object
+	## @see ired.ClusterTree
         self.ct = self.gen_cluster_tree(self.td)
         self.requires_evaluation = True
 
@@ -338,11 +377,13 @@ class BoltzmannSampler:
         return self.ct.sample()
 
     ## @brief Sample generator
+    ## @return generator of samples
     def samples(self):
         while(True):
             yield self.sample()
 
     ## @brief Generate the constraint network
+    ## Abstraact method
     ## @param features the features (containing their weights)
     ## @return the constraint network
     @abc.abstractmethod
@@ -350,6 +391,7 @@ class BoltzmannSampler:
         pass
 
     ## @brief Generate the tree decomposition
+    ## Abstract method
     ## @param cn the constraint network
     ## @return the tree decomposition
     @abc.abstractmethod
@@ -376,6 +418,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     ## @param features dictionary of features
     ##
     ## checks whether the sample approximately meets the targets
+    ## @return boolean
     def is_good_sample(self, features):
         for f in features.values():
             if abs(f.value - f.target) > f.tolerance:
@@ -395,6 +438,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     ## ```
     ## weight = weight * tweak_base**(mean -target)
     ## ```
+    ## @return generator of targeted samples
     def targeted_samples(self):
         means=None
 
@@ -429,11 +473,15 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
 ## @brief Convert integer (variable value) to nucleotide
 ## @note encoding A=0, C=1, G=2, U=3
+## @param x integer value
+## return nucleotide
 def value_to_nucleotide(x):
     return "ACGU"[x]
 
 ## @brief Convert list of integers (variable values) to string
 ## (sequence) of nucleotides
+## @param xs list of intergers
+## @return string of nucleotides (RNA sequence)
 def values_to_sequence(xs):
     return "".join(map(value_to_nucleotide, xs))
 

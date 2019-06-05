@@ -44,18 +44,25 @@ import rna_support as rna
 ## multi-target RNA design instance
 class RNAConstraintNetwork(ir.ConstraintNetwork):
     ## @brief Constructor
-    ## @param seqlen sequence length
+    ## @param seqlen seduence length
     ## @param structures structures as lists of base pairs
     ## @param features the features containing weights of energies and GC control
     def __init__( self, seqlen, structures, features ):
         super().__init__()
+	## sequence length
         self.seqlen = seqlen
+	## list of structures as lists of base pairs
         self.structures = list(structures)
+	## features containing energy weights and GC control
         self.features = features
 
         # to be filled later
+	## list of base pair dependencies
         self.bpdependencies = []
+	## list of #ired.Constraint
+	## @todo document Constraint object
         self.constraints=[]
+	## list of #ired.Function
         self.functions=[]
 
     ## @brief Generate base pair dependencies
@@ -90,13 +97,15 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
     ##
     ## Returns result in self.compl_classes
     def compute_compl_classes(self):
-        ## Transform pairs into dict with keys=first and value=list of second components
+        # Transform pairs into dict with keys=first and value=list of second components
         def accumulate_dict(xys):
             d = {x:[] for x,y in xys}
             for (x,y) in xys:
                 d[x].append(y)
             return d
 
+	## @brief complementarity classes in dictionary
+	##
         ## perform depth-first traversal
         self.compl_classes = dict()
 
@@ -132,7 +141,8 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
                             for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
 
-    ## @brief Add the complementarity constraints to self.constraints
+    ## @brief Add the complementarity constraint for each base pair dependenciy to self.constraints
+    ## @see ired.rnadesign.ComplConstraint
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
         return [ ( [i,j], [ ir.ComplConstraint(i,j) ] ) for [i,j] in self.bpdependencies ]
@@ -274,9 +284,16 @@ class RNATreeDecomposition(ir.TreeDecomposition):
 ## @brief GC content feature
 ##
 ## Defines the feature 'GC content'
+## @see infrared.Feature
 class GCFeature(ir.Feature):
+
+    ## The constructor.
+    ## The identifier is set to "GC" by default
     def __init__(self, weight, target=None, tolerance=None):
         super().__init__( "GC", weight, target, tolerance)
+
+
+    ## GC content of a given sample
     def eval(self, sample):
         return rna.GC_content(sample) * 100
 
@@ -290,13 +307,19 @@ class GCFeature(ir.Feature):
 ## RedPrint, the functions evaluate to some simplified energy in the
 ## base pair or stacking model, while the feature value is the Turner
 ## energy of the sequence as computed by RNA.energy_of_struct.
+## @see infrared.Feature
 class EnergyFeature(ir.Feature):
+    ## The constructor
+    ## @param index structure index
+    ## @param structure secondary structure
     def __init__(self, index, structure, weight, target=None, tolerance=None):
         super().__init__( ("E",index), weight, target, tolerance )
         self.structure = structure
+    ## Compute Turner energy of given sample
     def eval(self, sample):
         import RNA
         return RNA.energy_of_struct(sample, self.structure)
+    ## @return "EX" where X is the index
     def idstring(self):
         return "".join(map(str,self.identifier))
 
