@@ -51,25 +51,35 @@ class ConstraintNetwork:
 ## To see an example for the use of this class, check out the redprint
 ## tool.
 ##
+## @see redprint.RNATreeDecomposition
 class TreeDecomposition:
     ## @brief Constructor
     ## @param varnum number of variables
     ## @param dependencies list of dependencies
     ## @param method tree decomposition method
     def __init__(self, varnum, dependencies, *, method=0):
+	## @brief number of variables, _i.e._ number of constraint network nodes
         self.varnum = varnum
 
         # from dependencies generate list of binary edges
         bindependencies  = self.expand_to_cliques(dependencies)
 
         # generate tree decomposition -> bags, edges
+	## @brief Tree decomposition object #treedecomp.TreeDecomp
         self.td = treedecomp.makeTD(varnum, bindependencies, method = method)
-
+	## @brief a list of bags, 0-based sets of variables 
         self.bagsets = list(map(set,self.td.bags))
 
+	## @todo documentation
         self.domains = None
 
-    ## @brief Get assignments of functions and constraints to the bags
+    ## @brief Get assignments of functions and constraints to the bags.
+    ## Abstract method.
+    ## @return the assignments in two dictionaries, in which each key
+    ## is the bag index and the value is the assigned constraints for
+    ## the first dictionary, functions for the second one  
+    ## @see redprint.RNATreeDecomposition#get_bag_assignments
+    ## @todo make doxygen recognize abc.abstractmethod tag
     @abc.abstractmethod
     def get_bag_assignments(self):
         pass
@@ -135,6 +145,7 @@ class TreeDecomposition:
     ##
     ## self.domains can either specify a uniform domain size, or a
     ## list of all domain sizes
+    ## @return a cluster tree object #ired.ClusterTree
     def construct_cluster_tree(self):
 
         bagconstraints, bagfunctions = self.get_bag_assignments()
