@@ -41,10 +41,18 @@ namespace ired {
      */
     class Dependency {
     public:
+	//! type of variable index
         using var_idx_t = int;
 
+	/**
+	 * Constructor
+	 * @param vars vector of variable indices
+	 */
         Dependency(const std::vector<var_idx_t> &vars) : vars_(vars) {}
 
+	/**
+	 * @brief Return variable index vector
+	 */
         const std::vector<var_idx_t> &
         vars() const {return vars_;}
 
@@ -54,6 +62,13 @@ namespace ired {
 
     /**
      * @brief Functions evaluate assignments of a subset of variables
+     * @tparam FunValue type of Function value. Default: double
+     *
+     * @note
+     * The class with boolean FunValue is called Constraint
+     * @code{.hpp}
+     * using Constraint = Function<bool>
+     * @endcode
      */
     template<class FunValue=double>
     class Function : public Dependency {
@@ -67,6 +82,9 @@ namespace ired {
 
         // Function(const Function &fun) : Dependency(fun) {}
 
+	/** Function operator evaluating given assignment
+	 *  @return evaluation
+         */
         virtual
         fun_value_t
         operator () (const assignment_t &) const = 0;

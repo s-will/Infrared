@@ -29,7 +29,7 @@ namespace ired {
          * @brief Base pair complementarity constraint
          *
          * Constrains two variables to represent complementary base
-         * pairs. Due to A=0,C=1,G=2,U=4, this limits the value
+         * pairs. Due to A=0,C=1,G=2,U=3, this limits the value
          * combinations to AU=03, CG=12, GU=23 and symetrically UA=30,
          * GC=21, UG=32.
          */
@@ -51,9 +51,10 @@ namespace ired {
             }
             
             /**
-             * @brief Evaluate constraint
+             * @brief Evaluate constraint on {i,j}
              *
              * @param a assignment
+	     * @return bool
              */
             bool
             operator ()(const Assignment &a) const override {
@@ -132,10 +133,20 @@ namespace ired {
             using parent_t = Function<double>;
             using base_t = typename parent_t::base_t;
 
+	    /**
+	     * @brief Constructor of GC content control
+	     * @param i index of variable
+	     * @param weight GC ratio targeting value
+	     */
             GCControl(int i , double weight)
                 : parent_t({i}), weight_(weight) {
             }
 
+	    /**
+	     * @brief Evaluate GC content on position i
+	     * @return weight if assignment on position is C or G,
+	     * otherwise 1.
+	     */
             double
             operator ()(const Assignment &a) const override {
 
@@ -164,6 +175,12 @@ namespace ired {
                 : parent_t(vars), weight_(weight) {
             }
 
+	    /**
+	     * @brief Energy evaluation of the assignment
+	     * @param a assignment
+	     * @return 
+             * @f[ \pi^{E(a)} @f]
+	     */
             double
             operator ()(const Assignment &a) const override {
                 return
@@ -207,6 +224,7 @@ namespace ired {
 
             /** @brief set energy table
              *
+	     * @param table a vector of size 6
              * order of the 6 parameters in the table: AU,CG,GU,AU_term,CG_term,GU_term
              */
             static
