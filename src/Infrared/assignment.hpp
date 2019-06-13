@@ -116,8 +116,8 @@ namespace ired {
         }
 
         /**
-         * @brief set variables to undetermined
-         * @param i index of variable
+         * @brief set variable to undetermined
+         * @param i index of variable to be set
          */
         void
         set_undet(var_idx_t i) {
@@ -126,7 +126,7 @@ namespace ired {
 
         /**
          * @brief set variables to undetermined
-         * @param xs vector of variable indices
+         * @param xs vector of variable indices concerned
          */
         void
         set_undet(const std::vector<var_idx_t> &xs) {
@@ -159,14 +159,17 @@ namespace ired {
          * @brief evaluate constraints/functions where all variables
          * are already determined
          *
+	 * @tparam Function #ired::Function
+	 * @tparam EP #ired::StdEvaluationPolicy
          * @returns product of determined function values
          */
         template<class Function, class EP>
         auto
         eval_determined(const std::vector<const Function *> &functions, const EP &) {
-            // for each function
             auto x = EP::one();
+            // for each function
             for( const auto &f : functions ) {
+		// if assignment are determined at all positions of dependencies
                 if ( all_of( f->vars().begin(), f->vars().end(), [&] (auto x) {return is_det(x);} ) )
                     {
                         // evaluate f
