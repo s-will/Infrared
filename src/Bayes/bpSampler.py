@@ -2,9 +2,12 @@
 # This file is a plug-in of the InfraRed to realise the sampling of module sequences using 
 # BayesPairing
 
+import random
 import pickle
 import math
 import networkx as nx
+import pandas as pd
+from pgmpy.models import BayesianModel
 import infrared as ir
 
 # TODO: Modify the function to return the proper value
@@ -23,8 +26,7 @@ class LogProb(ir.Function):
         for ind, v in enumerate(sub_a[-1:0:-1]):
             col += v*(4**ind)
         p = self.probs[sub_a[0],col]
-        print(p)
-        return -math.log(p)
+        return p
         
 class ModuleConstraintNetwork(ir.ConstraintNetwork):
     def __init__(self, module):
@@ -45,7 +47,6 @@ class ModuleTreeDecomposition(ir.TreeDecomposition):
         self.cn = cn
 
     def get_bag_assignments(self):
-        print("Start Assign Functions")
         bagfunctions = self.assign_to_bags(self.cn.functions)
         bagconstraints = self.assign_to_all_bags(self.cn.constraints)
         return bagconstraints, bagfunctions
@@ -69,25 +70,28 @@ class ModuleSampler(ir.BoltzmannSampler):
     def sample(self):
         return ir.values_to_sequence(super().sample().values())
 
-def main(map_index, f):
-    module = pickle.load(open(f, 'rb'))
+def main(map_index, module, seed = None):
     module.map = map_index
+
+    if seed == None:
+        seed = random.randint(0, 2**31)
+    ir.seed(seed)
+    print(seed)
+
     sampler = ModuleSampler(module)
     sampler_generator = sampler.samples()
-    count  = 0
-    for seq in sampler_generator:
-        print(seq)
-        count += 1
-        if count == 10:
-            break
+    return sampler_generator
 
 def relabel_rna_module(module):
     cpds = module.get_cpds()
     variables = [t.variables for t in cpds]
     dependencies = [[module.map[a] for a in t] for t in variables]
     probs = [t.get_values() for t in cpds]
-
     return dependencies, probs
-    
+
 if __name__ == "__main__":
-    main({1797:0, 1798:1, 1799:2, 1800:3, 1801:4, 1802:5, 1803:6}, "test_module")
+    map_index = {1797:0, 1798:1, 1799:2, 1800:3, 1801:4, 1802:5, 1803:6}
+    module = pickle.load(open("test_module", 'rb'))
+    sampler = main(map_index, module, 1554097924)
+    for i in range(10):
+        print(next(sampler))

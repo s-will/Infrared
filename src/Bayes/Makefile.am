@@ -1,1 +1,1 @@
-bin_SCRIPTS=bayesPairing.py 
+bin_SCRIPTS=bpSampler.py test.py

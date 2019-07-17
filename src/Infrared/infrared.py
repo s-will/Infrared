@@ -165,10 +165,6 @@ class TreeDecomposition:
                         ct.add_constraint(cluster, x)
 
                     for x in bagfunctions[i]:
-                        print(ct,type(ct))
-                        print(cluster,type(cluster))
-                        print(x,type(x).__bases__)
-                        print("----------")
                         ct.add_function(cluster, x)
 
                     for j in self.td.adj[i]:
