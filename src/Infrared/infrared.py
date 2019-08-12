@@ -8,7 +8,9 @@
 # InfraRed provides a generic framework for tree decomposition-based
 # Boltzmann sampling over constraint networks
 #
-
+## @file
+## InfraRed Python interface
+##
 ## @namespace infrared
 ## InfraRed engine library for Python users
 ##
