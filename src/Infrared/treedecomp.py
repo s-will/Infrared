@@ -33,6 +33,7 @@ import os
 import subprocess
 import re
 from math import sqrt,ceil
+from networkx.algorithms.approximation.treewidth import treewidth_min_degree
 
 import libhtdwrap as htd
 
@@ -452,6 +453,15 @@ def makeTD(num_nodes, edges, *, method=0, **kwargs):
     else:
         return makeTD_TDlib(num_nodes, edges, strategy=method)
 
+
+## @brief Obtain tree deomposition using networkx
+def makeTD_nx(G, maxdiffsize=1):
+    i, tree = treewidth_min_degree(G)
+    bags = list(map(list, tree.nodes))
+    edges = [(bags.index(list(i)),bags.index(list(j))) for i,j in tree.edges]
+    td = TreeDecomp(bags, edges)
+    td.expand_treedecomposition(maxdiffsize)
+    return td
 # End of Interface tree demposition libraries
 # ----------------------------------------------------------
 
