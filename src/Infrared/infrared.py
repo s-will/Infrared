@@ -69,10 +69,19 @@ class TreeDecomposition:
 
         self.domains = None
 
+        self.cn = None
+
+
     ## @brief Get assignments of functions and constraints to the bags
-    @abc.abstractmethod
+    ##
+    ## straightforward non-redundant assignment of constraints and functions,
+    ## each to some bag that contains all of their variables
+    ##
+    ## assumes constraints and functions specified in self.cn
     def get_bag_assignments(self):
-        pass
+        bagconstraints = self.assign_to_bags(self.cn.constraints)
+        bagfunctions = self.assign_to_bags(self.cn.functions)
+        return (bagconstraints, bagfunctions)
 
     ## @brief Expand non-binary dependencies to cliques of binary deps
     ## @param dependencies list of dependencies
@@ -130,8 +139,7 @@ class TreeDecomposition:
 
     ## @brief Construct the cluster tree
     ##
-    ## Requires deriving classes to specialize self.domains and
-    ## self.get_bag_assignments()
+    ## Requires deriving classes to specialize self.domains
     ##
     ## self.domains can either specify a uniform domain size, or a
     ## list of all domain sizes
