@@ -1,1 +1,1 @@
-bin_SCRIPTS=romy.py
+bin_SCRIPTS=romy.py clustering.py functions.py
