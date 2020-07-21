@@ -24,6 +24,11 @@ import infrared as ir
 import treedecomp
 import rna_support as rna
 
+import clustering as cl
+from Bio.Phylo.TreeConstruction import DistanceCalculator
+from Bio.Phylo.TreeConstruction import DistanceTreeConstructor
+from Bio import AlignIO
+
 import RNA
 
 ## @brief InfraRed function to control hamming distance
@@ -193,6 +198,13 @@ class RomySampler(ir.MultiDimensionalBoltzmannSampler):
     def sample(self):
         return self.values_to_alignment(super().sample().values())
 
+##Additional useful functions
+def all_parents(tree):
+    parents = {}
+    for clade in tree.find_clades(order='level'):
+        for child in clade:
+            parents[child] = clade
+    return parents
 
 ## @brief command line tool definition
 ## @param args command line arguments
@@ -208,16 +220,38 @@ def main(args):
     ir.set_bpenergy_table( ir.params_bp )
 
     ## hard code an instance
+
     structure = "((((.((((...))))))))"
     seqnum = 5
     seqlen = len(structure)
-    phylotree = [(3,0),(3,4),(4,1),(4,2)]
+    phylotree = [(3,0),(3,4),(4,1),(4,2)] #List of edges
 
-    features = [ GCFeature( 1, 66, 5 ) ] 
-    features.extend( [ EnergyFeature( i, structure, 1, -10, 5 )
+    features = [ GCFeature( 1, 66, 5 ) ] #GC content of 66% with a tolerance of 5%
+    features.extend( [ EnergyFeature( i, structure, 1, -10, 5 ) #Energy of -10 with a tolerance of 5%
                        for i in range(seqnum) ] )
-    features.extend( [ DistanceFeature( edge, 1, 2, 1 )
-                       for edge in phylotree ] )    
+    features.extend( [ DistanceFeature( edge, 1, 2, 1 ) #We want to have a hamming distance of 2% for each sequence
+                       for edge in phylotree ] )
+
+    ##Get features from alignment file
+
+    #Get phylogenetic tree
+    """     aln=AlignIO.read(args.infile,'stockholm')
+    calculator = DistanceCalculator('identity')
+    constructor = DistanceTreeConstructor(calculator, 'nj')
+    tree = constructor.build_tree(aln) """
+    
+    #Cluster the alignment structures
+    sequences= list(RNA.file_msa_read(args.infile)[2])
+    if args.n1==-1:
+        args.n1= int(1000/len(sequences))+1 #To have approximatively 1000 structures generated
+    cl_results = cl.clustering(sequences, args.k, args.n1)
+    df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],args.n1,sequences, args.k,args.T, args.gamma)
+    best_cluster = df[df["Cluster ensemble energy"]==df["Cluster ensemble energy"].min()]
+    structure1=best_cluster["MEA representative structure"]
+    print(structure1)
+    average_gc=cl_results[-1]
+    print(average_gc)
+
     # transform features to the corresponding feature dictionary
     features = { f.identifier:f for f in features }
 
@@ -271,8 +305,16 @@ if __name__ == "__main__":
     ## command line argument parser
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
 
-    # parser.add_argument('infile', help="Input file")
+    parser.add_argument('infile', help="Input Stockholm file for the alignment")
 
+    parser.add_argument("-k",type=int, help="Number of clusters",default=5)
+
+    parser.add_argument("-n1",type=int, help="Number of generated structures for each sequence of the alignment",default= -1)
+
+    parser.add_argument("-T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
+    
+    parser.add_argument("-gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
+    
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
 
