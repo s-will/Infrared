@@ -28,9 +28,8 @@ def clustering(sequences,k,n=15):
     structs = [] #Structures generated
     base_pairs_list = [] #List of parsed structures: base pair pairs 
     diss_matrix=np.zeros((N,N)) #Dissimilarity matrix of base pair distances
-    similarity_matrix = np.zeros((N,N))
     clusters = [[] for _ in range(k)] #Clusters
-
+    mfes = [] #List of the MFE for each sequence of the alignment
     average_gc=0
     for seq in sequences:
         #Compute GC content
@@ -44,6 +43,7 @@ def clustering(sequences,k,n=15):
         fc = RNA.fold_compound(seq, md)
         # compute MFE[value for value in ls[value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] t1 if value in lst2] 
         (ss, mfe) = fc.mfe()
+        mfes.append(mfe)
         # rescale Boltzmann factors according to MFE
         fc.exp_params_rescale(mfe)
         
@@ -74,11 +74,12 @@ def clustering(sequences,k,n=15):
         
     #Compute the dissimilarity matrix
     for i in range(N):
-        for j in range(N):
+        for j in range(i,N):
             A = base_pairs_list[i]
             B = base_pairs_list[j]
-            diss_matrix[i][j] = len(A.symmetric_difference(B))
-            similarity_matrix[i][j]=len(A.intersection(B))      
+            diff = len(A.symmetric_difference(B))
+            diss_matrix[i][j] = diff
+            diss_matrix[j][i] = diff
 
     
     #Clustering with k means
@@ -87,7 +88,7 @@ def clustering(sequences,k,n=15):
     for i in range(N):
         clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters """ """
 
-    return [clusters,structs, base_pairs_list,fcs,s, kmeans,average_gc]
+    return [clusters,structs, base_pairs_list,fcs,s, kmeans,average_gc,mfes]
     
     
 """     #Spectral clustering

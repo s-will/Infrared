@@ -248,9 +248,11 @@ def main(args):
     df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],args.n1,sequences, args.k,args.T, args.gamma)
     best_cluster = df[df["Cluster ensemble energy"]==df["Cluster ensemble energy"].min()]
     structure1=best_cluster["MEA representative structure"]
-    print(structure1)
-    average_gc=cl_results[-1]
-    print(average_gc)
+    #print(structure1)
+    average_gc=cl_results[6]
+    #print(average_gc)
+    energies = cl_results[7]
+    #print(energies)
 
     # transform features to the corresponding feature dictionary
     features = { f.identifier:f for f in features }
