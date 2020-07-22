@@ -13,7 +13,7 @@ import itertools
 import os
 
 import libinfrared as libir
-from libinfrared import *
+from libinfrared import Constraint,Function
 
 import treedecomp
 import abc
@@ -27,8 +27,43 @@ import rna_support as rna
 ## up to the user; typically, one could define fields dependencies,
 ## functions, and constraints.
 class ConstraintNetwork:
-    def __init__(self):
-        pass
+    def __init__(self, *, domains=None, varnum=None, constraints=[], functions=[]):
+        if type(domains) is list:
+            assert(varnum is None)
+            self._domains = domains
+        else:
+            assert(type(domains) is int)
+            self._domains = [domains] * varnum
+
+        self._constraints = constraints
+        self._functions = functions
+    
+    ## @brief infer dependencies from the functions and constraints
+    ##
+    ## @param non_redundant whether the dependency list is made non-redundant
+    ## @returns list of lists of indices of variables that depend on each other either through functions or constraints
+    def get_dependencies(self, non_redundant=True):
+        deps = [ x.vars() for x in self.get_functions() + self.get_constraints() ]
+        
+        if non_redundant:
+            deps = self._remove_redundant_dependencies(deps)
+
+        return deps
+
+    ## @brief list of all functions
+    def get_functions(self):
+        return self._functions
+
+    ## @brief list of all constraints
+    def get_constraints(self):
+        return self._constraints
+   
+    def get_varnum(self):
+        return len(self._domains)
+
+    # list of the domain sizes of each variable
+    def get_domains(self):
+        return self._domains
 
     ## @brief Removes redundant dependencies
     ##
@@ -38,39 +73,100 @@ class ConstraintNetwork:
     ##
     ## @return pruned list of dependencies
     @staticmethod
-    def remove_redundant_dependencies(deps):
+    def _remove_redundant_dependencies(deps):
         def sublist(xs,ys):
             return all(x in ys for x in xs)
         def subsumed(dep,deps):
             return any( len(dep)<len(dep2) and sublist(dep,dep2) for dep2 in deps )
         return [ dep for dep in deps if not subsumed(dep,deps) ]
 
-## @brief Base class for tree decomposition defining some more
-## commonly useful methods.
-##
-## To see an example for the use of this class, check out the redprint
-## tool.
-##
-class TreeDecomposition:
-    ## @brief Constructor
-    ## @param varnum number of variables
-    ## @param dependencies list of dependencies
-    ## @param method tree decomposition method
-    def __init__(self, varnum, dependencies, *, method=0):
-        self.varnum = varnum
 
+## @brief Base class of tree decomposition factories
+##
+## A TD factory needs to provide a method create to produce a class TreeDecomposition
+## given the number of variables and the list of dependencies; 
+## dependencies are lists of lists of 0-based indices of the 
+## variables that respectively depend on each other
+##
+class TreeDecompositionFactoryBase:
+    def __init__(self):
+        pass
+    @abc.abstractmethod
+    def create(self, varnum, dependencies):
+        return
+
+## @brief Tree decomposition factory using the default method for the tree decomposition
+class TreeDecompositionFactory(TreeDecompositionFactoryBase):
+    def __init__(self):
+        pass
+    def create(self, varnum, dependencies):
         # from dependencies generate list of binary edges
-        bindependencies  = self.expand_to_cliques(dependencies)
+        bindependencies  = treedecomp.TreeDecomp.expand_to_cliques(dependencies)
 
         # generate tree decomposition -> bags, edges
-        self.td = treedecomp.makeTD(varnum, bindependencies, method = method)
+        return treedecomp.makeTD(varnum, bindependencies, method = 0)
 
-        self.bagsets = list(map(set,self.td.bags))
+## @brief Cluster tree (wrapping the cluster tree class of the C++ engine)
+class ClusterTree:
+    def __init__(self, cn, *, td_factory=TreeDecompositionFactory(), td=None):
+        if td is None:
+            td = td_factory.create(cn.get_varnum(), cn.get_dependencies())
 
-        self.domains = None
+        self.cn = cn
 
-        self.cn = None
+        self._bagsets = list( map(set, td.get_bags()) )
 
+
+        self.td = td
+        self.ct = self.construct_cluster_tree( cn.get_domains(), td )
+
+    ## @brief Construct the cluster tree object of the C++ engine
+    ##
+    ## domains can either specify a uniform domain size, or a
+    ## list of all domain sizes
+    def construct_cluster_tree(self, domains, td):
+        bagconstraints, bagfunctions = self.get_bag_assignments()
+
+        ct = libir.ClusterTree(domains);
+
+        # keep record of all non-root nodes
+        children = set()
+
+        for bagidx in td.toposorted_bag_indices():
+            if not bagidx in children:
+                # enumerate subtree
+                stack = [(None,bagidx)]
+                while stack:
+                    (p,i) = stack[-1]
+                    stack = stack[:-1]
+                    bagvars = sorted(list(self._bagsets[i]))
+
+                    if p==None:
+                        cluster = ct.add_root_cluster(bagvars)
+                    else:
+                        cluster = ct.add_child_cluster(p,bagvars)
+
+                    for x in bagconstraints[i]:
+                        ct.add_constraint(cluster, x)
+
+                    for x in bagfunctions[i]:
+                        ct.add_function(cluster, x)
+
+                    for j in td.adj[i]:
+                        children.add(j)
+                        stack.append((cluster,j))
+        return ct
+
+    def evaluate(self):
+        return self.ct.evaluate()
+
+    ## @brief generate sample
+    ## @returns a raw sample
+    def sample(self):
+        return self.ct.sample()
+
+    def get_td(self):
+        return self.td
 
     ## @brief Get assignments of functions and constraints to the bags
     ##
@@ -79,30 +175,21 @@ class TreeDecomposition:
     ##
     ## assumes constraints and functions specified in self.cn
     def get_bag_assignments(self):
-        bagconstraints = self.assign_to_bags(self.cn.constraints)
-        bagfunctions = self.assign_to_bags(self.cn.functions)
+        bagconstraints = self.assign_to_bags(self.cn.get_constraints())
+        bagfunctions = self.assign_to_bags(self.cn.get_functions())
         return (bagconstraints, bagfunctions)
 
-    ## @brief Expand non-binary dependencies to cliques of binary deps
-    ## @param dependencies list of dependencies
-    ## @return list of binary dependencies
-    @staticmethod
-    def expand_to_cliques(dependencies):
-        bindeps = list()
-        for d in dependencies:
-            bindeps.extend( itertools.combinations(d,2) )
-        return bindeps
 
     ## @brief Get the indices of all bags that contain a set of variables
     ## @param bvars the set of variables
     ## @return list of indices of the bags that contain bvars
-    def find_all_bags(self,bvars):
-        return [ i for i,bag in enumerate(self.bagsets) if all( x in bag for x in bvars ) ]
+    def find_all_bags(self, bvars):
+        return [ i for i,bag in enumerate(self._bagsets) if all( x in bag for x in bvars ) ]
 
     ## @brief Find a bag that contains a set of variables
     ## @param bvars the set of variables
     ## @return index of first bag that contains bvars (or None if there is none)
-    def find_bag(self,bvars):
+    def find_bag(self, bvars):
         bags = self.find_all_bags(bvars)
         if len(bags)>0:
             return bags[0]
@@ -119,9 +206,9 @@ class TreeDecomposition:
     ## @pre for each constraint/function there is one bag that contains its dependencies;
     ## otherwise the constraint/function is not assigned
     def assign_to_bags(self,constraints):
-        bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
-        for (cvars,ccons) in constraints:
-            bagconstraints[self.find_bag(cvars)].extend(ccons)
+        bagconstraints = { i:[]  for i in range(len(self._bagsets)) }
+        for cons in constraints:
+            bagconstraints[self.find_bag(cons.vars())].append(cons)
         return bagconstraints
 
     ## @brief assign constraints or functions to all possible bags
@@ -130,55 +217,12 @@ class TreeDecomposition:
     ##
     ## Assigns constraint/function is to each bags that contains its
     ## dependencies.
-    def assign_to_all_bags(self,constraints):
-        bagconstraints = { i:[]  for i in range(len(self.bagsets)) }
-        for (cvars,ccons) in constraints:
-            for bidx in self.find_all_bags(cvars):
-                bagconstraints[bidx].extend(ccons)
+    def assign_to_all_bags(self, constraints):
+        bagconstraints = { i:[]  for i in range(len(self._bagsets)) }
+        for cons in constraints:
+            for bidx in self.find_all_bags(cons.vars()):
+                bagconstraints[bidx].append(cons)
         return bagconstraints
-
-    ## @brief Construct the cluster tree
-    ##
-    ## Requires deriving classes to specialize self.domains
-    ##
-    ## self.domains can either specify a uniform domain size, or a
-    ## list of all domain sizes
-    def construct_cluster_tree(self):
-
-        bagconstraints, bagfunctions = self.get_bag_assignments()
-
-        if type(self.domains) == int:
-            ct = libir.ClusterTree(self.varnum, self.domains);
-        else:
-            ct = libir.ClusterTree(self.domains);
-
-        # keep record of all non-root nodes
-        children = set()
-
-        for bagidx in self.td.toposorted_bag_indices():
-            if not bagidx in children:
-                # enumerate subtree
-                stack = [(None,bagidx)]
-                while stack:
-                    (p,i) = stack[-1]
-                    stack = stack[:-1]
-                    bagvars = sorted(list(self.bagsets[i]))
-
-                    if p==None:
-                        cluster = ct.add_root_cluster(bagvars)
-                    else:
-                        cluster = ct.add_child_cluster(p,bagvars)
-
-                    for x in bagconstraints[i]:
-                        ct.add_constraint(cluster, x)
-
-                    for x in bagfunctions[i]:
-                        ct.add_function(cluster, x)
-
-                    for j in self.td.adj[i]:
-                        children.add(j)
-                        stack.append((cluster,j))
-        return ct
 
 
 ## @brief Feature in multi-dimensional Boltzmann sampling
@@ -294,19 +338,22 @@ class BoltzmannSampler:
 
     ## @brief Construct with features
     ## @param features list or dictionary of the features
-    def __init__(self, features):
+    def __init__( self, features, td_factory = TreeDecompositionFactory() ):
         if type(features) == list:
             self.features = { f.identifier:f for f in features }
         else:
             self.features = features
 
+        self._td_factory = td_factory
+
+        self.setup_engine()
+
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
     def setup_engine(self):
         self.cn = self.gen_constraint_network(self.features)
-        self.td = self.gen_tree_decomposition(self.cn)
+        self.td = self._td_factory.create(self.cn.get_varnum(), self.cn.get_dependencies())
         self.ct = self.gen_cluster_tree(self.td)
-        self.requires_evaluation = True
 
     ## @brief Get the features
     ## @return features
@@ -328,10 +375,6 @@ class BoltzmannSampler:
     ## @brief Compute next sample
     ## @return sample
     def sample(self):
-        if self.requires_evaluation:
-            self.ct.evaluate()
-            self.requires_evaluation = False
-
         return self.ct.sample()
 
     ## @brief Sample generator
@@ -346,25 +389,17 @@ class BoltzmannSampler:
     def gen_constraint_network(self, features):
         pass
 
-    ## @brief Generate the tree decomposition
-    ## @param cn the constraint network
-    ## @return the tree decomposition
-    @abc.abstractmethod
-    def gen_tree_decomposition(self, cn):
-        pass
-
     ## @brief Generate the populated cluster tree
     ## @param td tree decomposition
     ## @return cluster tree
     def gen_cluster_tree(self, td):
         ## make cluster tree
-        ct = td.construct_cluster_tree()
-        return ct
+        return ClusterTree(self.cn, td = self.td)
 
 ## @brief Multi-dimensional Boltzmann sampler (abstract base class)
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
-    def __init__(self, features):
-        super().__init__(features)
+    def __init__( self, features, td_factory=TreeDecompositionFactory() ):
+        super().__init__( features, td_factory )
 
         self.samples_per_round = 200
         self.tweak_base = 1.01

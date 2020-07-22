@@ -20,6 +20,9 @@
 import re
 import collections
 
+from libinfrared import ComplConstraint,BPEnergy,GCControl
+
+
 ## @brief Parse RNA structure including pseudoknots
 ##
 ## @param structure dot bracket string of RNA structure

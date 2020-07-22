@@ -188,7 +188,7 @@ namespace ired {
          *
          * Call this once before generating samples with sample()
          */
-        void
+        auto
         evaluate();
 
         /**
@@ -381,17 +381,21 @@ namespace ired {
     // evaluate by running a specialized depth first search via
     // boost::graph; see struct evaluate_finish_edge
     template<class ConstraintNetwork>
-    void
+    auto
     ClusterTree<ConstraintNetwork>
     ::evaluate() {
-
         auto root = single_empty_root();
+       
+        if (!evaluated_) { 
+            auto cte_visitor = boost::make_dfs_visitor(evaluate_finish_edge(cn_,tree_));
 
-        auto cte_visitor = boost::make_dfs_visitor(evaluate_finish_edge(cn_,tree_));
+            boost::depth_first_search(tree_, visitor(cte_visitor).root_vertex(root));
 
-        boost::depth_first_search(tree_, visitor(cte_visitor).root_vertex(root));
+            evaluated_ = true;
+        }
 
-        evaluated_ = true;
+        auto a = Assignment(cn_.num_vars());
+        return a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
     }
 
     // sample by running a specialized depth first search via

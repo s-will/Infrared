@@ -34,6 +34,7 @@ import subprocess
 import re
 from math import sqrt,ceil
 from networkx.algorithms.approximation.treewidth import treewidth_min_degree
+import itertools
 
 import libhtdwrap as htd
 
@@ -65,23 +66,42 @@ class TreeDecomp:
     ## bags and edges result from calling a tree decomposition
     ## algorithm. The supported algorithms return correctly oriented
     ## edges.
-    def __init__(self,bags,edges):
+    def __init__(self, bags, edges):
         # copy bags
-        self.bags = list(bags)
+        self._bags = list(bags)
         # ensure that all edges are tuples or lists of length 2
         assert(all(len(x)==2 for x in edges))
         # copy edges and convert all edges to pairs (even if they have been lists)
-        self.edges = list(map(lambda x: (x[0],x[1]), edges))
+        self._edges = list(map(lambda x: (x[0],x[1]), edges))
 
         self.update_adjacency_lists()
+
+    ## @brief list of bags
+    def get_bags(self):
+        return self._bags
+    
+    ## @brief list of edges
+    def get_edges(self):
+        return self._edges
+
+
+    ## @brief Expand non-binary dependencies to cliques of binary deps
+    ## @param dependencies list of dependencies
+    ## @return list of binary dependencies
+    @staticmethod
+    def expand_to_cliques(dependencies):
+        bindeps = list()
+        for d in dependencies:
+            bindeps.extend( itertools.combinations(d,2) )
+        return bindeps
 
     ## @brief Comute adjacency list representation
     ##
     ## @param n number of nodes
     ## @param edges list of edges
     @staticmethod
-    def adjacency_lists(n,edges):
-        adj = { i:[] for i in range(n)}
+    def adjacency_lists(n, edges):
+        adj = { i:[] for i in range(n) }
         for (i,j) in edges:
             adj[i].append(j)
         return adj
@@ -91,13 +111,13 @@ class TreeDecomp:
     ## Updates the adjacency representation in adj according to the
     ## number of bags and edges
     def update_adjacency_lists(self):
-        self.adj = self.adjacency_lists(len(self.bags),self.edges)
+        self.adj = self.adjacency_lists(len(self._bags),self._edges)
 
     ## @brief Toppological sort of bags
     ##
     ## @returns sorted list of bag indices
     def toposorted_bag_indices(self):
-        n = len(self.bags)
+        n = len(self._bags)
 
         visited = set()
         sorted = list()
@@ -142,7 +162,7 @@ class TreeDecomp:
 
     ## @brief Get tree width
     def treewidth(self):
-        return max([len(bag) for bag in self.bags]) - 1
+        return max([len(bag) for bag in self._bags]) - 1
 
     ## @brief Write tree decomposition in dot format
     ## @param out output file handle
@@ -161,14 +181,14 @@ class TreeDecomp:
 
         out.write("digraph G {\n\n")
 
-        for bagid,bag in enumerate(self.bags):
+        for bagid,bag in enumerate(self._bags):
             label = baglabel(bag)
             out.write( "\tbag{} [label=\"{}\"]\n".format(bagid+1,label) )
 
         out.write("\n\n")
 
-        for (x,y) in self.edges:
-            edgelabel = " ".join( [ str(x) for x in self.diff_set(self.bags[x],self.bags[y] )] )
+        for (x,y) in self._edges:
+            edgelabel = " ".join( [ str(x) for x in self.diff_set(self._bags[x],self._bags[y] )] )
             out.write( "\tbag{} -> bag{}  [label=\"{}\"]\n".format(x+1,y+1,edgelabel) )
 
         out.write("\n}\n")
@@ -193,7 +213,7 @@ class TreeDecomp:
             for i in range(0, len(l), n):
                 yield l[i:i + n]
 
-        n = len(self.bags)
+        n = len(self._bags)
         root = self.toposorted_bag_indices()[0]
 
         next_bag_idx = n
@@ -215,15 +235,15 @@ class TreeDecomp:
 
             if u is not None:
                 # determine diff set
-                diff = self.diff_set(self.bags[u],self.bags[v])
+                diff = self.diff_set(self._bags[u],self._bags[v])
                 if len(diff) > maxdiffsize:
-                    sep = self.sep_set(self.bags[u],self.bags[v])
+                    sep = self.sep_set(self._bags[u],self._bags[v])
 
-                    if (u,v) in self.edges:
-                        self.edges.remove((u,v))
+                    if (u,v) in self._edges:
+                        self._edges.remove((u,v))
 
-                    if (v,u) in self.edges:
-                        self.edges.remove((v,u))
+                    if (v,u) in self._edges:
+                        self._edges.remove((v,u))
 
                     last_bag_idx = u
 
@@ -231,12 +251,12 @@ class TreeDecomp:
 
                     for ext in chunks(diff[:-1],maxdiffsize):
                         newbag.extend(ext)
-                        self.bags.append(newbag[:])
-                        self.edges.append([ last_bag_idx, next_bag_idx])
+                        self._bags.append(newbag[:])
+                        self._edges.append([ last_bag_idx, next_bag_idx])
                         last_bag_idx = next_bag_idx
                         next_bag_idx += 1
 
-                    self.edges.append([ last_bag_idx, v])
+                    self._edges.append([ last_bag_idx, v])
 
         self.update_adjacency_lists()
 
@@ -253,6 +273,10 @@ class TreeDecomp:
 def dotfile_to_pdf(graphfile):
     outfile = re.sub(r".dot$",".pdf",graphfile)
     subprocess.check_output(["dot","-Tpdf","-o",outfile,graphfile])
+
+def dotfile_to_png(graphfile):
+    outfile = re.sub(r".dot$",".png",graphfile)
+    subprocess.check_output(["dot","-Tpng","-o",outfile,graphfile])
 
 ## @brief Write graph in dgf format
 ##
