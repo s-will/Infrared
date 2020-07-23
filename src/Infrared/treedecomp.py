@@ -33,10 +33,8 @@ import os
 import subprocess
 import re
 from math import sqrt,ceil
-from networkx.algorithms.approximation.treewidth import treewidth_min_degree
 import itertools
-
-import libhtdwrap as htd
+import abc
 
 
 ## @brief Class to hold a tree decomposition
@@ -50,7 +48,7 @@ import libhtdwrap as htd
 ## * adj    adjacency lists (as defined by edges)
 ##
 ## edges are directed, an edge from bag x to y is represented by (x,y)
-class TreeDecomp:
+class TreeDecomposition:
 
     ## @brief construct from bags and edges
     ##
@@ -79,21 +77,10 @@ class TreeDecomp:
     ## @brief list of bags
     def get_bags(self):
         return self._bags
-    
+
     ## @brief list of edges
     def get_edges(self):
         return self._edges
-
-
-    ## @brief Expand non-binary dependencies to cliques of binary deps
-    ## @param dependencies list of dependencies
-    ## @return list of binary dependencies
-    @staticmethod
-    def expand_to_cliques(dependencies):
-        bindeps = list()
-        for d in dependencies:
-            bindeps.extend( itertools.combinations(d,2) )
-        return bindeps
 
     ## @brief Comute adjacency list representation
     ##
@@ -366,7 +353,7 @@ def parseTD_TDlib(tdfh, num_nodes):
         if not i in present:
             bags.append([i])
 
-    return TreeDecomp(bags,edges)
+    return TreeDecomposition(bags,edges)
 
 ## @brief Compute tree decomposition of a graph by TDlib
 ##
@@ -410,82 +397,114 @@ def makeTDFile_TDlib( filename, num_nodes, edges,
 
         return outname
 
-## @brief Make tree decomposition using TDlib
-##
-## @param num_nodes Number of nodes
-## @param edges list of edges
-## @param strategy TDlib's strategy (see help page of TDlib)
-##
-## @return tree decomposition (object of TreeDecomp)
-##
-## @todo generate unique / thread-safe tmp name
-def makeTD_TDlib(num_nodes, edges, *, strategy=2):
-    tmpfile = "/tmp/treedecomp-tmp~"
-    makeTDFile_TDlib( tmpfile, num_nodes, edges, strategy=strategy )
-    tdfile = tmpfile+".td"
-    with open(tdfile) as tdfh:
-        td =  parseTD_TDlib( tdfh, num_nodes )
-    #os.remove(tdfile)
-    return td
-
-# End of TDlib-specific functions
-# ----------------------------------------------------------
-
-# ##########################################################
-# Interface the htd library
-#
-# specific functions to interface libhtd
-#
-
-## @brief Obtain tree decomposition using htd
-##
-## @param num_nodes number of nodes
-## @param edges specifies edges of a graph; nodes are indexed 0-based
-##
-## @return tree decomposition (object of TreeDecomp)
-def makeTD_htd(num_nodes, edges, maxdiffsize=1):
-    myhtd = htd.HTD(num_nodes,edges)
-    myhtd.decompose()
-    td = TreeDecomp(myhtd.bags(), myhtd.edges())
-
-    td.expand_treedecomposition(maxdiffsize)
-
-    return td
-
-# End of libhtd-specific functions
-# ----------------------------------------------------------
-
 # ###########################################################
 # Interface tree demposition libraries
+#
 
-## @brief Obtain tree decomposition
+## @brief Base class of tree decomposition factories
 ##
-## Dispatches to tree decomp libraries based on 'method'
+## A TD factory needs to provide a method create to produce a class TreeDecomposition
+## given the number of variables and the list of dependencies;
+## dependencies are lists of lists of 0-based indices of the
+## variables that respectively depend on each other
 ##
-## @param num_nodes number of nodes
-## @param edges specifies edges of a graph; nodes are indexed 0-based
-## @param method tree decomposition method
-##
-## The parameter method controls which tree decomposition algorithm is
-## used. Default 0 causes to call libhtd; otherwise TDlib is used with
-## strategy=method, see TDlib help page.
-##
-## @return tree decomposition (object of TreeDecomp)
-def makeTD(num_nodes, edges, *, method=0, **kwargs):
-    if str(method) == "0":
-        return makeTD_htd(num_nodes, edges, **kwargs)
-    else:
-        return makeTD_TDlib(num_nodes, edges, strategy=method)
+class TreeDecompositionFactoryBase:
+    def __init__(self):
+        pass
+
+    ## @brief Create tree decomposition
+    ##
+    ## @param size number of nodes in the dependency graph
+    ## @param dependencies specifies edges of the dependency (hyper-)graph; nodes are indexed 0-based
+    ##
+    ## @return tree decomposition (object of TreeDecomp)
+    @abc.abstractmethod
+    def create(self, size, dependencies):
+        return
+
+    ## @brief Expand non-binary dependencies to cliques of binary deps
+    ## @param dependencies list of dependencies
+    ## @return list of binary dependencies
+    @staticmethod
+    def expand_to_cliques(dependencies):
+        bindeps = list()
+        for d in dependencies:
+            bindeps.extend( itertools.combinations(d,2) )
+        return bindeps
 
 
-## @brief Obtain tree deomposition using networkx
-def makeTD_nx(G, maxdiffsize=1):
-    i, tree = treewidth_min_degree(G)
-    bags = list(map(list, tree.nodes))
-    edges = [(bags.index(list(i)),bags.index(list(j))) for i,j in tree.edges]
-    td = TreeDecomp(bags, edges)
-    td.expand_treedecomposition(maxdiffsize)
-    return td
+## @brief Tree decomposition factory using HTD
+class HTDTreeDecompositionFactory(TreeDecompositionFactoryBase):
+    def __init__(self, maxdiffsize=1):
+        self.maxdiffsize = maxdiffsize
+        pass
+
+    ## @brief Create tree decomposition
+    def create(self, size, dependencies):
+        bindependencies  = self.expand_to_cliques(dependencies)
+
+        from libhtdwrap import HTD
+        myhtd = HTD(size,bindependencies)
+        myhtd.decompose()
+
+        td = TreeDecomposition(myhtd.bags(), myhtd.edges())
+        td.expand_treedecomposition(self.maxdiffsize)
+
+        return td
+
+## @brief Tree decomposition factory using TDlib
+class TDLibTreeDecompositionFactory(TreeDecompositionFactoryBase):
+    ## @brief construct
+    ## @param strategy TDlib's strategy (see help page of TDlib)
+    ## @param tmpfile file for tdlib's output 
+    ## @todo automatically generate unique / thread-safe tmp name
+    def __init__(self, strategy=2, tmpfile="/tmp/treedecomp-tmp~"):
+        self.strategy = strategy
+        pass
+
+    ## @brief Make tree decomposition using TDlib
+    ##
+    ##
+    ## @return tree decomposition (object of TreeDecomp)
+    ##
+    def create(self, size, dependencies):
+        bindependencies = self.expand_to_cliques(dependencies)
+
+        makeTDFile_TDlib( self.tmpfile, size, bindependencies, strategy=self.strategy )
+        tdfile = self.tmpfile+".td"
+        with open(tdfile) as tdfh:
+            td =  parseTD_TDlib( tdfh, size )
+        os.remove(tdfile)
+        return td
+
+## @brief Tree decomposition factory using networkx
+class NXTreeDecompositionFactory(TreeDecompositionFactoryBase):
+    def __init__(self, maxdiffsize=1):
+        self.maxdiffsize = maxdiffsize
+        pass
+
+    ## @brief Create tree decomposition
+    def create(self, size, dependencies):
+        bindependencies = self.expand_to_cliques(dependencies)
+
+        # produce networkx graph from size, dependencies
+        from networkx import Graph
+        G = Graph()
+        G.add_nodes_from(range(size))
+        G.add_edges_from(bindependencies)
+
+        from networkx.algorithms.approximation.treewidth import treewidth_min_degree
+        width, tree = treewidth_min_degree(G)
+        
+        bags = list(map(list, tree.nodes))
+        edges = [(bags.index(list(i)),bags.index(list(j))) for i,j in tree.edges]
+        td = TreeDecomposition(bags, edges)
+        td.expand_treedecomposition(self.maxdiffsize)
+        return td
+
+## @brief default tree decomposition factory
+TreeDecompositionFactory = NXTreeDecompositionFactory
+
 # End of Interface tree demposition libraries
 # ----------------------------------------------------------
 

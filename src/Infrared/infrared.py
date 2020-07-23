@@ -15,7 +15,8 @@ import os
 import libinfrared as libir
 from libinfrared import Constraint,Function
 
-import treedecomp
+from treedecomp import TreeDecomposition, TreeDecompositionFactory
+
 import abc
 import rna_support as rna
 
@@ -80,31 +81,6 @@ class ConstraintNetwork:
             return any( len(dep)<len(dep2) and sublist(dep,dep2) for dep2 in deps )
         return [ dep for dep in deps if not subsumed(dep,deps) ]
 
-
-## @brief Base class of tree decomposition factories
-##
-## A TD factory needs to provide a method create to produce a class TreeDecomposition
-## given the number of variables and the list of dependencies; 
-## dependencies are lists of lists of 0-based indices of the 
-## variables that respectively depend on each other
-##
-class TreeDecompositionFactoryBase:
-    def __init__(self):
-        pass
-    @abc.abstractmethod
-    def create(self, varnum, dependencies):
-        return
-
-## @brief Tree decomposition factory using the default method for the tree decomposition
-class TreeDecompositionFactory(TreeDecompositionFactoryBase):
-    def __init__(self):
-        pass
-    def create(self, varnum, dependencies):
-        # from dependencies generate list of binary edges
-        bindependencies  = treedecomp.TreeDecomp.expand_to_cliques(dependencies)
-
-        # generate tree decomposition -> bags, edges
-        return treedecomp.makeTD(varnum, bindependencies, method = 0)
 
 ## @brief Cluster tree (wrapping the cluster tree class of the C++ engine)
 class ClusterTree:
@@ -455,59 +431,3 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             # print("==============================")
 
 
-
-# ------------------------------------------------------------
-# RNA specific definitions
-
-## @brief Convert integer (variable value) to nucleotide
-## @note encoding A=0, C=1, G=2, U=3
-def value_to_nucleotide(x):
-    return "ACGU"[x]
-
-## @brief Convert list of integers (variable values) to string
-## (sequence) of nucleotides
-def values_to_sequence(xs):
-    return "".join(map(value_to_nucleotide, xs))
-
-## Parameters for the base pair model (magic params from the Redprint paper)
-params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
-              "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
-
-## Parameters for the stacking model (magic params from the Redprint paper)
-params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
-                    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
-                    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
-                    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
-                    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
-                    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
-
-## @brief set the bp energy table for Infrared
-##
-## @param params dictionary of parameters or a table of the parameters
-## as expected by infrared::rnadesign
-def set_bpenergy_table(params):
-    if type(params) == dict:
-        params = list(map(lambda x: params[x],
-                          [ "AU_IN", "GC_IN", "GU_IN",
-                            "AU_TERM", "GC_TERM", "GU_TERM" ] ))
-    libir.BPEnergy.set_energy_table(params)
-
-## @brief set the stacking energy table for Infrared
-##
-## @param params dictionary of parameters or a table of the parameters
-## as expected by infrared::rnadesign
-def set_stacking_energy_table(params):
-    if type(params) == dict:
-        params = list(map(lambda x: params[x],
-                          [ "AUAU", "AUUA",
-                            "AUCG", "AUGC",
-                            "AUGU", "AUUG",
-
-                            "CGAU", "CGUA",
-                            "CGCG", "CGGC",
-                            "CGGU", "CGUG",
-
-                            "GUAU", "GUUA",
-                            "GUCG", "GUGC",
-                            "GUGU", "GUUG" ] ))
-    libir.StackEnergy.set_energy_table(params)
