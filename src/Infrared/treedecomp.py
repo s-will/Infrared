@@ -505,6 +505,23 @@ class NXTreeDecompositionFactory(TreeDecompositionFactoryBase):
 ## @brief default tree decomposition factory
 TreeDecompositionFactory = NXTreeDecompositionFactory
 
+## @brief the available, predefined td factories with some description
+_td_factories = [
+        ["nx", "using networkx module", NXTreeDecompositionFactory],
+        ["tdlib", "using TDlib, strategy 2", lambda: TDLibTreeDecompositionFactory(strategy=2)],
+        ["htd", "using libhtd", HTDTreeDecompositionFactory]
+        ]
+
+## @brief get a tree decomposition factory by a descriptor string
+def td_factory_from_descriptor(descriptor):
+    for x in _td_factories:
+        if descriptor == x[0]:
+            return x[2]()
+    return None
+
+def get_td_factory_descriptors():
+    return [ x[0] for x in _td_factories ]
+
 # End of Interface tree demposition libraries
 # ----------------------------------------------------------
 

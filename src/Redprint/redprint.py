@@ -26,9 +26,13 @@ import random
 import argparse
 import itertools
 import os
+import sys
+import abc
 
 import infrared as ir
 import rna_support as rna
+import treedecomp
+
 
 ############################################################
 ## Redprint Library
@@ -36,19 +40,21 @@ import rna_support as rna
 
 ## @brief A constraint network for multi-target RNA design
 ##
-## 'Abstract' class, which provides some common functionality for
+## Abstract class that provides some common functionality for
 ## specific energy models
 ##
 ## The constraint network specifies the number of variables, the
 ## specific dependencies, the constraints and functions of a
 ## multi-target RNA design instance
-class RNAConstraintNetwork(ir.ConstraintNetwork):
+class RNAConstraintNetworkFactory:
     ## @brief Constructor
     ## @param seqlen sequence length
     ## @param structures structures as lists of base pairs
     ## @param features the features containing weights of energies and GC control
-    def __init__( self, seqlen, structures, features ):
-        super().__init__()
+    def __init__( self ):
+        pass
+
+    def prepare_create( self, seqlen, structures, features ):
         self.seqlen = seqlen
         self.structures = list(structures)
         self.features = features
@@ -57,6 +63,11 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
         self.bpdependencies = []
         self.constraints=[]
         self.functions=[]
+
+    ## @brief create constraint network
+    @abc.abstractmethod
+    def create( self, seqlen, structures, features ):
+        pass
 
     ## @brief Generate base pair dependencies
     ##
@@ -88,7 +99,7 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
     ## i.e. the components of the bipartitiion induced by the
     ## complementarity constraints on base pairs
     ##
-    ## Returns result in self.compl_classes
+    ## @returns complementarity classes
     def compute_compl_classes(self):
         ## Transform pairs into dict with keys=first and value=list of second components
         def accumulate_dict(xys):
@@ -98,7 +109,7 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
             return d
 
         ## perform depth-first traversal
-        self.compl_classes = dict()
+        compl_classes = dict()
 
         visited = set()
 
@@ -110,7 +121,7 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
             if x in visited: continue
 
             ## new component, color it
-            self.compl_classes[x] = color
+            compl_classes[x] = color
             color+=1
 
             if x not in other_ends:
@@ -123,36 +134,44 @@ class RNAConstraintNetwork(ir.ConstraintNetwork):
                 if x in visited: continue
                 visited.add(x)
                 for y in other_ends[x]:
-                    self.compl_classes[y]= -self.compl_classes[x]
+                    compl_classes[y]= -compl_classes[x]
                     stack.append(y)
+
+        return compl_classes
 
     ## @brief Add the functions for gc-content control to self.functions
     def add_gc_control(self):
-        gc_control_funs = [ ( [i], [ ir.GCControl( i, self.features["GC"].weight ) ] )
-                            for i in range(self.seqlen) ]
+        gc_control_funs = [ rna.GCControl( i, self.features["GC"].weight ) for i in range(self.seqlen) ]
         self.functions.extend( gc_control_funs )
 
     ## @brief Add the complementarity constraints to self.constraints
     def compl_constraints(self):
         # generate constraints and functions; assign them to bags
-        return [ ( [i,j], [ ir.ComplConstraint(i,j) ] ) for [i,j] in self.bpdependencies ]
+        return [ rna.ComplConstraint(i,j) for [i,j] in self.bpdependencies ]
+
+
+
 
 
 ## @brief Construct and hold constraint network for mult-target design
 ## based in the base pair energy model
-class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
+class RNAConstraintNetworkBasePairFactory(RNAConstraintNetworkFactory):
     ## @brief Constructor
-    ##
+    def __init__( self ):
+        super().__init__()
+
+    ## @brief create constraint network
     ## @param seqlen length of sequences
     ## @param structures list of target structures in dot bracket format
     ## @param features the features containing weights of energies and GC control
-    def __init__( self, seqlen, structures, features ):
-
-        super().__init__( seqlen, structures, features )
+    def create( self, seqlen, structures, features ):
+        super().prepare_create( seqlen, structures, features )
 
         self.generate_cn_basepair_model()
 
-        self.compute_compl_classes()
+        cn = ir.ConstraintNetwork( varnum = seqlen, domains = 4, constraints = self.constraints, functions = self.functions )
+        cn.compl_classes = self.compute_compl_classes()
+        return cn
 
     ## @brief Generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
@@ -165,34 +184,38 @@ class RNAConstraintNetworkBasePair(RNAConstraintNetwork):
 
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
-            self.functions.extend( [ ( [ i, j ],
-                                       [ ir.BPEnergy( i,j, not (i-1,j+1) in structureset,
-                                                      self.features[("E",k)].weight ) ] )
+            self.functions.extend( [ rna.BPEnergy( i,j, not (i-1,j+1) in structureset,
+                                                   self.features[("E",k)].weight )
                                      for (i,j) in structure ] )
 
         self.add_gc_control()
 
 ## @brief Construct and hold constraint network for mult-target design
 ## based in the stacking energy model
-class RNAConstraintNetworkStacking(RNAConstraintNetwork):
+class RNAConstraintNetworkStackingFactory(RNAConstraintNetworkFactory):
+
     ## @brief Constructor
+    def __init__( self ):
+        super().__init__()
+
+    ## @brief create constraint network
     ##
     ## @param seqlen length of sequences
     ## @param structures list of target structures in dot bracket format
     ## @param features the features containing weights of energies and GC control
-    def __init__(self, seqlen, structures, features ):
-
-        super().__init__( seqlen, structures, features )
+    def create(self, seqlen, structures, features ):
+        super().prepare_create( seqlen, structures, features )
 
         self.generate_cn_stacking_model()
 
-        self.compute_compl_classes()
+        cn = ir.ConstraintNetwork( varnum = seqlen, domains = 4, constraints = self.constraints, functions = self.functions )
+        cn.compl_classes = self.compute_compl_classes()
+        return cn
 
     ## @brief Generate constraint network for the stacking model
     def generate_cn_stacking_model( self ):
         self.bpdependencies = self.gen_bp_dependencies()
         self.dependencies = self.remove_redundant_dependencies( self.stacking_dependencies() + self.bpdependencies )
-
 
         self.constraints = self.compl_constraints()
 
@@ -200,34 +223,23 @@ class RNAConstraintNetworkStacking(RNAConstraintNetwork):
 
         for k,structure in enumerate(self.structures):
             structureset = set(structure)
-            self.functions.extend( [ ( [ i,j,i+1,j-1 ],
-                                       [ ir.StackEnergy( i, j, self.features[("E",k)].weight ) ] )
+            self.functions.extend( [ rna.StackEnergy( i, j, self.features[("E",k)].weight )
                                      for (i,j) in structure
                                      if (i+1,j-1) in structureset
             ] )
 
         self.add_gc_control()
 
-## @brief Holds tree decomposition for RNA design, constructs RNA design cluster tree
+
+## @brief Specialized cluster tree for redprint
 ##
-class RNATreeDecomposition(ir.TreeDecomposition):
-
-    ## @brief Constructor from constraint network
-    ##
-    ## @param cn the RNA design constraint network
-    ## @param add_red_constrs whether to insert redundant
-    ## constraints (in practice, one usually wants this for performance!)
-    ## @param method tree decomposition method
-    ##
-    ## Calls tree decomposition algorithm (according to method)
-    def __init__(self, cn, *, add_red_constrs=True, method=0):
-        super().__init__(cn.seqlen, cn.dependencies, method=method)
-
-        self.domains = 4
-
-        self.cn = cn
-
-        self.add_red_constrs = add_red_constrs
+## in addition to standared cluster tree,
+## allows to put constraints redundantly in bags
+## and adds complementarity class constraints
+class RNAClusterTree(ir.ClusterTree):
+    def __init__(self, cn, *, add_red_constrs=True, td_factory=ir.TreeDecompositionFactory(), td=None):
+        self.add_red_constrs=add_red_constrs
+        super().__init__(cn, td_factory=td_factory, td=td)
 
     ## @brief assign functions and constraints to bags
     ##
@@ -235,15 +247,14 @@ class RNATreeDecomposition(ir.TreeDecomposition):
     ##
     ## the function is called by construct_cluster_tree
     def get_bag_assignments(self):
-        if self.add_red_constrs:
-            bagconstraints = self.assign_to_all_bags(self.cn.constraints)
-            self.fillin_class_constraints(self.cn.compl_classes,
-                                          self.cn.constraints,
-                                          bagconstraints)
-        else:
-            bagconstraints = self.assign_to_bags(self.cn.constraints)
+        bagconstraints = self.assign_to_all_bags(self.cn.get_constraints())
 
-        bagfunctions = self.assign_to_bags(self.cn.functions)
+        if self.add_red_constrs:
+            self.fillin_class_constraints(self.cn.compl_classes,
+                                          self.cn.get_constraints(),
+                                          bagconstraints)
+
+        bagfunctions = self.assign_to_bags(self.cn.get_functions())
 
         return bagconstraints, bagfunctions
 
@@ -252,24 +263,24 @@ class RNATreeDecomposition(ir.TreeDecomposition):
     ## Fills in constraints due to complementarity to all bags. Adds
     ## SameComplClass or DifferentComplClass constraints, wherever a
     ## variable would have to be enumerated unnconstrained otherwise
-    ## @param classes complementarity classes @param
-    ## existing_constraints @param[in,out] bagconstraints
+    ## @param classes complementarity classes
+    ## @param existing_constraints the existing complementarity constraints
+    ## @param[in,out] bagconstraints
     ##
     ## Avoids to add constraints which already exist
     def fillin_class_constraints(self, classes, existing_constraints, bagconstraints):
-        existing = set( (vars[0],vars[1]) for (vars,constr) in existing_constraints )
-        for bagidx,bag in enumerate(self.bagsets):
+        existing = set( tuple(constr.vars()) for constr in existing_constraints )
+        for bagidx,bag in enumerate(self.get_bagsets()):
             bagvars=sorted(list(bag))
             for j in bagvars[1:]:
                 if all( (i,j) not in existing for i in range(0,j) ):
                     i = bagvars[0]
                     if classes[i] == classes[j]:
-                        #print("Add same:",i,j)
-                        bagconstraints[bagidx].append(ir.SameComplClassConstraint(i,j))
+                        print("Add same:",bag,i,j)
+                        bagconstraints[bagidx].append(rna.SameComplClassConstraint(i,j))
                     elif classes[i] == - classes[j]:
-                        #print("Add diff:",i,j)
-                        bagconstraints[bagidx].append(ir.DifferentComplClassConstraint(i,j))
-
+                        print("Add diff:",bag,i,j)
+                        bagconstraints[bagidx].append(rna.DifferentComplClassConstraint(i,j))
 
 ## @brief GC content feature
 ##
@@ -306,8 +317,8 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
     ## @param seqlen sequence length
     ## @param structure_strings structures as dot-bracket strings
     ## @param features the features as list or dictionary
-    ## @param method method for tree decomposition (0: libhtd, 1-5: respective /strategy/ of TDlib)
-    ## @param model base pair or stacking model, sepcified as respective string "bp"/"basepair" or "stack"/"stacking"
+    ## @param td_factory tree decomposition factory
+    ## @param cn_factory constraint network factory
     ## @param no_red_constrs no redundant constraints flag (mainly for experimenting)
     def __init__(self, seqlen, structure_strings, features, **kwargs):
         super().__init__( features )
@@ -321,8 +332,8 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
             else:
                 return default
 
-        self.method = optarg("method", 0)
-        self.model = optarg("model", "bp")
+        self.td_factory = optarg("td_factory", ir.TreeDecompositionFactory())
+        self.cn_factory = optarg("cn_factory", RNAConstraintNetworkBasePairFactory())
         self.no_red_constrs = optarg("no_red_constrs", False)
 
         self.setup_engine()
@@ -360,35 +371,31 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
     ## @return constraint network
     def gen_constraint_network(self, features):
         ## build constraint network
-        if self.model in ["bp", "basepair"]:
-            cn = RNAConstraintNetworkBasePair( self.seqlen,
-                                               self.structures,
-                                               self.features)
-        elif self.model in ["stack", "stacking"]:
-            cn = RNAConstraintNetworkStacking( self.seqlen,
-                                               self.structures,
-                                               self.features )
-        else:
-            print("Model", self.model,
-                  "unknown! Please see help for supported modules.")
-            exit(-1)
-
-        return cn
+        return self.cn_factory.create( self.seqlen,
+                                       self.structures,
+                                       self.features )
 
     ## @brief Generate tree decomposition
     ## @param cn constraint network
     ## @return tree decomposition
     def gen_tree_decomposition(self, cn):
         ## make tree decomposition
-        return RNATreeDecomposition( cn,
-                                     add_red_constrs = not self.no_red_constrs,
-                                     method=self.method )
+        return td_factory.create( cn )
+
+    def gen_cluster_tree( self ):
+        return RNAClusterTree( self.cn, td = self.td, add_red_constrs = not self.no_red_constrs )
 
     ## @brief Calculate sample
     ## @return sampled RNA sequence
     def sample(self):
-        return ir.values_to_sequence(super().sample().values())
+        return rna.values_to_sequence(super().sample().values())
 
+def cn_factory_from_descriptor(descriptor):
+    if descriptor in ["bp","basepair"]:
+        return RNAConstraintNetworkBasePairFactory()
+    elif descriptor in ["stack","stacking"]:
+        return RNAConstraintNetworkStackingFactory()
+    return None
 
 # END Redprint Library
 # ##########################################################
@@ -400,6 +407,11 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
 ## @brief command line tool definition
 ## @param args command line arguments
 def main(args):
+
+    if args.listtds:
+        print("Avalaible tree decomposition methods", treedecomp.get_td_factory_descriptors())
+        return
+
     import RNA
 
     ## init seed
@@ -408,8 +420,8 @@ def main(args):
     else:
         ir.seed(args.seed)
 
-    ir.set_bpenergy_table( ir.params_bp )
-    ir.set_stacking_energy_table( ir.params_stacking )
+    rna.set_bpenergy_table()
+    rna.set_stacking_energy_table()
 
     ## read instance
     with open(args.infile) as infh:
@@ -441,10 +453,20 @@ def main(args):
                                             targets, args.gctarget,
                                             tolerances, args.gctolerance)
 
+    td_factory = treedecomp.td_factory_from_descriptor(args.td)
+    if td_factory is None:
+        sys.stderr.write("[ERROR] Invalid tree decomposition method: "+args.td+"\n")
+        exit(-1)
+
+    cn_factory = cn_factory_from_descriptor(args.model)
+    if cn_factory is None:
+        sys.stderr.write("[ERROR] Invalid model: "+args.model+"\n")
+        exit(-1)
+
     sampler = RedprintSampler( seqlen, structures, features,
-                               method = args.method,
-                               model = args.model,
-                               no_red_constrs = args.no_red_constrs )
+                               no_red_constrs = args.no_red_constrs,
+                               td_factory = td_factory,
+                               cn_factory = cn_factory)
 
     ## optionally, write tree decomposition
     if args.plot_td:
@@ -494,15 +516,17 @@ if __name__ == "__main__":
     ## command line argument parser
     parser = argparse.ArgumentParser(description="Boltzmann sampling for RNA design with multiple target structures")
     parser.add_argument('infile', help="Input file")
-    parser.add_argument('--method', type=int, default=0,
-                        help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
+    parser.add_argument('--td', type=str, default="nx",
+                        help="Method for tree decomposition (see --listtds)")
+    parser.add_argument('--listtds', action="store_true", help="List available tree decomposition methods")
+    parser.add_argument('--model', type=str, default="bp",
+                        help="Energy model used for sampling [bp=base pair model,stack=stacking model]")
+
     parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
     parser.add_argument('--seed', type=int, default=None,
                         help="Seed infrared's random number generator (def=auto)")
 
     parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
-    parser.add_argument('--model', type=str, default="bp",
-                        help="Energy model used for sampling [bp=base pair model,stack=stacking model]")
     parser.add_argument('--turner', action="store_true",
                         help="Report Turner energies of the single structures for each sample")
     parser.add_argument('--gc', action="store_true",

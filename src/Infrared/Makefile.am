@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libinfrared.la libhtdwrap.la
+lib_LTLIBRARIES = libinfrared.la
 
 ## install python modules
 bin_SCRIPTS=treedecomp.py rna_support.py infrared.py
@@ -17,8 +17,10 @@ libinfrared_la_SOURCES = libinfrared.cpp $(infrared_include_HEADERS)
 
 ########################################
 ## htd wrapper module
-
+if HAVE_HTD
+lib_LTLIBRARIES+=libhtdwrap.la
 libhtdwrap_la_CXXFLAGS = $(AM_CXXFLAGS) $(HTD_CPPFLAGS)
 libhtdwrap_la_LDFLAGS = $(LDFLAGS) $(HTD_LDFLAGS) $(HTD_LIBS)
 
 libhtdwrap_la_SOURCES = libhtdwrap.cpp
+endif

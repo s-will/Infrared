@@ -76,12 +76,12 @@ AC_ARG_WITH([htd],
       )
 )
 
-if test "$HTD_PREFIX" = "" ; then
+if test "x$HTD_PREFIX" = "x" ; then
     AC_MSG_CHECKING([where to find the htd tree decomposition library])
-    if test "$with_htd" = "" ; then
+    if test "x$with_htd" = "x" ; then
       if test -d "/usr/local/include/htd" ; then
         HTD_PREFIX="/usr/local"
-      else
+    elif test -d "/usr/include/htd" ; then
         HTD_PREFIX="/usr"
       fi
     else
@@ -107,6 +107,7 @@ AX_BOOST_PYTHON
 dnl AX_BOOST_GRAPH
 
 dnl ###########  CHECKS  ############################################
+AM_CONDITIONAL([HAVE_HTD], [test "x$HTD_PREFIX" != "x"])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
@@ -142,6 +143,7 @@ AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LIBS])
 AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
+
 
 
 dnl files to generate via autotools (.am or .in source files)

@@ -13,7 +13,7 @@ import itertools
 import os
 
 import libinfrared as libir
-from libinfrared import Constraint,Function
+from libinfrared import seed,Constraint,Function
 
 from treedecomp import TreeDecomposition, TreeDecompositionFactory
 
@@ -143,6 +143,9 @@ class ClusterTree:
 
     def get_td(self):
         return self.td
+
+    def get_bagsets(self):
+        return self._bagsets
 
     ## @brief Get assignments of functions and constraints to the bags
     ##
@@ -308,8 +311,6 @@ class FeatureStatistics:
         print()
 
 ## @brief Boltzmann sampler (abstract base class)
-##
-## derived classes must override gen_cluster_tree
 class BoltzmannSampler:
 
     ## @brief Construct with features
@@ -322,14 +323,12 @@ class BoltzmannSampler:
 
         self._td_factory = td_factory
 
-        self.setup_engine()
-
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
     def setup_engine(self):
         self.cn = self.gen_constraint_network(self.features)
         self.td = self._td_factory.create(self.cn.get_varnum(), self.cn.get_dependencies())
-        self.ct = self.gen_cluster_tree(self.td)
+        self.ct = self.gen_cluster_tree()
 
     ## @brief Get the features
     ## @return features
@@ -339,14 +338,15 @@ class BoltzmannSampler:
     ## @brief Plot the tree decomposition to pdf file
     def plot_td(self, dotfilename):
         with open(dotfilename,"w") as dot:
-            self.td.td.writeTD(dot)
+            self.td.writeTD(dot)
+        import treedecomp
         treedecomp.dotfile_to_pdf(dotfilename)
         os.remove(dotfilename)
 
     ## @brief Get tree width
     ## @return tree width
     def treewidth(self):
-        return self.td.td.treewidth()
+        return self.td.treewidth()
 
     ## @brief Compute next sample
     ## @return sample
@@ -368,7 +368,7 @@ class BoltzmannSampler:
     ## @brief Generate the populated cluster tree
     ## @param td tree decomposition
     ## @return cluster tree
-    def gen_cluster_tree(self, td):
+    def gen_cluster_tree(self):
         ## make cluster tree
         return ClusterTree(self.cn, td = self.td)
 

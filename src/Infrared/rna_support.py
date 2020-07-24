@@ -20,8 +20,8 @@
 import re
 import collections
 
-from libinfrared import ComplConstraint,BPEnergy,GCControl
-
+from libinfrared import ComplConstraint, BPEnergy, GCControl, SameComplClassConstraint, DifferentComplClassConstraint
+import libinfrared as libir
 
 ## @brief Parse RNA structure including pseudoknots
 ##
@@ -180,22 +180,22 @@ def values_to_sequence(xs):
     return "".join(map(value_to_nucleotide, xs))
 
 ## Parameters for the base pair model (magic params from the Redprint paper)
-params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
-              "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
+def_params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
+                  "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
 
 ## Parameters for the stacking model (magic params from the Redprint paper)
-params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
-                    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
-                    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
-                    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
-                    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
-                    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
+def_params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
+                        "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
+                        "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
+                        "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
+                        "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
+                        "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876 }
 
 ## @brief set the bp energy table for Infrared
 ##
 ## @param params dictionary of parameters or a table of the parameters
 ## as expected by infrared::rnadesign
-def set_bpenergy_table(params):
+def set_bpenergy_table(params = def_params_bp):
     if type(params) == dict:
         params = list(map(lambda x: params[x],
                           [ "AU_IN", "GC_IN", "GU_IN",
@@ -206,7 +206,7 @@ def set_bpenergy_table(params):
 ##
 ## @param params dictionary of parameters or a table of the parameters
 ## as expected by infrared::rnadesign
-def set_stacking_energy_table(params):
+def set_stacking_energy_table(params = def_params_stacking):
     if type(params) == dict:
         params = list(map(lambda x: params[x],
                           [ "AUAU", "AUUA",
