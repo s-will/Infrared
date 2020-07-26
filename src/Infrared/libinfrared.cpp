@@ -20,41 +20,31 @@
 #include <config.h>
 #endif
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <vector>
-#include <memory>
+#include <boost/python.hpp>
 
 #include "infrared.hpp"
 #include "rnadesign.hpp"
 
-namespace py = pybind11; 
+#include <vector>
+
+#include "boost_python_aux.hpp"
+
+namespace bpy = boost::python;
+
 using namespace ired;
 using namespace ired::rnadesign;
 
-/**@brief trampoline / wrapper class
- *
- * @note this is needed to support overriding of the virtual function
- * '__call__' from Python
- */
 template<class FunValue=double>
-struct PyFunction
-    : public Function<FunValue> {
+struct FunctionWrap
+    : public Function<FunValue>, bpy::wrapper<Function<FunValue>> {
     using var_idx_t = int;
-    using parent_t = Function<FunValue>;  
 
-    // inherit constructor
-    //PyFunction(const std::vector<var_idx_t> &vars) : Function<FunValue>(vars) {}
-    using parent_t::parent_t;
+    FunctionWrap(const std::vector<var_idx_t> &vars)
+        : Function<FunValue>(vars) {}
 
     FunValue
-    operator () (const Assignment & a) const override { 
-        PYBIND11_OVERLOAD_PURE_NAME(
-                FunValue,
-                parent_t,
-                "__call__",
-                operator (),
-                a);
+    operator () (const Assignment & a) const {
+        return this->get_override("__call__")(a);
     }
 };
 
@@ -68,72 +58,70 @@ seed(int x) {
 }
 
 //! @brief The libinfrared module exposing infrared to Python
-PYBIND11_MODULE(libinfrared,ir)
+BOOST_PYTHON_MODULE(libinfrared)
 {
-    ir.doc() = "Infrared module or Boltzmann sampling";
-    ir.def("seed",&seed);
+    register_vector_conversions<int>();
+    register_vector_conversions<double>();
 
-    py::class_< Assignment >
-        (ir, "Assignment")
-        .def(py::init<int>())
+    bpy::def("seed",&seed);
+
+    bpy::class_< Assignment >("Assignment", bpy::init<int>())
         .def("values", &Assignment::values,
-             py::return_value_policy::copy)
+             bpy::return_value_policy<bpy::copy_const_reference>())
         ;
 
-    py::class_< Constraint, PyFunction<bool>, std::shared_ptr<Constraint> >
-        constraint(ir, "Constraint");
-    
-    constraint
-        .def(py::init<const std::vector<int> &>())
-        .def("__call__", &Constraint::operator ())
+    bpy::class_< FunctionWrap<bool>,
+                 std::shared_ptr<FunctionWrap<bool>>,
+                 boost::noncopyable >
+        ("Constraint", bpy::init<const std::vector<int> &>())
+        .def("__call__", bpy::pure_virtual(&Constraint::operator ()))
         .def("vars", &Constraint::vars,
-             py::return_value_policy::copy)
+             bpy::return_value_policy<bpy::copy_const_reference>())
         ;
 
-    py::class_< Function<>, PyFunction<>, std::shared_ptr<Function<>> >
-        function(ir, "Function");
-
-    function
-        .def(py::init<const std::vector<int> &>())
-        //.def("__call__", &Function<>::operator ())
+    bpy::class_< FunctionWrap<>,
+                 std::shared_ptr<FunctionWrap<>>,
+                 boost::noncopyable >
+        ("Function", bpy::init<const std::vector<int> &>())
+        .def("__call__", bpy::pure_virtual(&Function<>::operator ()))
         .def("vars", &Function<>::vars,
-             py::return_value_policy::copy)
+             bpy::return_value_policy<bpy::copy_const_reference>())
         ;
 
-    py::class_< ComplConstraint >
-        (ir, "ComplConstraint", constraint)
-        .def(py::init<int,int>())
+    bpy::implicitly_convertible< std::shared_ptr<FunctionWrap<>>,
+                                 std::shared_ptr<Function<>>      >();
+
+    bpy::class_< ComplConstraint, bpy::bases<Constraint>,
+                 boost::noncopyable >
+        ("ComplConstraint", bpy::init<int,int>())
        ;
 
-    py::class_< SameComplClassConstraint >
-        (ir, "SameComplClassConstraint", constraint)
-        .def(py::init<int,int>())
+    bpy::class_< SameComplClassConstraint, bpy::bases<Constraint>,
+                 boost::noncopyable >
+        ("SameComplClassConstraint", bpy::init<int,int>())
        ;
 
-    py::class_< DifferentComplClassConstraint >
-        (ir, "DifferentComplClassConstraint", constraint )
-        .def(py::init<int,int>())
+    bpy::class_<DifferentComplClassConstraint, bpy::bases<Constraint>,
+           boost::noncopyable>("DifferentComplClassConstraint", bpy::init<int,int>())
        ;
 
-    py::class_< BPEnergy >
-        (ir, "BPEnergy", function)
-        .def(py::init<int, int, bool, double>())
+    bpy::class_< BPEnergy, std::shared_ptr<BPEnergy>,
+                 bpy::bases<Function<>>, boost::noncopyable >
+        ("BPEnergy", bpy::init<int, int, bool, double>())
         .def("set_energy_table", &BPEnergy::set_energy_table)
         ;
 
-    py::class_< StackEnergy >
-        (ir, "StackEnergy", function)
-        .def(py::init<int, int, double>())
+    bpy::class_<StackEnergy, std::shared_ptr<StackEnergy>,
+                bpy::bases<Function<>>, boost::noncopyable>
+        ("StackEnergy", bpy::init<int, int, double>())
         .def("set_energy_table", &StackEnergy::set_energy_table)
         ;
 
-    py::class_< GCControl >
-            (ir, "GCControl", function)
-            .def(py::init<int, double>());
+    bpy::class_< GCControl, bpy::bases<Function<> >,
+           boost::noncopyable>("GCControl", bpy::init<int, double>());
 
-    py::class_< ClusterTree<> >(ir,"ClusterTree")
-        .def(py::init<int,int>())
-        .def(py::init<const std::vector<int> &>())
+    bpy::class_< ClusterTree<> >("ClusterTree", bpy::init<int,int>())
+        .def(bpy::init<const std::vector<int> &>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)
         .def("add_child_cluster", &ClusterTree<>::add_child_cluster)
         .def("add_constraint", &ClusterTree<>::add_constraint)

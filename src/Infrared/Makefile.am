@@ -6,9 +6,9 @@ bin_SCRIPTS=treedecomp.py rna_support.py infrared.py
 ########################################
 ## infrared headers
 infrared_includedir=$(includedir)/Infrared
-infrared_include_HEADERS=assignment.hpp cluster.hpp cluster_tree.hpp	\
-	constraint_network.hpp functions.hpp infrared.hpp		\
-	rnadesign.hpp
+infrared_include_HEADERS=assignment.hpp boost_python_aux.hpp	\
+	cluster.hpp cluster_tree.hpp constraint_network.hpp	\
+	functions.hpp infrared.hpp rnadesign.hpp
 
 ########################################
 ## infrared module
