@@ -102,8 +102,6 @@ dnl ############################################################################
 dnl BOOST CHECK
 dnl ##############################################################################
 
-PYTHON_VERSION=3.6
-
 AX_BOOST_BASE([$BOOST_REQUIRED_VERSION], [FOUND_BOOST=1;], [FOUND_BOOST=0;])
 AX_BOOST_PYTHON
 dnl AX_BOOST_GRAPH
