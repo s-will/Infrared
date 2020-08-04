@@ -17,7 +17,20 @@ import rna_support as rna
 
 from functions import *
 
+def analyze_alignments(sequences,target_struc):
+    s = len(sequences)
+    average_gc=0
+    energies=[]
+    for seq in sequences:
+        average_gc+= rna.GC_content(seq) * 100
 
+        fc = RNA.fold_compound(seq)
+        fc.hc_add_from_db(target_struc)
+        energies.append(fc.mfe()[1])
+
+    average_gc /= s
+
+    return average_gc,energies
 
 def clustering(sequences,k,n=15):
 
@@ -29,21 +42,17 @@ def clustering(sequences,k,n=15):
     base_pairs_list = [] #List of parsed structures: base pair pairs 
     diss_matrix=np.zeros((N,N)) #Dissimilarity matrix of base pair distances
     clusters = [[] for _ in range(k)] #Clusters
-    mfes = [] #List of the MFE for each sequence of the alignment
     average_gc=0
     for seq in sequences:
-        #Compute GC content
-        average_gc+= rna.GC_content(seq) * 100
-        
+       
         # create model details
         md = RNA.md()
         # activate unique multibranch loop decomposition
         md.uniq_ML = 1
         # create fold compound object
         fc = RNA.fold_compound(seq, md)
-        # compute MFE[value for value in ls[value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] [value for value in lst1 if value in lst2] t1 if value in lst2] 
+        # compute MFE 
         (ss, mfe) = fc.mfe()
-        mfes.append(mfe)
         # rescale Boltzmann factors according to MFE
         fc.exp_params_rescale(mfe)
         
@@ -62,7 +71,6 @@ def clustering(sequences,k,n=15):
         
         fcs.append(fc)
         
-    average_gc /= s
 
     #Parse Vienna notation into a set of pairs using RNA.plist()
     #And get_pairs defined in functions.py  
@@ -88,7 +96,7 @@ def clustering(sequences,k,n=15):
     for i in range(N):
         clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters """ """
 
-    return [clusters,structs, base_pairs_list,fcs,s, kmeans,average_gc,mfes]
+    return [clusters,structs, base_pairs_list,fcs,s, kmeans]
     
     
 """     #Spectral clustering
@@ -103,6 +111,7 @@ def clustering(sequences,k,n=15):
 def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, n, sequences,k ,T=310.15, gamma=1):
     
     #MEA structure for each cluster
+    structs[0]
     reps = [] #Representatives for each cluster
     probas=[]
     for cluster in clusters:

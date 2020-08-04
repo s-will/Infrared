@@ -24,9 +24,10 @@ import infrared as ir
 import treedecomp
 import rna_support as rna
 
+import numpy as np
+
 import clustering as cl
-from Bio.Phylo.TreeConstruction import DistanceCalculator
-from Bio.Phylo.TreeConstruction import DistanceTreeConstructor
+from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor, DistanceMatrix
 from Bio import AlignIO
 
 import RNA
@@ -239,20 +240,26 @@ def main(args):
     calculator = DistanceCalculator('identity')
     constructor = DistanceTreeConstructor(calculator, 'nj')
     tree = constructor.build_tree(aln) """
-    
-    #Cluster the alignment structures
+
+    #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
-    if args.n1==-1:
-        args.n1= int(1000/len(sequences))+1 #To have approximatively 1000 structures generated
-    cl_results = cl.clustering(sequences, args.k, args.n1)
-    df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],args.n1,sequences, args.k,args.T, args.gamma)
-    best_cluster = df[df["Cluster ensemble energy"]==df["Cluster ensemble energy"].min()]
-    structure1=best_cluster["MEA representative structure"]
-    #print(structure1)
-    average_gc=cl_results[6]
-    #print(average_gc)
-    energies = cl_results[7]
-    #print(energies)
+    msa_size= len(sequences)
+    Dist= DistanceFeature
+    ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
+    for i in range(msa_size):
+        for j in range(i):
+            ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
+    print(ds_mat)
+    
+    distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
+    
+    constructor = DistanceTreeConstructor()
+    tree=constructor.nj(distance_matrix)
+    print(tree)
+    #GC content and energy
+    target_struc=".........((((((((...((((((.(((..((.(((((.((((.((((..(............)..))))))))))))).))..))))))))).))))).)))......."
+    gc,energies=cl.analyze_alignments(sequences,target_struc)
+    print(gc,energies)
 
     # transform features to the corresponding feature dictionary
     features = { f.identifier:f for f in features }
@@ -305,17 +312,11 @@ def main(args):
 
 if __name__ == "__main__":
     ## command line argument parser
+
+    print("Is it working lool?")
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
 
-    parser.add_argument('infile', help="Input Stockholm file for the alignment")
-
-    parser.add_argument("-k",type=int, help="Number of clusters",default=5)
-
-    parser.add_argument("-n1",type=int, help="Number of generated structures for each sequence of the alignment",default= -1)
-
-    parser.add_argument("-T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
-    
-    parser.add_argument("-gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
+    parser.add_argument('infile', help="Input Stockholm file of the alignment")
     
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
