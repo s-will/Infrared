@@ -28,7 +28,8 @@ import numpy as np
 
 import clustering as cl
 from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor, DistanceMatrix
-from Bio import AlignIO
+from Bio import AlignIO, Phylo
+import sys
 
 import RNA
 
@@ -192,34 +193,57 @@ class RomySampler(ir.MultiDimensionalBoltzmannSampler):
         return self.values_to_alignment(super().sample().values())
 
 ##Additional useful functions
-def all_parents(tree):
-    parents = {}
+def all_edges(tree,n):
+    phylo_v = []
+    phylo = []
+    seqnum = n
     for clade in tree.find_clades(order='level'):
         for child in clade:
-            parents[child] = clade
-    return parents
+            if child.name[:5]=="Inner":
+                i = int(child.name.split('r')[1])+n-1
+                if i>seqnum:
+                    seqnum=i+1
+                child_name = i
+            else: child_name=int(child.name)
 
-def get_alignment_features():
+            if clade.name[:5]=="Inner":
+                i = int(clade.name.split('r')[1])+n-1
+                if i>seqnum:
+                    seqnum=i+1
+                clade_name = i
+            else: clade_name=int(clade.name)
 
-    #Get phylogenetic tree
-    """     aln=AlignIO.read(args.infile,'stockholm')
-    calculator = DistanceCalculator('identity')
-    constructor = DistanceTreeConstructor(calculator, 'nj')
-    tree = constructor.build_tree(aln) """
+            phylo_v.append((clade_name,child_name,child.branch_length))
+            phylo.append((clade_name,child_name))
 
-    #Cluster the alignment structures
+    return phylo_v,phylo,seqnum
+
+def get_alignment_features(newick):
+
+    #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
-    if args.n1==-1:
-        args.n1= int(1000/len(sequences))+1 #To have approximatively 1000 structures generated
-    cl_results = cl.clustering(sequences, args.k, args.n1)
-    df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],args.n1,sequences, args.k,args.T, args.gamma)
-    best_cluster = df[df["Cluster ensemble energy"]==df["Cluster ensemble energy"].min()]
-    structure1=best_cluster["MEA representative structure"]
-    #print(structure1)
-    average_gc=cl_results[6]
-    #print(average_gc)
-    energies = cl_results[7]
-    #print(energies)
+    msa_size= len(sequences)
+    Dist= DistanceFeature
+    ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
+    for i in range(msa_size):
+        for j in range(i):
+            ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
+    
+    distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
+    
+    constructor = DistanceTreeConstructor()
+    tree=constructor.nj(distance_matrix)
+    
+    if args.newick: Phylo.write(tree,sys.stdout,"newick")
+    
+    
+
+    phylo_v,phylotree,seqnum = all_edges(tree,msa_size)
+    #GC content and energy
+    target_struct =".........((((((((...((((((.(((..((.(((((.((((.((((..(............)..))))))))))))).))..))))))))).))))).)))......."
+    gc,energies=cl.analyze_alignments(sequences,target_struct)
+
+    return {"Structure":target_struct,"GC":gc,"Energies":energies, "Distance matrix": ds_mat, "Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
 
 ## @brief command line tool definition
@@ -241,7 +265,7 @@ def main(args):
 
     ## hard code an instance
 
-    structure = "((((.((((...))))))))"
+    """     structure = "((((.((((...))))))))"
     seqnum = 5
     seqlen = len(structure)
     phylotree = [(3,0),(3,4),(4,1),(4,2)] #List of edges
@@ -250,34 +274,31 @@ def main(args):
     features.extend( [ EnergyFeature( i, structure, 1, -10, 5 ) #Energy of -10 with a tolerance of 5%
                        for i in range(seqnum) ] )
     features.extend( [ DistanceFeature( edge, 1, 2, 1 ) #We want to have a hamming distance of 2% for each sequence
-                       for edge in phylotree ] )
+                       for edge in phylotree ] )  """
 
-
-    #Get phylogenetic tree
-    """     aln=AlignIO.read(args.infile,'stockholm')
-    calculator = DistanceCalculator('identity')
-    constructor = DistanceTreeConstructor(calculator, 'nj')
-    tree = constructor.build_tree(aln) """
-
-    #aln=AlignIO.read(args.infile,'stockholm')
-    sequences= list(RNA.file_msa_read(args.infile)[2])
-    msa_size= len(sequences)
-    Dist= DistanceFeature
-    ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
-    for i in range(msa_size):
-        for j in range(i):
-            ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
-    print(ds_mat)
     
-    distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
     
-    constructor = DistanceTreeConstructor()
-    tree=constructor.nj(distance_matrix)
-    print(tree)
-    #GC content and energy
-    target_struc=".........((((((((...((((((.(((..((.(((((.((((.((((..(............)..))))))))))))).))..))))))))).))))).)))......."
-    gc,energies=cl.analyze_alignments(sequences,target_struc)
-    print(gc,energies)
+    #Get instance from alignment
+    msa_features = get_alignment_features(args.newick)
+    structure=msa_features["Structure"]
+
+    seqnum=msa_features["Seqnum"]
+    seqlen=len(structure)
+    phylotree=msa_features["Phylotree"]
+    
+    ##GC feature
+    features = [ GCFeature(1,msa_features["GC"],5) ]
+    ##Energy feature
+    features.extend( [ EnergyFeature( i, structure, 1, msa_features["Energies"], 5 ) #Energy of -10 with a tolerance of 5%
+                       for i in range(msa_features["Size"]) ] )
+
+    ###Then for Inner nodes (-60 is randomly chosen here)
+    features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
+                       for i in range(msa_features["Size"],seqnum) ] )   
+    ##Then Distance feature
+    features.extend( [ DistanceFeature((edge[0],edge[1]), 1, edge[2], 1 ) #We want to have a hamming distance of 2% for each sequence
+                       for edge in msa_features["Phylo_v"] ] )
+
 
     # transform features to the corresponding feature dictionary
     features = { f.identifier:f for f in features }
@@ -341,8 +362,6 @@ def main(args):
 
 if __name__ == "__main__":
     ## command line argument parser
-
-    print("Is it working lool?")
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
 
     parser.add_argument('infile', help="Input Stockholm file of the alignment")
@@ -360,6 +379,9 @@ if __name__ == "__main__":
                         help="Seed infrared's random number generator (def=auto)")
     parser.add_argument('--gcweight', type=float, default=1, help="GC weight")
 
+    parser.add_argument("--newick",action="store_true",
+                        help="Show newick representation of the tree")
+    
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")
 
