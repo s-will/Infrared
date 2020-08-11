@@ -100,8 +100,9 @@ class RomyConstraintNetworkFactory:
     ## @param seqlen length of sequences
     ## @param structures list of target structures in dot bracket format
     ## @param features the features containing weights of energies and GC control
-    def create( self, seqnum, seqlen, phylotree, structure, features ):
+    def create( self, seqsize, seqnum, seqlen, phylotree, structure, features ):
 
+        self.seqsize = seqsize
         self.seqnum = seqnum
         self.seqlen = seqlen
         self.phylotree = phylotree
@@ -139,7 +140,7 @@ class RomyConstraintNetworkFactory:
         self.energy_functions = [ rna.BPEnergy(self.vid(i,p), self.vid(i,q),
                                                not (p-1,q+1) in self.structure,
                                                self.features[("E",i)].weight )
-                                  for p,q in self.structure for i in range(self.seqnum) ]
+                                  for p,q in self.structure for i in range(self.seqsize) ]
 
         # GC content control
         self.gc_functions = [ rna.GCControl( self.vid(i,j), self.features["GC"].weight )
@@ -147,10 +148,11 @@ class RomyConstraintNetworkFactory:
 
 
 class RomySampler(ir.MultiDimensionalBoltzmannSampler):
-    def __init__( self, seqnum, seqlen, phylotree, structure, features,
+    def __init__( self, seqsize, seqnum, seqlen, phylotree, structure, features,
                   *, td_factory, cn_factory ):
         super().__init__( features )
 
+        self.seqsize = seqsize
         self.seqnum = seqnum
         self.seqlen = seqlen
         self.phylotree = phylotree
@@ -166,7 +168,7 @@ class RomySampler(ir.MultiDimensionalBoltzmannSampler):
     ## @param features dictionary of features
     ## @return constraint network
     def gen_constraint_network(self, features):
-        return self.cn_factory.create(self.seqnum, self.seqlen, self.phylotree,
+        return self.cn_factory.create(self.seqsize, self.seqnum, self.seqlen, self.phylotree,
                                      self.structure, self.features)
 
     ## @brief Generate tree decomposition
@@ -218,32 +220,68 @@ def all_edges(tree,n):
 
     return phylo_v,phylo,seqnum
 
-def get_alignment_features(newick):
+def all_edges_nhx(tree,n):
+    phylo_v = []
+    phylo = []
+    index_in, index_out = n,0
+    for clade in tree.find_clades(order='level'):
+        for child in clade:
+
+            if clade.comment == None:
+                clade_name = index_in
+                index_in += 1
+            else:
+                clade_name = index_out
+                index_out +=1
+
+            if child.comment == None:
+                child_name = index_in
+                index_in += 1
+            else:
+                child_name = index_out
+                index_out +=1
+
+            phylo_v.append((clade_name,child_name,child.branch_length))
+            phylo.append((clade_name,child_name))
+
+    return phylo_v,phylo,index_in
+
+def get_alignment_features(args):
 
     #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
     msa_size= len(sequences)
-    Dist= DistanceFeature
-    ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
-    for i in range(msa_size):
-        for j in range(i):
-            ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
-    
-    distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
-    
-    constructor = DistanceTreeConstructor()
-    tree=constructor.nj(distance_matrix)
-    
-    if args.newick: Phylo.write(tree,sys.stdout,"newick")
-    
+
+    if args.newick!=None: 
+        tree=Phylo.read(args.newick,'newick')
+        phylo_v,phylotree,seqnum = all_edges_nhx(tree,msa_size)
+    else:
+        Dist= DistanceFeature
+        ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
+        for i in range(msa_size):
+            for j in range(i):
+                ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
+        
+        distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
+        
+        constructor = DistanceTreeConstructor()
+        tree=constructor.nj(distance_matrix)
+        phylo_v,phylotree,seqnum = all_edges(tree,msa_size)
     
 
-    phylo_v,phylotree,seqnum = all_edges(tree,msa_size)
+        
+
+
     #GC content and energy
-    target_struct =".........((((((((...((((((.(((..((.(((((.((((.((((..(............)..))))))))))))).))..))))))))).))))).)))......."
+
+    if args.struct == None:
+        target_struct = RNA.alifold(sequences)[0]
+    else:
+        target_struct = args.struct
+    #target_struct = "(((((((.((((.......))))((((((.......))))))...(((((.......))))))))))))."
     gc,energies=cl.analyze_alignments(sequences,target_struct)
 
-    return {"Structure":target_struct,"GC":gc,"Energies":energies, "Distance matrix": ds_mat, "Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
+    return {"Structure":target_struct,"GC":gc,"Energies":energies,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
 
 ## @brief command line tool definition
@@ -279,24 +317,25 @@ def main(args):
     
     
     #Get instance from alignment
-    msa_features = get_alignment_features(args.newick)
+    msa_features = get_alignment_features(args)
     structure=msa_features["Structure"]
 
     seqnum=msa_features["Seqnum"]
+    seqsize=msa_features["Size"]
     seqlen=len(structure)
     phylotree=msa_features["Phylotree"]
     
     ##GC feature
-    features = [ GCFeature(1,msa_features["GC"],5) ]
+    features = [ GCFeature(args.GC_weight,msa_features["GC"],args.GC_tolerance) ]
     ##Energy feature
-    features.extend( [ EnergyFeature( i, structure, 1, msa_features["Energies"], 5 ) #Energy of -10 with a tolerance of 5%
+    features.extend( [ EnergyFeature( i, structure, args.Energy_weight, msa_features["Energies"][i], args.Energy_tolerance ) #Energy of -10 with a tolerance of 5%
                        for i in range(msa_features["Size"]) ] )
 
     ###Then for Inner nodes (-60 is randomly chosen here)
-    features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
-                       for i in range(msa_features["Size"],seqnum) ] )   
+    """     features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
+                       for i in range(msa_features["Size"],seqnum) ] ) """ 
     ##Then Distance feature
-    features.extend( [ DistanceFeature((edge[0],edge[1]), 1, edge[2], 1 ) #We want to have a hamming distance of 2% for each sequence
+    features.extend( [ DistanceFeature((edge[0],edge[1]), args.Distance_weight, edge[2], args.Distance_tolerance ) #We want to have a hamming distance of 2% for each sequence
                        for edge in msa_features["Phylo_v"] ] )
 
 
@@ -311,7 +350,7 @@ def main(args):
 
     cn_factory = RomyConstraintNetworkFactory()
 
-    sampler = RomySampler( seqnum, seqlen, phylotree, structure, features,
+    sampler = RomySampler( seqsize, seqnum, seqlen, phylotree, structure, features,
                            td_factory = td_factory,
                            cn_factory = cn_factory
                            )
@@ -336,7 +375,7 @@ def main(args):
     sample_count = 0
     for alignment in sample_generator:
         print(alignment,end='')
-        for i in range(seqnum):
+        for i in range(seqsize):
             feat_id, value = fstats.record( sampler.features[("E",i)], alignment )
             print(" {}={:3.2f}".format(feat_id, value), end='')
 
@@ -365,6 +404,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
 
     parser.add_argument('infile', help="Input Stockholm file of the alignment")
+
+    parser.add_argument('--struct', type=str, default=None, help="Consensus structure for the alignment")
+
+    parser.add_argument('--GC_tolerance', type=float, default=5, help="Target tolerance for the GC content")
+
+    parser.add_argument('--Energy_tolerance', type=float, default=5, help="Target tolerance for energies")
+
+    parser.add_argument('--Distance_tolerance', type=float, default=1, help="Target tolerance for hamming distances")
+
+    parser.add_argument('--GC_weight', type=float, default=1, help="GC weight")
+
+    parser.add_argument('--Energy_weight', type=float, default=1, help="Energy weight")
+
+    parser.add_argument('--Distance_weight', type=float, default=1, help="Distance weight")
     
     parser.add_argument('--method', type=int, default=0,
                         help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
@@ -377,10 +430,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--seed', type=int, default=None,
                         help="Seed infrared's random number generator (def=auto)")
-    parser.add_argument('--gcweight', type=float, default=1, help="GC weight")
+    
 
-    parser.add_argument("--newick",action="store_true",
-                        help="Show newick representation of the tree")
+    parser.add_argument("--newick",type=str,default=None,
+                        help="Filename of the newick phylogenetic tree to use")
     
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")

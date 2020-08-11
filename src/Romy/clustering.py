@@ -15,7 +15,7 @@ import pandas as pd
 from sklearn.cluster import KMeans, SpectralClustering, MiniBatchKMeans
 import rna_support as rna
 
-from functions import *
+from cl_functions import *
 
 def analyze_alignments(sequences,target_struc):
     s = len(sequences)
