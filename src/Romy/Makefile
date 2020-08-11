@@ -94,6 +94,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
 	$(top_srcdir)/m4/doxygen.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/m4-ax_boost_base.m4 \
+	$(top_srcdir)/m4/m4_ax_boost_python.m4 \
 	$(top_srcdir)/m4/m4_ax_python_devel.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -156,19 +158,22 @@ am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = ${SHELL} /home/amine-abdeljaoued/Documents/CNRS/Infrared/config/missing aclocal-1.16
 AMTAR = $${TAR-tar}
-AM_CXXFLAGS = -I/home/amine-abdeljaoued/anaconda3/include/python3.7m  -Wall -pedantic
+AM_CXXFLAGS = -I/home/amine-abdeljaoued/anaconda3/include/python3.7m -I/usr/include  -Wall -pedantic
 AM_DEFAULT_VERBOSITY = 1
-AM_LDFLAGS =  
+AM_LDFLAGS =  -L/usr/lib/x86_64-linux-gnu 
 AR = ar
 AUTOCONF = ${SHELL} /home/amine-abdeljaoued/Documents/CNRS/Infrared/config/missing autoconf
 AUTOHEADER = ${SHELL} /home/amine-abdeljaoued/Documents/CNRS/Infrared/config/missing autoheader
 AUTOMAKE = ${SHELL} /home/amine-abdeljaoued/Documents/CNRS/Infrared/config/missing automake-1.16
 AWK = mawk
+BOOST_CPPFLAGS = -I/usr/include
+BOOST_LDFLAGS = -L/usr/lib/x86_64-linux-gnu
+BOOST_PYTHON_LIB = boost_python
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
 CPP = gcc -E
-CPPFLAGS =  -I/home/amine-abdeljaoued/anaconda3/include/python3.7m  -Wall -pedantic
+CPPFLAGS = 
 CXX = g++
 CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
@@ -223,7 +228,7 @@ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LD = /usr/bin/ld -m elf_x86_64
 LDFLAGS = 
 LIBOBJS = 
-LIBS = 
+LIBS =  -lboost_python
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = 
 LN_S = ln -s
@@ -313,7 +318,7 @@ target_alias =
 top_build_prefix = ../../
 top_builddir = ../..
 top_srcdir = ../..
-bin_SCRIPTS = romy.py clustering.py functions.py
+bin_SCRIPTS = romy.py clustering.py cl_functions.py
 all: all-am
 
 .SUFFIXES:
