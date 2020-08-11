@@ -318,7 +318,7 @@ target_alias =
 top_build_prefix = ../../
 top_builddir = ../..
 top_srcdir = ../..
-bin_SCRIPTS = romy.py clustering.py cl_functions.py
+bin_SCRIPTS = romy.py clustering.py cl_functions.py rm_gaps.py
 all: all-am
 
 .SUFFIXES:

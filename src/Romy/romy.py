@@ -403,7 +403,7 @@ if __name__ == "__main__":
     ## command line argument parser
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
 
-    parser.add_argument('infile', help="Input Stockholm file of the alignment")
+    parser.add_argument('infile',type=str, help="Input Stockholm file of the alignment")
 
     parser.add_argument('--struct', type=str, default=None, help="Consensus structure for the alignment")
 
