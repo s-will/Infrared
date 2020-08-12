@@ -199,24 +199,34 @@ def all_edges(tree,n):
     phylo_v = []
     phylo = []
     seqnum = n
+    print(tree)
     for clade in tree.find_clades(order='level'):
         for child in clade:
             if child.name[:5]=="Inner":
-                i = int(child.name.split('r')[1])+n-1
-                if i>seqnum:
-                    seqnum=i+1
-                child_name = i
+                if child.name=="Inner": #Case of only one Inner node
+                    child_name=n
+                    seqnum +=1
+                else:
+                    i = int(child.name.split('r')[1])+n-1
+                    if i+1>seqnum:
+                        seqnum=i+1
+                    child_name = i
             else: child_name=int(child.name)
 
             if clade.name[:5]=="Inner":
-                i = int(clade.name.split('r')[1])+n-1
-                if i>seqnum:
-                    seqnum=i+1
-                clade_name = i
+                if clade.name=="Inner": #Case of only one Inner node
+                    clade_name=n
+                    seqnum +=1
+                else:
+                    i = int(clade.name.split('r')[1])+n-1
+                    if i+1>seqnum:
+                        seqnum=i+1
+                    clade_name = i
             else: clade_name=int(clade.name)
 
             phylo_v.append((clade_name,child_name,child.branch_length))
             phylo.append((clade_name,child_name))
+
 
     return phylo_v,phylo,seqnum
 
@@ -280,8 +290,9 @@ def get_alignment_features(args):
         target_struct = args.struct
     #target_struct = "(((((((.((((.......))))((((((.......))))))...(((((.......))))))))))))."
     gc,energies=cl.analyze_alignments(sequences,target_struct)
-
-    return {"Structure":target_struct,"GC":gc,"Energies":energies,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
+    print(phylo_v)
+    print(distance_matrix)
+    return {"Structure":target_struct,"GC":gc,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
 
 ## @brief command line tool definition
@@ -326,16 +337,16 @@ def main(args):
     phylotree=msa_features["Phylotree"]
     
     ##GC feature
-    features = [ GCFeature(args.GC_weight,msa_features["GC"],args.GC_tolerance) ]
+    features = [ GCFeature(args.gc_weight,msa_features["GC"],args.gc_tolerance) ]
     ##Energy feature
-    features.extend( [ EnergyFeature( i, structure, args.Energy_weight, msa_features["Energies"][i], args.Energy_tolerance ) #Energy of -10 with a tolerance of 5%
+    features.extend( [ EnergyFeature( i, structure, args.energy_weight, msa_features["Energies"][i], args.energy_tolerance ) #Energy of -10 with a tolerance of 5%
                        for i in range(msa_features["Size"]) ] )
 
     ###Then for Inner nodes (-60 is randomly chosen here)
     """     features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
                        for i in range(msa_features["Size"],seqnum) ] ) """ 
     ##Then Distance feature
-    features.extend( [ DistanceFeature((edge[0],edge[1]), args.Distance_weight, edge[2], args.Distance_tolerance ) #We want to have a hamming distance of 2% for each sequence
+    features.extend( [ DistanceFeature((edge[0],edge[1]), args.distance_weight, edge[2], args.distance_tolerance ) #We want to have a hamming distance of 2% for each sequence
                        for edge in msa_features["Phylo_v"] ] )
 
 
@@ -361,6 +372,11 @@ def main(args):
 
     if args.verbose:
         print("Treewidth:",sampler.treewidth())
+        print("The targeted structure is: ",structure)
+        print("The targeted average GC content is: ",msa_features["GC"])
+        print("The targeted energies are: ",msa_features["Energies"])
+    """         print("The phylogenetic tree will be printed in another window, close it tp have the results")
+        Phylo.draw(msa_features["Tree"]) """
 
 
     fstats = ir.FeatureStatistics()
@@ -407,20 +423,17 @@ if __name__ == "__main__":
 
     parser.add_argument('--struct', type=str, default=None, help="Consensus structure for the alignment")
 
-    parser.add_argument('--GC_tolerance', type=float, default=5, help="Target tolerance for the GC content")
+    parser.add_argument('--gc_tolerance', type=float, default=5, help="Target tolerance for the GC content")
 
-    parser.add_argument('--Energy_tolerance', type=float, default=5, help="Target tolerance for energies")
+    parser.add_argument('--energy_tolerance', type=float, default=5, help="Target tolerance for energies")
 
-    parser.add_argument('--Distance_tolerance', type=float, default=1, help="Target tolerance for hamming distances")
+    parser.add_argument('--distance_tolerance', type=float, default=1, help="Target tolerance for hamming distances")
 
-    parser.add_argument('--GC_weight', type=float, default=1, help="GC weight")
+    parser.add_argument('--gc_weight', type=float, default=1, help="GC weight")
 
-    parser.add_argument('--Energy_weight', type=float, default=1, help="Energy weight")
+    parser.add_argument('--energy_weight', type=float, default=1, help="Energy weight")
 
-    parser.add_argument('--Distance_weight', type=float, default=1, help="Distance weight")
-    
-    parser.add_argument('--method', type=int, default=0,
-                        help="Method for tree decomposition (0: use htd; otherwise pass to TDlib as strategy)")
+    parser.add_argument('--distance_weight', type=float, default=1, help="Distance weight")
 
     parser.add_argument('--td', type=str, default="nx",
                         help="Method for tree decomposition (see --listtds)")
