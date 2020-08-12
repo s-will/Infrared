@@ -43,7 +43,7 @@ def remove_gaps(args):
     if args.outfile!=None:
         RNA.file_msa_write(args.outfile,Names,new_aln,Id,new_struct,'',2)
 
-    return [n,Names,aln]
+    return [n,Names,aln,Id,new_struct]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Removing gaps from a MSA')
