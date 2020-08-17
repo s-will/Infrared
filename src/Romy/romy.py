@@ -199,7 +199,6 @@ def all_edges(tree,n):
     phylo_v = []
     phylo = []
     seqnum = n
-    print(tree)
     for clade in tree.find_clades(order='level'):
         for child in clade:
             if child.name[:5]=="Inner":
@@ -261,7 +260,6 @@ def get_alignment_features(args):
     #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
     msa_size= len(sequences)
-
     if args.newick!=None: 
         tree=Phylo.read(args.newick,'newick')
         phylo_v,phylotree,seqnum = all_edges_nhx(tree,msa_size)
@@ -290,8 +288,6 @@ def get_alignment_features(args):
         target_struct = args.struct
     #target_struct = "(((((((.((((.......))))((((((.......))))))...(((((.......))))))))))))."
     gc,energies=cl.analyze_alignments(sequences,target_struct)
-    print(phylo_v)
-    print(distance_matrix)
     return {"Structure":target_struct,"GC":gc,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
 
@@ -389,7 +385,9 @@ def main(args):
         sample_generator = sampler.samples()
 
     sample_count = 0
+    alignments=[]
     for alignment in sample_generator:
+        alignments.append(alignment)
         print(alignment,end='')
         for i in range(seqsize):
             feat_id, value = fstats.record( sampler.features[("E",i)], alignment )
@@ -413,7 +411,8 @@ def main(args):
             print("----------")
             print("Summary: ",end='')
         fstats.report()
-
+    
+    return alignments,seqnum
 
 if __name__ == "__main__":
     ## command line argument parser

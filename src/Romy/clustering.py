@@ -42,7 +42,6 @@ def clustering(sequences,k,n=15):
     base_pairs_list = [] #List of parsed structures: base pair pairs 
     diss_matrix=np.zeros((N,N)) #Dissimilarity matrix of base pair distances
     clusters = [[] for _ in range(k)] #Clusters
-    average_gc=0
     for seq in sequences:
        
         # create model details

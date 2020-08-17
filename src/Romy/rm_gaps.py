@@ -10,13 +10,13 @@ def remove_gaps(args):
     Id = msa[3]
     consensus_struct=msa[4]
 
-    if args.n==-1:
+    if args.ss==-1:
         n = msa[0]
         aln=msa[2]
         Names = msa[1]
     else:
-        n = args.n
-        indices = random.sample([i for i in range(msa[0])],args.n)
+        n = args.ss
+        indices = random.sample([i for i in range(msa[0])],n)
         aln = [msa[2][i] for i in indices]
         Names = [msa[1][i] for i in indices]
         
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-outfile',help="Output Stockholm filename of the MSA without gaps")
 
-    parser.add_argument('-n', type=int,default=-1,help="Size of the alignment to return (subset of initial one)")
+    parser.add_argument('-ss', type=int,default=-1,help="Subset size: Size of the alignment to return")
     
     args=parser.parse_args()
 
