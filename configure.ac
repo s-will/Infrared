@@ -120,32 +120,37 @@ dnl #########################################################################
 dnl check boost test results
 dnl #########################################################################
 
-dnl FOUND_BOOST is only defined if want_boost is "yes"
-AS_IF([test $want_boost = "no" || test $FOUND_BOOST != 1], [
+AS_IF([test $FOUND_BOOST != 1], [
         AC_MSG_NOTICE([])
-        AC_MSG_NOTICE([The Boost Library was not found!])
+        AC_MSG_NOTICE([Boost was not found!])
         AC_MSG_NOTICE([ -> If installed in a non-standard path, please use '--with-boost=PREFIX'.])
         AC_MSG_NOTICE([])
-        DEPENDENCYNOTFOUND=1;
+        DEPENDENCYNOTFOUND=1
 ], [
         AM_CXXFLAGS="$BOOST_CPPFLAGS $AM_CXXFLAGS"
         AM_LDFLAGS="$BOOST_LDFLAGS $AM_LDFLAGS"
         LIBS="$LIBS"
 ])
+AS_IF([test -z $BOOST_PYTHON_LIB], [
+        AC_MSG_NOTICE([])
+        AC_MSG_NOTICE([The Boost Python library was not found!])
+        AC_MSG_NOTICE([])
+        DEPENDENCYNOTFOUND=1
+], [
+    AM_CXXFLAGS="$PYTHON_CPPFLAGS $AM_CXXFLAGS"
+    AM_LDFLAGS="$PYTHON_LDFLAGS $AM_LDFLAGS"
+    LIBS="$LIBS -l$BOOST_PYTHON_LIB"
+])
 
-AM_CXXFLAGS="$PYTHON_CPPFLAGS $AM_CXXFLAGS"
-AM_LDFLAGS="$PYTHON_LDFLAGS $AM_LDFLAGS"
-LIBS="$LIBS -l$BOOST_PYTHON_LIB"
 
 dnl distribute additional compiler and linker flags
 dnl --> set these variables instead of CXXFLAGS or LDFLAGS
 AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LIBS])
-AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
+# AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
 
-
-
+AS_IF([test -z $DEPENDENCYNOTFOUND], [
 dnl files to generate via autotools (.am or .in source files)
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
@@ -156,3 +161,7 @@ AC_CONFIG_FILES([src/Test/Makefile])
 
 dnl generate the final Makefile etc.
 AC_OUTPUT
+],
+[
+    AC_MSG_ERROR([Some dependency could not be found!])
+])
