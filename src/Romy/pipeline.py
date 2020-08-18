@@ -4,14 +4,24 @@ import rm_gaps as rg
 
 import argparse
 import pandas as pd
+import RNA
 
+## What this script does:
+# 1) Remove gaps of the alignment contained in the infile argument, 
+#    and takes a random subset of size -ss 
+# 2) Sample -n alignments targeting features of the input alignment.
+# 3) For each sampled alignment, we sample structures and cluster them 
+#    to store the minimum free energy and ensemble energy of the 2 best clusters.
+
+## The resulting dataframe contains all these results and its last line is
+#  for the input alignment.
 
 def main(args):
     args.outfile=args.infile.split('.')[0]+'-gapless.'+args.infile.split('.')[1]
     rg.remove_gaps(args)
     args.infile= args.outfile
-    alignments,seqnum=romy.main(args)
-    x = int(1000/seqnum) #Number of structures to generate per sequence to have 1000 structures for the alignment
+    alignments=romy.main(args)
+    x = int(1000/args.ss) #Number of structures to generate per sequence to have 1000 structures for the alignment
     res= {"best_min_e":[], "best_ens_e" :[], "second_best_min_e" :[], "second_best_ens_e" :[]}
     for sequences in alignments:
         cl_results = cl.clustering(sequences,args.k,x)
@@ -21,10 +31,20 @@ def main(args):
         res["second_best_min_e"].append(df["Cluster min energy"][i2])
         res["best_ens_e"].append(df["Cluster ensemble energy"][i1])
         res["second_best_ens_e"].append(df["Cluster ensemble energy"][i2])
+    
+    #Then collecting results from the initial alignments (gapless)
+    sequences = list(RNA.file_msa_read(args.outfile)[2])
+    msa_res = cl.clustering(sequences,args.k,x)
+    df = cl.analyze_clusters(msa_res[0],msa_res[1],msa_res[2],msa_res[3],msa_res[4],x,sequences,args.k,args.T,args.gamma)
+    i1, i2 = minimin(df)
+    res["best_min_e"].append(df["Cluster min energy"][i1])
+    res["second_best_min_e"].append(df["Cluster min energy"][i2])
+    res["best_ens_e"].append(df["Cluster ensemble energy"][i1])
+    res["second_best_ens_e"].append(df["Cluster ensemble energy"][i2])
+    
+    
     results = pd.DataFrame.from_dict(res)
-    print(results)
-    if args.outcsv!=None:
-        results.to_csv(args.outcsv+".csv")
+    results.to_csv(args.outcsv+".csv")
 
     
     return results
@@ -74,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("-T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
     parser.add_argument("-gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
 
-    parser.add_argument("-outcsv",type=str, help="Store the resulting DataFrame in a CSV file with the given filename")
+    parser.add_argument("-outcsv",type=str,default="background", help="Store the resulting DataFrame in a CSV file with the given filename")
 
     args=parser.parse_args()
     main(args)

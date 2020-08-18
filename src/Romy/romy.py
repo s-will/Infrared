@@ -387,8 +387,9 @@ def main(args):
     sample_count = 0
     alignments=[]
     for alignment in sample_generator:
-        alignments.append(alignment)
-        print(alignment,end='')
+        msa = alignment[:seqsize]
+        alignments.append(msa)
+        print(msa,end='')
         for i in range(seqsize):
             feat_id, value = fstats.record( sampler.features[("E",i)], alignment )
             print(" {}={:3.2f}".format(feat_id, value), end='')
@@ -412,7 +413,7 @@ def main(args):
             print("Summary: ",end='')
         fstats.report()
     
-    return alignments,seqnum
+    return alignments
 
 if __name__ == "__main__":
     ## command line argument parser
