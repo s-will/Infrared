@@ -269,15 +269,15 @@ def get_alignment_features(args):
         for i in range(msa_size):
             for j in range(i):
                 ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
-        
-        distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat) 
-        
+
+        distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat)
+
         constructor = DistanceTreeConstructor()
         tree=constructor.nj(distance_matrix)
         phylo_v,phylotree,seqnum = all_edges(tree,msa_size)
-    
 
-        
+
+
 
 
     #GC content and energy
@@ -288,8 +288,150 @@ def get_alignment_features(args):
         target_struct = args.struct
     #target_struct = "(((((((.((((.......))))((((((.......))))))...(((((.......))))))))))))."
     gc,energies=cl.analyze_alignments(sequences,target_struct)
-    return {"Structure":target_struct,"GC":gc,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
+    return {"Sequences": sequences, "Structure":target_struct,"GC":gc,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
+def sequence_to_gap_pattern( ali_sequence ):
+    """
+    @brief convert a sequence to a gap pattern
+    @param ali_sequence alignment sequence, possibly containing gaps '-'
+    """
+    return [ x=='-' for x in ali_sequence ]
+
+"""
+A quite specialized tree class
+
+Supports traversal based on a list of edges
+@note makes quite a few assumptions on edges and nodes (@see infer_inner_gap_patterns)!
+"""
+class Tree():
+    def __init__(self,edges):
+        self.nodes = set()
+        for (i,j) in edges:
+            self.nodes.add(i)
+            self.nodes.add(j)
+
+        self.adjacency = dict()
+        for (i,j) in edges:
+            if i not in self.adjacency:
+                 self.adjacency[i]=list()
+            if j not in self.adjacency:
+                self.adjacency[j]=list()
+            self.adjacency[i].append(j)
+            self.adjacency[j].append(i)
+
+        self.parent = dict()
+        self.children = dict()
+
+        self.root = max(self.nodes)
+        self._init_parents_and_children(self.root)
+
+    def _init_parents_and_children(self,i,parent=None):
+        self.parent[i] = parent
+        self.children[i] = []
+        for j in self.adjacency[i]:
+            if j!=parent:
+                self._init_parents_and_children(j,i)
+                self.children[i].append(j)
+
+def infer_inner_gap_patterns( sequences, tree_edges ):
+    """
+    @brief Infer the gap patterns at the inner leaves of the tree
+    @param sequences sequences/alignment strings of the alignment (including gaps)
+    @param tree as list of edges
+    @returns list of all gap patterns
+
+    @pre the indices of sequences and node indices of the leave nodes in tree correspond;
+    in tree the leaves must have the indices in range(number of leaves), inner nodes have integer indices
+    in range(number of leaves, number of nodes); all sequences have the same length
+    """
+    print("infer_inner_gap_patterns",tree_edges)
+
+    leave_gap_patterns = [ sequence_to_gap_pattern(x) for x in sequences ]
+    leave_num = len(leave_gap_patterns)
+
+    if leave_num==0:
+        return []
+
+    seqlen = len(sequences[0])
+
+    tree = Tree(tree_edges)
+
+    ## We run a fitch maximum parsimony algo with trace back, separately on each alignment column
+    ##
+
+    # we follow this schema:
+
+    # foreach alignment column
+    #   ## fitch_fwd
+    #   traverse nodes in post order, at each node
+    #      determine and store max parsimonius scores for each node type
+    #
+    #   determine best node type
+    #
+    #   ## fitch_tb
+    #   traverse pre-order, at each node
+    #      choose types for children that yield maximum score
+
+    values = [False,True]
+
+    cost_tab = dict()
+
+    def fitch_fwd( node, col ):
+        ncost_tab = dict()
+        if tree.children[node] == []:
+            # init the table
+            g = leave_gap_patterns[node][col]
+            ncost_tab[g] = 0
+            ncost_tab[not g] = 10**9 # hackish for 'infinite cost'
+        else:
+            # run algo on kids and infer the table
+            for child in tree.children[node]:
+                fitch_fwd(child, col)
+
+            for v in values:
+                ncost_tab[v] = sum( min( cost_tab[child][v], cost_tab[child][not v] + 1 ) for child in tree.children[node] )
+
+        cost_tab[node] = ncost_tab
+
+    tb_values = dict()
+    def fitch_tb( node, val ):
+        tb_values[node]=val
+
+        # pick optimal values for children
+        children = tree.children[node]
+
+        if children == []:
+            return
+
+        best_cost = 10**9
+        best_values = None
+        for children_values in itertools.product( values, repeat=len(children) ):
+            cost = sum( cost_tab[children[cidx]][children_values[cidx]] + (children_values[cidx]!=val) for cidx in range(len(children)) )
+            if cost < best_cost:
+                best_cost = cost
+                best_values = children_values
+
+        for cidx in range(len(children)):
+            fitch_tb( children[cidx], best_values[cidx] )
+
+    gap_patterns = [ [] for node in tree.nodes ]
+
+    for col in range(seqlen):
+        fitch_fwd( tree.root, col )
+
+        best_cost,best_val = min( (cost_tab[tree.root][val],val) for val in values )
+
+        fitch_tb( tree.root, best_val )
+
+        for node in tree.nodes:
+            gap_patterns[node].append(tb_values[node])
+
+    return gap_patterns
+
+def gap_pattern_to_string(gap_pattern):
+    def f(x):
+        return {True:'-',False:'.'}[x]
+    return "".join( [ f(x) for x in gap_pattern ] )
 
 ## @brief command line tool definition
 ## @param args command line arguments
@@ -321,17 +463,21 @@ def main(args):
     features.extend( [ DistanceFeature( edge, 1, 2, 1 ) #We want to have a hamming distance of 2% for each sequence
                        for edge in phylotree ] )  """
 
-    
-    
     #Get instance from alignment
     msa_features = get_alignment_features(args)
+    print(msa_features)
+
+    sequences = msa_features["Sequences"]
     structure=msa_features["Structure"]
 
     seqnum=msa_features["Seqnum"]
     seqsize=msa_features["Size"]
     seqlen=len(structure)
     phylotree=msa_features["Phylotree"]
-    
+
+    gap_patterns = infer_inner_gap_patterns(sequences, phylotree)
+    print([ gap_pattern_to_string(x) for x in gap_patterns ])
+
     ##GC feature
     features = [ GCFeature(args.gc_weight,msa_features["GC"],args.gc_tolerance) ]
     ##Energy feature
@@ -340,7 +486,7 @@ def main(args):
 
     ###Then for Inner nodes (-60 is randomly chosen here)
     """     features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
-                       for i in range(msa_features["Size"],seqnum) ] ) """ 
+                       for i in range(msa_features["Size"],seqnum) ] ) """
     ##Then Distance feature
     features.extend( [ DistanceFeature((edge[0],edge[1]), args.distance_weight, edge[2], args.distance_tolerance ) #We want to have a hamming distance of 2% for each sequence
                        for edge in msa_features["Phylo_v"] ] )
@@ -443,11 +589,11 @@ if __name__ == "__main__":
 
     parser.add_argument('--seed', type=int, default=None,
                         help="Seed infrared's random number generator (def=auto)")
-    
+
 
     parser.add_argument("--newick",type=str,default=None,
                         help="Filename of the newick phylogenetic tree to use")
-    
+
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")
 
