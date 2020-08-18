@@ -33,6 +33,9 @@ import sys
 
 import RNA
 
+def hamming_distance(xs,ys):
+    return sum(map(lambda x:x[0]!=x[1], zip(xs,ys)))
+
 ## @brief InfraRed function to control hamming distance
 class HammingDistance(ir.Function):
     def __init__(self, i, j, weight):
@@ -79,12 +82,8 @@ class DistanceFeature(ir.Feature):
         self.i = i
         self.j = j
 
-    @staticmethod
-    def hamming_distance(xs,ys):
-        return sum(map(lambda x:x[0]!=x[1], zip(xs,ys)))
-
     def eval(self, sample):
-        return self.hamming_distance( sample[self.i], sample[self.j] )
+        return hamming_distance( sample[self.i], sample[self.j] )
 
     def idstring(self):
         return "_".join(map(str,self.identifier))
@@ -260,15 +259,14 @@ def get_alignment_features(args):
     #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
     msa_size= len(sequences)
-    if args.newick!=None: 
+    if args.newick!=None:
         tree=Phylo.read(args.newick,'newick')
         phylo_v,phylotree,seqnum = all_edges_nhx(tree,msa_size)
     else:
-        Dist= DistanceFeature
         ds_mat = [[0 for i in range(i+1)] for i in range(msa_size)]
         for i in range(msa_size):
             for j in range(i):
-                ds_mat[i][j] = Dist.hamming_distance(sequences[i],sequences[j])
+                ds_mat[i][j] = hamming_distance(sequences[i],sequences[j])
 
         distance_matrix = DistanceMatrix([str(i) for i in range(msa_size)],ds_mat)
 
@@ -433,6 +431,17 @@ def gap_pattern_to_string(gap_pattern):
         return {True:'-',False:'.'}[x]
     return "".join( [ f(x) for x in gap_pattern ] )
 
+def subtract_gap_distances( tree, gps ):
+    """
+    @brief subtract hamming distances between gap patterns for each branch of a tree
+
+    Corrects the tree lengths to reflect hamming distances between non-gap positions
+
+    @param tree tree edges with lengths (list of triples x,y,l)
+    @param gps gap patterns of the nodes
+    """
+    return [ (x,y,l - hamming_distance(gps[x],gps[y])) for (x,y,l) in tree ]
+
 ## @brief command line tool definition
 ## @param args command line arguments
 def main(args):
@@ -465,7 +474,6 @@ def main(args):
 
     #Get instance from alignment
     msa_features = get_alignment_features(args)
-    print(msa_features)
 
     sequences = msa_features["Sequences"]
     structure=msa_features["Structure"]
@@ -474,22 +482,28 @@ def main(args):
     seqsize=msa_features["Size"]
     seqlen=len(structure)
     phylotree=msa_features["Phylotree"]
+    phylotree_v=msa_features["Phylo_v"]
 
+    # infer gap patterns at inner nodes
     gap_patterns = infer_inner_gap_patterns(sequences, phylotree)
-    print([ gap_pattern_to_string(x) for x in gap_patterns ])
+    if args.verbose:
+        print([ gap_pattern_to_string(x) for x in gap_patterns ])
 
-    ##GC feature
+    # update the branch lengths in the phylo tree by subtracting gap-caused distances
+    corrected_phylotree_v = subtract_gap_distances( phylotree_v, gap_patterns )
+    if args.verbose:
+        print(phylotree_v,'--->',corrected_phylotree_v)
+
+    ## GC feature
     features = [ GCFeature(args.gc_weight,msa_features["GC"],args.gc_tolerance) ]
-    ##Energy feature
-    features.extend( [ EnergyFeature( i, structure, args.energy_weight, msa_features["Energies"][i], args.energy_tolerance ) #Energy of -10 with a tolerance of 5%
+
+    ## Energy features
+    features.extend( [ EnergyFeature( i, structure, args.energy_weight, msa_features["Energies"][i], args.energy_tolerance )
                        for i in range(msa_features["Size"]) ] )
 
-    ###Then for Inner nodes (-60 is randomly chosen here)
-    """     features.extend( [ EnergyFeature( i, structure, 1, -60, 5 ) #Energy of -60 with a tolerance of 5%
-                       for i in range(msa_features["Size"],seqnum) ] ) """
-    ##Then Distance feature
-    features.extend( [ DistanceFeature((edge[0],edge[1]), args.distance_weight, edge[2], args.distance_tolerance ) #We want to have a hamming distance of 2% for each sequence
-                       for edge in msa_features["Phylo_v"] ] )
+    ## Distance features
+    features.extend( [ DistanceFeature((edge[0],edge[1]), args.distance_weight, edge[2], args.distance_tolerance )
+                       for edge in corrected_phylotree_v ] )
 
 
     # transform features to the corresponding feature dictionary
@@ -558,8 +572,8 @@ def main(args):
             print("----------")
             print("Summary: ",end='')
         fstats.report()
-    
-    return alignments
+
+    return alignments,seqnum
 
 if __name__ == "__main__":
     ## command line argument parser
