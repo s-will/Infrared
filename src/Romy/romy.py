@@ -22,7 +22,7 @@ import os
 
 import infrared as ir
 import treedecomp
-import rna_support as rna
+import rna_support
 
 import numpy as np
 
@@ -75,6 +75,8 @@ class GapPattern:
                 p += 1
             else:
                 self._ctp.append(None)
+        
+        self._seqlen = len(self._gap_pattern) - sum(self._gap_pattern)
 
     def __getitem__(self, i):
         return self._gap_pattern[i]
@@ -84,6 +86,9 @@ class GapPattern:
 
     def __len__(self):
         return len(self._gap_pattern)
+
+    def seqlen(self):
+        return self._seqlen
 
     ## @brief sequence position to column
     def pos_to_col(self, i):
@@ -97,10 +102,10 @@ class GapPattern:
 
     ## @brief alignment string from ungapped sequence
     def sequence_to_alistr(self, sequence):
-        x = ['-'] * len( self )
+        s = ['-'] * len( self )
         for i,x in enumerate(sequence):
             s[self._ptc[i]]=x
-        return "".join(x)
+        return "".join(s)
 
     def __str__(self):
         def f(x):
@@ -118,15 +123,17 @@ class RomySample:
         self._gap_patterns = gap_patterns
         self._seqnum = len(self._gap_patterns)
         assert(self._seqnum != 0)
-        self._seqlen = len( self._gap_patterns[0] )
-        self._sequences = self._values_to_alignment(self._values)
+        self._sequences = self._values_to_sequences(self._values)
+        self._sequences = [ gp.sequence_to_alistr(seq) for seq,gp in zip(self._sequences,self._gap_patterns) ]
 
-    def _values_to_alignment(self,vals):
+    def _values_to_sequences(self,vals):
         seqs = []
+        offset=0
         for i in range(self._seqnum):
-            seq = rna.values_to_sequence(vals[:self._seqlen])
-            vals = vals[self._seqlen:]
+            seqlen = self._gap_patterns[i].seqlen()
+            seq = rna_support.values_to_sequence(vals[offset:offset+seqlen])
             seqs.append(seq)
+            offset = offset + seqlen
         return seqs
 
     def sequences(self):
@@ -143,7 +150,7 @@ class GCFeature(ir.Feature):
     def __init__(self, weight, target, tolerance):
         super().__init__( "GC", weight, target, tolerance )
     def eval(self, sample):
-        return rna.GC_content( "".join(sample.sequences()) ) * 100
+        return rna_support.GC_content( "".join(sample.sequences()) ) * 100
 
 ## @brief Turner energy feature
 class EnergyFeature(ir.Feature):
@@ -153,7 +160,9 @@ class EnergyFeature(ir.Feature):
         self.index = index
 
     def eval(self, sample):
-        fc = RNA.fold_compound(sample[self.index])
+        sequence = sample[self.index].replace("-","")
+        #print("EnergyFeature::eval",sequence,self.structure)
+        fc = RNA.fold_compound(sequence)
         return fc.eval_structure(self.structure)
 
     def idstring(self):
@@ -176,6 +185,26 @@ class DistanceFeature(ir.Feature):
     def idstring(self):
         return "_".join(map(str,self.identifier))
 
+## @brief a RNA secondary structure
+class RnaStructure:
+    ## @brief init from dot bracket string
+    def __init__(self, dbstring):
+        self._dbstring = dbstring
+        self._pairings = rna_support.parseRNAStructure(dbstring)
+        self._basepairs = rna_support.parseRNAStructureBps(dbstring)
+
+    def __len__(self):
+        return len(self._dbstring)
+
+    def dot_bracket(self):
+        return self._dbstring
+
+    def pair_array(self):
+        return self._pairings
+
+    def basepairs(self):
+        return self._basepairs
+
 ## @brief Construct and hold constraint network for mult-target design
 ## based in the base pair energy model
 class RomyConstraintNetworkFactory:
@@ -184,68 +213,94 @@ class RomyConstraintNetworkFactory:
         pass
 
     ## @brief create constraint network
-    ## @param seqlen length of sequences
-    ## @param structures list of target structures in dot bracket format
+    ## @gap_patterns list of the gap patterns of all sequences in the tree
+    ## @param alnsize number of sequences in the alignment (w/o sequences at inner nodes)
+    ## @param seqnum number of all sequences
+    ## @param phylotree list of edges of the phylogenetic tree
+    ## @param structures list of target structures of all sequences
     ## @param features the features containing weights of energies and GC control
-    def create( self, seqsize, seqnum, seqlen, phylotree, structure, features ):
-
-        self.seqsize = seqsize
+    def create( self, gap_patterns, alnsize, seqnum, phylotree, structures, features ):
+        self.gap_patterns = gap_patterns    
+        self.alnsize = alnsize
         self.seqnum = seqnum
-        self.seqlen = seqlen
+
+        # construct helper array for variable index computation
+        self.idx_offsets = [0] 
+        self.idx_offsets.extend( itertools.accumulate( [ self.gap_patterns[i].seqlen() for i in range(self.seqnum) ] ) ) 
+
+        self.alnlen = len(gap_patterns[0]) # number of columns in the alignment
         self.phylotree = phylotree
-        self.structure_string = structure
-        self.structure = rna.parseRNAStructureBps(structure)
+        self.structures = [ RnaStructure(s) for s in structures ]
         self.features = features
 
         self.generate_constraints_and_functions()
 
-        cn = ir.ConstraintNetwork( varnum = seqlen * seqnum, domains = 4,
+        cn = ir.ConstraintNetwork( varnum = self.alnlen * self.seqnum, domains = 4,
                 constraints = self.bp_constraints,
                 functions = self.gc_functions + self.energy_functions + self.distance_functions )
 
         return cn
 
 
-    ## @brief Get variable id
+    ## @brief Get variable id by sequence position
     ## @param seq_id sequence id
-    ## @param pos position
-    def vid(self, seq_id, pos):
-        return seq_id * self.seqlen + pos
+    ## @param pos sequence position
+    def vid_pos(self, seq_id, pos):
+        assert( seq_id < self.seqnum )
+        assert( 0 <= pos )
+        assert( pos < self.idx_offsets[seq_id+1] )
+        return self.idx_offsets[seq_id] + pos 
+    
+    ## @brief Get variable id by alignment column
+    ## @param seq_id sequence id
+    ## @param col alignment column 
+    def vid_col(self, seq_id, col):
+        assert( seq_id < self.seqnum )
+        assert( 0 <= col )
+        assert( col < self.alnlen )
+        return self.idx_offsets[seq_id] + self.gap_patterns[seq_id].col_to_pos(col) 
 
     ## @brief Generate constraint network constraints and functions
     def generate_constraints_and_functions(self):
+
         # determine constraints due to consensus structure
-        self.bp_constraints = [ rna.ComplConstraint(self.vid(i,p), self.vid(i,q))
-                                for p, q in self.structure for i in range(self.seqnum) ]
+        self.bp_constraints = list()
+        for i in range(self.alnsize):
+            self.bp_constraints.extend( [ rna_support.ComplConstraint(self.vid_pos(i,p), self.vid_pos(i,q))
+                                          for p,q in self.structures[i].basepairs() ] )
 
         # set up dependencies due to evolutionary distance
-        self.distance_functions = [ HammingDistance(self.vid(i,k), self.vid(j,k),
+        self.distance_functions = [ HammingDistance(self.vid_col(i,k), self.vid_col(j,k),
                                                     self.features[("D", i, j)].weight )
-                                    for k in range(self.seqlen) for (i,j) in self.phylotree ]
+                                    for k in range(self.alnlen) for (i,j) in self.phylotree
+                                    if not ( self.gap_patterns[i].is_gap(k) or self.gap_patterns[j].is_gap(k) )
+                                    ]
 
         # determine energy functions due to consensus structure
-        self.energy_functions = [ rna.BPEnergy(self.vid(i,p), self.vid(i,q),
-                                               not (p-1,q+1) in self.structure,
+        self.energy_functions = list()
+        for i in range(self.alnsize): 
+            self.energy_functions.extend( [ rna_support.BPEnergy(self.vid_pos(i,p), self.vid_pos(i,q),
+                                               not (p-1,q+1) in self.structures[i].basepairs(),
                                                self.features[("E",i)].weight )
-                                  for p,q in self.structure for i in range(self.seqsize) ]
+                                            for p,q in self.structures[i].basepairs() ] )
 
         # GC content control
-        self.gc_functions = [ rna.GCControl( self.vid(i,j), self.features["GC"].weight )
-                              for i in range(self.seqnum) for j in range(self.seqlen) ]
+        self.gc_functions = [ rna_support.GCControl( self.vid_col(i,j), self.features["GC"].weight )
+                              for i in range(self.seqnum) for j in range(self.alnlen)
+                              if not self.gap_patterns[i].is_gap(j) ]
 
 
 class RomySampler(ir.MultiDimensionalBoltzmannSampler):
-    def __init__( self, gap_patterns, seqlen, seqsize, phylotree, structure, features,
+    def __init__( self, gap_patterns, alnsize, phylotree, structures, features,
                   *, td_factory, cn_factory ):
         super().__init__( features )
 
         self.gap_patterns = gap_patterns
 
-        self.seqsize = seqsize
+        self.alnsize = alnsize
         self.seqnum = len(gap_patterns)
-        self.seqlen = seqlen
         self.phylotree = phylotree
-        self.structure = structure
+        self.structures = structures
         self.features = features
 
         self.td_factory = td_factory
@@ -256,9 +311,9 @@ class RomySampler(ir.MultiDimensionalBoltzmannSampler):
     ## @brief Generate constraint network
     ## @param features dictionary of features
     ## @return constraint network
-    def gen_constraint_network(self, features):
-        return self.cn_factory.create(self.seqsize, self.seqnum, self.seqlen, self.phylotree,
-                                     self.structure, self.features)
+    def gen_constraint_network(self):
+        return self.cn_factory.create(self.gap_patterns, self.alnsize, self.seqnum, self.phylotree,
+                                        self.structures, self.features)
 
     ## @brief Generate tree decomposition
     ## @param cn constraint network
@@ -273,7 +328,7 @@ class RomySampler(ir.MultiDimensionalBoltzmannSampler):
     ## @brief Calculate sample
     ## @return sampled RNA sequence
     def sample(self):
-        return RomySample(super().sample().values(), self.seqsize, self.gap_patterns)
+        return RomySample(super().sample().values(), self.alnsize, self.gap_patterns)
 
 ##Additional useful functions
 def all_edges(tree,n):
@@ -336,8 +391,67 @@ def all_edges_nhx(tree,n):
 
     return phylo_v,phylo,index_in
 
-def get_alignment_features(args):
 
+def gap_positions(sequence):
+    """
+    @return gap positions of a sequence
+    """
+    return [ i for i,x in enumerate(sequence) if x=='-' ]
+
+def remove_pos_sequence(sequence, positions):
+    """
+    @brief remove a set of positions from a sequence
+    @param sequence
+    @returns sequence without positions
+    """
+    if type(positions) is not set:
+        positions = set(positions)
+    return "".join( x for i,x in enumerate(sequence) if i not in positions )
+
+def remove_pos_structure(structure, positions, *, pairings=None):
+    """
+    @brief remove positions from an RNA structure
+    @note takes care of base pair ends
+    """
+
+    if type(positions) is not set:
+        positions = set(positions)
+
+    if pairings == None:
+        pairings = rna_support.parseRNAStructure(structure)
+
+    structure = list(structure)
+    for i in positions:
+        j = pairings[i]
+        if j != -1:
+            structure[j] = '.'
+    return remove_pos_sequence(structure, positions)
+
+def analyze_alignment(sequences,consensus_structure):
+    average_gc=0
+    structures=[]
+    energies=[]
+
+    gps = [ set(gap_positions(s)) for s in sequences ]
+    sequences_wo_gaps = [ remove_pos_sequence(s,gps[i]) for i,s in enumerate(sequences) ]
+    consensus_pairings = rna_support.parseRNAStructure(consensus_structure)
+
+    for i,seq in enumerate( sequences_wo_gaps ):
+        fc = RNA.fold_compound(seq)
+
+        projected_cs  = remove_pos_structure(consensus_structure, gps[i], pairings=consensus_pairings)
+        fc.hc_add_from_db(projected_cs)
+
+        mfe = fc.mfe()
+    
+        structures.append(mfe[0])
+        energies.append(mfe[1])
+
+    gc_content = rna_support.GC_content("".join(sequences_wo_gaps)) * 100
+
+    return gc_content,structures,energies
+
+def get_alignment_features(args):
     #aln=AlignIO.read(args.infile,'stockholm')
     sequences= list(RNA.file_msa_read(args.infile)[2])
     msa_size= len(sequences)
@@ -358,12 +472,12 @@ def get_alignment_features(args):
 
     #GC content and energy
     if args.struct == None:
-        target_struct = RNA.alifold(sequences)[0]
+        consensus_structure = RNA.alifold(sequences)[0]
     else:
-        target_struct = args.struct
+        consensus_structure = args.struct
 
-    gc,energies=cl.analyze_alignments(sequences,target_struct)
-    return {"Sequences": sequences, "Structure":target_struct,"GC":gc,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
+    gc,structures,energies=analyze_alignment(sequences,consensus_structure)
+    return {"Sequences": sequences, "Consensus":consensus_structure,"GC":gc,"Structures":structures,"Energies":energies,"Tree":tree,"Phylotree":phylotree,"Phylo_v":phylo_v,"Seqnum":seqnum,"Size":msa_size}
 
 
 """
@@ -413,7 +527,6 @@ def infer_inner_gap_patterns( sequences, tree_edges ):
     in tree the leaves must have the indices in range(number of leaves), inner nodes have integer indices
     in range(number of leaves, number of nodes); all sequences have the same length
     """
-    print("infer_inner_gap_patterns",tree_edges)
 
     leave_gap_patterns = [ GapPattern(x) for x in sequences ]
     leave_num = len(leave_gap_patterns)
@@ -523,30 +636,17 @@ def main(args):
         ir.seed(args.seed)
 
     # set base pair energies
-    rna.set_bpenergy_table()
-
-    ## hard code an instance
-
-    """     structure = "((((.((((...))))))))"
-    seqnum = 5
-    seqlen = len(structure)
-    phylotree = [(3,0),(3,4),(4,1),(4,2)] #List of edges
-
-    features = [ GCFeature( 1, 66, 5 ) ] #GC content of 66% with a tolerance of 5%
-    features.extend( [ EnergyFeature( i, structure, 1, -10, 5 ) #Energy of -10 with a tolerance of 5%
-                       for i in range(seqnum) ] )
-    features.extend( [ DistanceFeature( edge, 1, 2, 1 ) #We want to have a hamming distance of 2% for each sequence
-                       for edge in phylotree ] )  """
+    rna_support.set_bpenergy_table()
 
     #Get instance from alignment
     msa_features = get_alignment_features(args)
 
     sequences = msa_features["Sequences"]
-    structure=msa_features["Structure"]
+    structures = msa_features["Structures"]
+    energies = msa_features["Energies"]
 
     seqnum=msa_features["Seqnum"]
-    seqsize=msa_features["Size"]
-    seqlen=len(structure)
+    alnsize=msa_features["Size"]
     phylotree=msa_features["Phylotree"]
     phylotree_v=msa_features["Phylo_v"]
 
@@ -555,17 +655,22 @@ def main(args):
     if args.verbose:
         print("Gap patterns",gap_patterns)
 
+    ## whether we need something like the following correction, depends on our exact handling
+    # of distances in the distance feature; currently, we don't want to
+    # change distances (but keep the code for later)
+    #
     # update the branch lengths in the phylo tree by subtracting gap-caused distances
-    corrected_phylotree_v = subtract_gap_distances( phylotree_v, gap_patterns )
-    if args.verbose:
-        print(phylotree_v,'--->',corrected_phylotree_v)
+    #corrected_phylotree_v = subtract_gap_distances( phylotree_v, gap_patterns )
+    #if args.verbose:
+    #    print(phylotree_v,'--->',corrected_phylotree_v)
+    corrected_phylotree_v = phylotree_v
 
     ## GC feature
     features = [ GCFeature(args.gc_weight,msa_features["GC"],args.gc_tolerance) ]
 
     ## Energy features
-    features.extend( [ EnergyFeature( i, structure, args.energy_weight, msa_features["Energies"][i], args.energy_tolerance )
-                       for i in range(msa_features["Size"]) ] )
+    features.extend( [ EnergyFeature( i, structures[i], args.energy_weight, energies[i], args.energy_tolerance )
+                       for i in range( alnsize ) ] )
 
     ## Distance features
     features.extend( [ DistanceFeature((edge[0],edge[1]), args.distance_weight, edge[2], args.distance_tolerance )
@@ -583,7 +688,7 @@ def main(args):
 
     cn_factory = RomyConstraintNetworkFactory()
 
-    sampler = RomySampler( gap_patterns, seqlen, seqsize, phylotree, structure, features,
+    sampler = RomySampler( gap_patterns, alnsize, phylotree, structures, features,
                            td_factory = td_factory,
                            cn_factory = cn_factory
                            )
@@ -594,7 +699,7 @@ def main(args):
 
     if args.verbose:
         print("Treewidth:",sampler.treewidth())
-        print("The targeted structure is: ",structure)
+        print("The targeted structures are: ",structures)
         print("The targeted average GC content is: ",msa_features["GC"])
         print("The targeted energies are: ",msa_features["Energies"])
     """         print("The phylogenetic tree will be printed in another window, close it tp have the results")
@@ -616,7 +721,7 @@ def main(args):
         alignment = sample.alignment()
         alignments.append(alignment)
         print(alignment,end='')
-        for i in range(seqsize):
+        for i in range(alnsize):
             feat_id, value = fstats.record( sampler.features[("E",i)], sample )
             print(" {}={:3.2f}".format(feat_id, value), end='')
 

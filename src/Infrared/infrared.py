@@ -325,7 +325,7 @@ class BoltzmannSampler:
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
     def setup_engine(self):
-        self.cn = self.gen_constraint_network(self.features)
+        self.cn = self.gen_constraint_network()
         self.td = self._td_factory.create(self.cn.get_varnum(), self.cn.get_dependencies())
         self.ct = self.gen_cluster_tree()
 
@@ -358,10 +358,9 @@ class BoltzmannSampler:
             yield self.sample()
 
     ## @brief Generate the constraint network
-    ## @param features the features (containing their weights)
     ## @return the constraint network
     @abc.abstractmethod
-    def gen_constraint_network(self, features):
+    def gen_constraint_network(self):
         pass
 
     ## @brief Generate the populated cluster tree

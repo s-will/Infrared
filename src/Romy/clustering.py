@@ -17,21 +17,6 @@ import rna_support as rna
 
 from cl_functions import *
 
-def analyze_alignments(sequences,target_struc):
-    s = len(sequences)
-    average_gc=0
-    energies=[]
-    for seq in sequences:
-        average_gc+= rna.GC_content(seq) * 100
-
-        fc = RNA.fold_compound(seq)
-        fc.hc_add_from_db(target_struc)
-        energies.append(fc.mfe()[1])
-
-    average_gc /= s
-
-    return average_gc,energies
-
 def clustering(sequences,k,n=15):
 
     s = len(sequences) #Number of sequences in alignment
