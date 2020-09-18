@@ -17,6 +17,11 @@ import rna_support as rna
 
 from cl_functions import *
 
+def cluster_kmeans(k,matrix):
+    kmeans = MiniBatchKMeans(n_clusters= k, init='k-means++')
+    kmeans.fit(matrix)
+    return kmeans 
+
 def clustering(sequences,k,n=15):
 
     s = len(sequences) #Number of sequences in alignment
@@ -75,8 +80,7 @@ def clustering(sequences,k,n=15):
 
     
     #Clustering with k means
-    kmeans = MiniBatchKMeans(n_clusters= k, init='k-means++')
-    kmeans.fit(diss_matrix)
+    kmeans = cluster_kmeans(k,diss_matrix)
     for i in range(N):
         clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters """ """
 
@@ -146,15 +150,15 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("filename",type=str, help="Name of the Stockholm file representing the RNA alignment (with path)")
-    parser.add_argument("-n",type=int, help="Number of generated structures for each sequence of the alignment (default: 10)",default= 30)
-    parser.add_argument("-k",type=int, help="Number of clusters (default: 5)",default=5)
-    parser.add_argument("-T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
-    parser.add_argument("-gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
-    parser.add_argument("-outcsv",type=str, help="Store the resulting DataFrame in a CSV file with the given filename")
-    parser.add_argument("-outxlsx",type=str, help="Store the resulting DataFrame in a XLSX file with the given filename")
+    parser.add_argument("--n",type=int, help="Number of generated structures for each sequence of the alignment (default: 10)",default= 30)
+    parser.add_argument("--k",type=int, help="Number of clusters (default: 5)",default=5)
+    parser.add_argument("--T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
+    parser.add_argument("--gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
+    parser.add_argument("--outcsv",type=str, help="Store the resulting DataFrame in a CSV file with the given filename")
+    parser.add_argument("--outxlsx",type=str, help="Store the resulting DataFrame in a XLSX file with the given filename")
 
     args = parser.parse_args()
-
+    
     main(args)
 
 

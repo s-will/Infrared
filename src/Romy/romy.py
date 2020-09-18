@@ -735,7 +735,8 @@ def main(args):
         print()
 
         sample_count += 1
-        if sample_count >= args.number:
+
+        if sample_count >= args.n:
             break
 
     if args.verbose:
@@ -744,7 +745,7 @@ def main(args):
             print("Summary: ",end='')
         fstats.report()
 
-    return alignments,seqnum
+    return alignments
 
 if __name__ == "__main__":
     ## command line argument parser
@@ -770,7 +771,7 @@ if __name__ == "__main__":
                         help="Method for tree decomposition (see --listtds)")
     parser.add_argument('--listtds', action="store_true", help="List available tree decomposition methods")
 
-    parser.add_argument('-n','--number', type=int, default=10, help="Number of samples")
+    parser.add_argument('--n','--number', type=int, default=10, help="Number of samples")
 
     parser.add_argument('--seed', type=int, default=None,
                         help="Seed infrared's random number generator (def=auto)")
