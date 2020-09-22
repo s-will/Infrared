@@ -17,6 +17,21 @@ import rna_support as rna
 
 from cl_functions import *
 
+def minimin(df):
+    ''' Find the two best clusters '''
+    m1, m2 = float("inf"),float("inf")
+    i1, i2 = -1, -1
+    for i in range(len(df)):
+        x = df["Cluster min energy"][i]
+        if x<m1:
+            m1,m2 = x,m1
+            i1,i2 = i, i1
+        elif x<m2:
+            m2 = x
+            i2 = i
+    
+    return i1,i2
+
 def cluster_kmeans(k,matrix):
     kmeans = MiniBatchKMeans(n_clusters= k, init='k-means++')
     kmeans.fit(matrix)
@@ -84,7 +99,9 @@ def clustering(sequences,k,n=15):
     for i in range(N):
         clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters """ """
 
-    return [clusters,structs, base_pairs_list,fcs,s, kmeans]
+
+
+    return [clusters,structs, base_pairs_list,fcs,s,diss_matrix, kmeans]
     
     
 """     #Spectral clustering
@@ -96,7 +113,7 @@ def clustering(sequences,k,n=15):
     
 
 
-def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, n, sequences,k ,T=310.15, gamma=1):
+def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, diss_matrix, n, sequences,k ,T=310.15, gamma=1):
     
     #MEA structure for each cluster
     structs[0]
@@ -118,11 +135,29 @@ def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, n, sequences,k 
     #Clusters' minimum free energy
     clusters_min_e = [min( [fcs[i// n].eval_structure(structs[i]) for i in cluster] ) for cluster in clusters]
 
+
+    #Statistics on clusters
+
+  
+    
     #Printing results
 
     data = [[len(clusters[i]),clusters_min_e[i],clusters_div[i],clusters_ensemble_e[i],reps[i][0]] for i in range( k)]
     df = pd.DataFrame(data, columns=["Cluster size","Cluster min energy","Cluster diversity","Cluster ensemble energy","MEA representative structure"])
     df.index.name = "Cluster index"
+
+    """ cluster_diff = []
+    for i in range(len(clusters)):
+        for j in range(i+1,len(clusters)):
+            dist_cl = np.mean(np.array([[diss_matrix[u][v] for u in clusters[i]] for v in clusters[j]]))
+            cluster_diff.append(dist_cl)
+
+    print("Average cluster distance: ",np.mean(cluster_diff))
+
+    i1,i2 = minimin(df)
+    dist_cl = np.mean(np.array([[diss_matrix[u][v] for u in clusters[i1]] for v in clusters[i2]]))
+    print("The average distance between the best and second best cluster is: ",dist_cl) """
+    
     return df
 
 #Other way:
@@ -136,7 +171,7 @@ def main(args):
 
     cl_results = clustering(sequences,args.k, args.n)
 
-    df = analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],args.n,sequences, args.k,args.T, args.gamma)
+    df = analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],args.n,sequences, args.k,args.T, args.gamma)
 
     print(df)
 
@@ -156,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("--gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
     parser.add_argument("--outcsv",type=str, help="Store the resulting DataFrame in a CSV file with the given filename")
     parser.add_argument("--outxlsx",type=str, help="Store the resulting DataFrame in a XLSX file with the given filename")
-
+    
     args = parser.parse_args()
     
     main(args)

@@ -2,6 +2,10 @@ import romy
 import clustering as cl
 import rm_gaps as rg
 import random
+import seaborn as sns
+import matplotlib.pyplot as plt 
+from scipy import stats
+
 
 import argparse
 import pandas as pd
@@ -27,7 +31,7 @@ def main(args):
     for sequences in alignments:
         #print(sequences)
         cl_results = cl.clustering(sequences,args.k,x)
-        df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],x,sequences,args.k,args.T,args.gamma)
+        df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],x,sequences,args.k,args.T,args.gamma)
         i1, i2 = minimin(df)
         res["best_min_e"].append(df["Cluster min energy"][i1])
         res["second_best_min_e"].append(df["Cluster min energy"][i2])
@@ -37,7 +41,7 @@ def main(args):
     #Then collecting results from the initial alignments (gapless)
     sequences = list(RNA.file_msa_read(args.infile)[2])
     msa_res = cl.clustering(sequences,args.k,x)
-    df = cl.analyze_clusters(msa_res[0],msa_res[1],msa_res[2],msa_res[3],msa_res[4],x,sequences,args.k,args.T,args.gamma)
+    df = cl.analyze_clusters(msa_res[0],msa_res[1],msa_res[2],msa_res[3],msa_res[4],msa_res[4],x,sequences,args.k,args.T,args.gamma)
     i1, i2 = minimin(df)
     res["best_min_e"].append(df["Cluster min energy"][i1])
     res["second_best_min_e"].append(df["Cluster min energy"][i2])
@@ -48,7 +52,23 @@ def main(args):
     results = pd.DataFrame.from_dict(res)
     results.to_csv(args.outcsv+".csv")
 
-    
+    if args.plot_res:
+        #Compare the distribution 
+        dist = results["second_best_min_e"][:-1]
+        point = [ results["second_best_min_e"][len(results)-1] ]
+        print("Statistics: ",stats.ks_2samp(dist, point))
+        
+        plt.plot([results["second_best_min_e"][len(results)-1]],[0],marker='o',markersize = 10, color='red')
+        sns.distplot(results["second_best_min_e"][:-1],hist=True, kde=True, 
+             color = 'darkblue', 
+             hist_kws={'edgecolor':'black'},
+             kde_kws={'linewidth': 4})
+        
+
+        plt.title("Sampled distribution of the 2nd best cluster min energy")
+        plt.show()
+    results.to_csv(args.outcsv+".csv")
+
     return results
 
 def minimin(df):
@@ -101,7 +121,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Boltzmann sampling of homologous sequences')
     parser.add_argument('infile',type=str, help="Input Stockholm file of the alignment")
     parser.add_argument('--ss', type=int, default=-1, help="Subset size: size of the alignment subset to do the analysis on")
-    
+    parser.add_argument('--plot_res',action="store_true",help="Plot the resulting sampled distribution and the true value")
     #Arguments for romy sampler
     parser.add_argument('--n','--number', type=int, default=100, help="Number of samples")
     parser.add_argument('--td', type=str, default="nx",help="Method for tree decomposition (see --listtds)")
@@ -111,9 +131,9 @@ if __name__ == "__main__":
     parser.add_argument("--newick",type=str,default=None,
                         help="Filename of the newick phylogenetic tree to use")       
     parser.add_argument('--struct', type=str, default=None, help="Consensus structure for the alignment")
-    parser.add_argument('--gc_tolerance', type=float, default=5, help="Target tolerance for the GC content")
-    parser.add_argument('--energy_tolerance', type=float, default=5, help="Target tolerance for energies")
-    parser.add_argument('--distance_tolerance', type=float, default=1, help="Target tolerance for hamming distances")
+    parser.add_argument('--gc_tolerance', type=float, default=10, help="Target tolerance for the GC content")
+    parser.add_argument('--energy_tolerance', type=float, default=10, help="Target tolerance for energies")
+    parser.add_argument('--distance_tolerance', type=float, default=4, help="Target tolerance for hamming distances")
     parser.add_argument('--gc_weight', type=float, default=1, help="GC weight")
     parser.add_argument('--energy_weight', type=float, default=1, help="Energy weight")
     parser.add_argument('--distance_weight', type=float, default=1, help="Distance weight")
