@@ -20,7 +20,7 @@
 import re
 import collections
 
-from libinfrared import ComplConstraint, BPEnergy, GCControl, SameComplClassConstraint, DifferentComplClassConstraint
+from libinfrared import ComplConstraint, BPEnergy, StackEnergy, GCControl, SameComplClassConstraint, DifferentComplClassConstraint
 import libinfrared as libir
 
 ## @brief Parse RNA structure including pseudoknots

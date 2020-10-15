@@ -176,7 +176,6 @@ class RNAConstraintNetworkBasePairFactory(RNAConstraintNetworkFactory):
     ## @brief Generate constraint network for the base pair model
     def generate_cn_basepair_model(self):
         self.bpdependencies = self.gen_bp_dependencies()
-        self.dependencies = self.bpdependencies
 
         self.constraints = self.compl_constraints()
 
@@ -215,7 +214,6 @@ class RNAConstraintNetworkStackingFactory(RNAConstraintNetworkFactory):
     ## @brief Generate constraint network for the stacking model
     def generate_cn_stacking_model( self ):
         self.bpdependencies = self.gen_bp_dependencies()
-        self.dependencies = self.remove_redundant_dependencies( self.stacking_dependencies() + self.bpdependencies )
 
         self.constraints = self.compl_constraints()
 
@@ -276,10 +274,8 @@ class RNAClusterTree(ir.ClusterTree):
                 if all( (i,j) not in existing for i in range(0,j) ):
                     i = bagvars[0]
                     if classes[i] == classes[j]:
-                        print("Add same:",bag,i,j)
                         bagconstraints[bagidx].append(rna.SameComplClassConstraint(i,j))
                     elif classes[i] == - classes[j]:
-                        print("Add diff:",bag,i,j)
                         bagconstraints[bagidx].append(rna.DifferentComplClassConstraint(i,j))
 
 ## @brief GC content feature
