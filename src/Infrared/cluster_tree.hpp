@@ -184,35 +184,58 @@ namespace ired {
         }
 
         /**
-         * @brief Run the dynamic programming evaluation
+         * @brief Evaluate the cluster tree (by DP)
+         *
+         * @return evaluation result
          *
          * Call this once before generating samples with sample()
+         *
+         * @note multiple calls will not rerun the evaluation algorithm,
+         * but return the stored evaluation result
          */
         auto
         evaluate();
 
         /**
-         * @brief Run the dynamic programming evaluation
+         * @brief Check consistency
+         *
+         * @return whether the ct is consistent
+         *
+         * @note Implicitely evaluates the cluster tree by calling @see
+         * evaluate().  Consequently, after this method returned true,
+         * valid samples can be produced by @see sample().
+         */
+        bool is_consistent() {
+            return evaluate() != evaluation_policy_t::zero();
+        }
+
+        /**
+         * @brief Generate a sample
          *
          * @return assignment ("sample")
          *
-         * Generates one sample assignment; arbitrarily many samples
-         * can be generated after (a required!) precomputation by one
-         * call of evaluate().
+         * Generates one sample assignment. Requires that the cluster tree
+         * was evaluated and is consistent.
+         * Arbitrarily many samples can be generated after a single
+         * evaluation.
          *
-         * This is a real 'sample' only if partition functions are
-         * computed due to the evaluation policy! If used correctly
-         * (with functions that return Boltzmann weights), assignments
-         * are sampled from a Boltzmann distribution.
+         * Results are NOT defined if the cluster tree was never evaluated (due to a call
+         * to evaluate() or is_consistent()) or is not consistent. Calling
+         * sample on an inconsistent tree may even result in termination.
+         *
+         * On evaluated and consistent trees, we sample from a distribution
+         * controlled by the functions and constraints. When functions that
+         * return Boltzmann weights, assignments are sampled from a
+         * Boltzmann distribution.
          */
-        auto
-        sample();
+        auto sample();
 
     private:
         constraint_network_t cn_;
         tree_t tree_;
 
         bool evaluated_ = false;
+        fun_value_t evaluation_result_;
         bool single_empty_rooted_ = false;
 
         vertex_descriptor root_;
@@ -385,17 +408,18 @@ namespace ired {
     ClusterTree<ConstraintNetwork>
     ::evaluate() {
         auto root = single_empty_root();
-       
-        if (!evaluated_) { 
+
+        if (!evaluated_) {
             auto cte_visitor = boost::make_dfs_visitor(evaluate_finish_edge(cn_,tree_));
 
             boost::depth_first_search(tree_, visitor(cte_visitor).root_vertex(root));
 
+            auto a = Assignment(cn_.num_vars());
+            evaluation_result_ = a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
+
             evaluated_ = true;
         }
-
-        auto a = Assignment(cn_.num_vars());
-        return a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
+        return evaluation_result_;
     }
 
     // sample by running a specialized depth first search via
@@ -405,9 +429,8 @@ namespace ired {
     auto
     ClusterTree<ConstraintNetwork>::sample() {
 
-        if (!evaluated_) {
-            evaluate();
-        }
+        assert(evaluated_);
+        assert(is_consistent());
 
         auto a = assignment_t(cn_.num_vars());
 

@@ -127,6 +127,7 @@ BOOST_PYTHON_MODULE(libinfrared)
         .def("add_constraint", &ClusterTree<>::add_constraint)
         .def("add_function", &ClusterTree<>::add_function)
         .def("evaluate", &ClusterTree<>::evaluate)
+        .def("is_consistent", &ClusterTree<>::is_consistent)
         .def("sample", &ClusterTree<>::sample)
         ;
 }
