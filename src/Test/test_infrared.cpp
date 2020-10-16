@@ -8,6 +8,8 @@
 #include <config.h>
 #endif
 
+#undef NDEBUG
+
 #include <memory>
 #include <iostream>
 #include <array>
@@ -15,6 +17,8 @@
 
 #include "../Infrared/infrared.hpp"
 #include "../Infrared/rnadesign.hpp"
+
+#include <cassert>
 
 using namespace ired;
 using namespace ired::rnadesign;
@@ -28,16 +32,19 @@ operator <<(std::ostream &out, const Assignment &a) {
     return out << seq;
 }
 
-int
-main(int argc, char** argv) {
-
-    srand(time(0)); // poor man's seeding
-
-    // initialize static energy table for all BPEnergy functions
-    BPEnergy::set_energy_table({-2,-3,-1,-2,-3,-1});
-
-    int seqlen=30;
-    int num_seqs=20;
+/* construct a very specific hand-crafted cluster tree:
+ * {1,9} {2,8}, {3,5}, {6,7} {11,13}-{13,21} {0,14}-{14,20}
+ *                                                \-{14,25,27,29}-{14,25,28,29}
+ * we add constraints and functions for the base pairs
+ *   of structure 1:  { {1,9}, {2,8}, {3,5}, {6,7}, {11,13}, {0,14} }
+ *   and 'structure 2': { {14,20}, {14,25}, {25,27}, {29,27}, {14,29}, {25,28}, {28,29}, {13,21} }
+ *
+ * and singleton nodes for all other variables 0..seqlen-1
+ *
+ * if make_inconsistent, we add a base pair {14,28} to make the cn inconsistent.
+ */
+auto
+make_my_cluster_tree(int seqlen, bool make_inconsistent=false) {
 
     auto ct = ClusterTree<>(seqlen, 4);
 
@@ -103,6 +110,11 @@ main(int argc, char** argv) {
             ct.add_function( cluster4, std::make_unique<BPEnergy>(25, 28, weightE2) );
             ct.add_constraint( cluster4, std::make_unique<ComplConstraint>(28,29) );
             ct.add_function( cluster4, std::make_unique<BPEnergy>(28, 29, weightE2) );
+
+            if (make_inconsistent) {
+                ct.add_constraint( cluster4, std::make_unique<ComplConstraint>(14,28) );
+                ct.add_function( cluster4, std::make_unique<BPEnergy>(14, 28, weightE2) );
+            }
         }
 
         if (p.second==13) {
@@ -123,19 +135,46 @@ main(int argc, char** argv) {
         ct.add_function( cluster, std::make_unique<GCControl>(i, weightGC ) );
     }
 
-    // write dot bracket
-    std::vector<char> s(seqlen,'.');
-    for (auto p : basepairs) {
-        s[p.first] = '(';
-        s[p.second] = ')';
-    }
-    std::copy(s.begin(),s.end(),std::ostream_iterator<char>(std::cout,""));
-    std::cout<<std::endl;
+    // // write dot bracket
+    // std::vector<char> s(seqlen,'.');
+    // for (auto p : basepairs) {
+    //     s[p.first] = '(';
+    //     s[p.second] = ')';
+    // }
+    // std::copy(s.begin(),s.end(),std::ostream_iterator<char>(std::cout,""));
+    // std::cout<<std::endl;
 
-    ct.evaluate();
+    return ct;
+}
+
+int
+main(int argc, char** argv) {
+
+    srand(time(0)); // poor man's seeding
+
+    // initialize static energy table for all BPEnergy functions
+    BPEnergy::set_energy_table({-2,-3,-1,-2,-3,-1});
+
+    int seqlen=30;
+    int num_seqs=20;
+
+    auto ct = make_my_cluster_tree(seqlen);
+
+    assert( ct.evaluate() > 0 );
 
     for (int i=0; i<num_seqs; i++) {
         const Assignment &a = ct.sample();
         std::cout << a << std::endl;
     }
+
+    auto ct2 = make_my_cluster_tree(seqlen,true);
+    assert( ct2.evaluate() == 0 );
+
+    /* the following is allowed to yield undefined samples
+    for (int i=0; i<num_seqs; i++) {
+        const Assignment &a = ct.sample();
+        std::cout << a << std::endl;
+    }
+    */
+
 }
