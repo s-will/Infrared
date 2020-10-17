@@ -21,6 +21,11 @@ import abc
 import rna_support as rna
 
 
+## @brief exception to signal inconsistency, when consistency would be required
+class ConsistencyError(RuntimeError):
+    def __init__(self, arg):
+        self.args = [arg]
+
 ## @brief Constraint network base class
 ##
 ## The constraint network typically holds the problem instance-specific
@@ -133,12 +138,30 @@ class ClusterTree:
                         stack.append((cluster,j))
         return ct
 
+    ## @brief evaluates the cluster tree
+    ## @return partition function
+    ##
+    ## @note Evaluation is a potentially (depending on the treewidth) costly operation.
+    ## The method does not re-evaluate the tree if this was already done
     def evaluate(self):
         return self.ct.evaluate()
 
+    ## @brief evaluates the cluster tree (and thereby checks consistency)
+    ## @return whether the constraints are consistent
+    ##
+    ## @note does not re-evaluate the tree if this was already done
+    def is_consistent(self):
+        return self.ct.is_consistent()
+
     ## @brief generate sample
     ## @returns a raw sample
+    ##
+    ## @note raises exception ConsistencyError if the network is inconsistent.
+    ## If the cluster tree was not evaluated (or consistency checked) before,
+    ## it will be evaluated once on-demand.
     def sample(self):
+        if not self.is_consistent():
+            raise ConsistencyError("Inconsistent constraint model")
         return self.ct.sample()
 
     def get_td(self):
