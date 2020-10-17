@@ -478,27 +478,31 @@ def main(args):
     else:
         sample_generator = sampler.samples()
 
-    sample_count = 0
-    for seq in sample_generator:
 
-        print(seq,end='')
-        if args.turner:
-            for i,struc in enumerate(structures):
-                feat_id, value = fstats.record( sampler.features[("E",i)], seq )
-                print(" {}={:3.2f}".format(feat_id,value),end='')
+    try:
+        sample_count = 0
+        for seq in sample_generator:
 
-        if args.gc:
-            feat_id, value = fstats.record( sampler.features["GC"], seq )
-            print(" GC={:3.2f}".format(value),end='')
+            print(seq,end='')
+            if args.turner:
+                for i,struc in enumerate(structures):
+                    feat_id, value = fstats.record( sampler.features[("E",i)], seq )
+                    print(" {}={:3.2f}".format(feat_id,value),end='')
 
-        if args.checkvalid:
-            for i,struc in enumerate(structures):
-                if not rna.is_valid(seq, struc):
-                    print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
-        print()
-        sample_count += 1
-        if sample_count >= args.number:
-            break
+            if args.gc:
+                feat_id, value = fstats.record( sampler.features["GC"], seq )
+                print(" GC={:3.2f}".format(value),end='')
+
+            if args.checkvalid:
+                for i,struc in enumerate(structures):
+                    if not rna.is_valid(seq, struc):
+                        print(" INVALID{}: {}".format(i,str(rna.invalid_bps(seq,struc))),end='')
+            print()
+            sample_count += 1
+            if sample_count >= args.number:
+                break
+    except ir.ConsistencyError:
+        sys.stderr.write("Inconsistent targets.\n")
 
     if args.verbose:
         if not fstats.empty():
