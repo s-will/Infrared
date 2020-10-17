@@ -332,8 +332,6 @@ class RedprintSampler(ir.MultiDimensionalBoltzmannSampler):
         self.cn_factory = optarg("cn_factory", RNAConstraintNetworkBasePairFactory())
         self.no_red_constrs = optarg("no_red_constrs", False)
 
-        self.setup_engine()
-
     ## @brief Generate feature record
     ## @param structure_strings structures as dot bracket strings
     ## @param energy_weights

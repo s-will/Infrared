@@ -378,6 +378,7 @@ class BoltzmannSampler:
 
     ## @brief Sample generator
     def samples(self):
+        self.setup_engine()
         while(True):
             yield self.sample()
 
