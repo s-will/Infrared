@@ -23,6 +23,13 @@ import collections
 from libinfrared import ComplConstraint, BPEnergy, StackEnergy, GCControl, SameComplClassConstraint, DifferentComplClassConstraint
 import libinfrared as libir
 
+
+## @brief exception to signal inconsistency, when consistency would be required
+class ParseError(RuntimeError):
+    def __init__(self, arg):
+        self.args = [arg]
+
+
 ## @brief Parse RNA structure including pseudoknots
 ##
 ## @param structure dot bracket string of RNA structure
@@ -42,9 +49,15 @@ def parseRNAStructure(structure, *, opening = "([{<", closing = ")]}>"):
             if c==op:
                 stack[op].append(i)
             elif c==cl:
+                if len(stack[op]) == 0:
+                    raise ParseError("Unbalanced RNA dot-bracket structure reading "+cl+".")
                 j = stack[op].pop()
                 bps[i] = j
                 bps[j] = i
+
+    for op in opening:
+        if len(stack[op]) > 0:
+            raise ParseError("Unbalanced RNA dot-bracket structure reading "+op+".")
 
     return bps
 
@@ -162,6 +175,9 @@ def read_inp(inpfh):
             structures.append(line.rstrip('\n'))
         elif re.match(";", line, flags=0):
             break
+
+    if any( len(s) != len(structures[0]) for s in structures[1:] ):
+        raise IOError("Read structures of unequal length")
 
     return structures
 
