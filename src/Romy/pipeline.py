@@ -30,8 +30,8 @@ def main(args):
     res= {"best_min_e":[], "best_ens_e" :[], "second_best_min_e" :[], "second_best_ens_e" :[]}
     for sequences in alignments:
         #print(sequences)
-        cl_results = cl.clustering(sequences,args.k,x)
-        df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],x,sequences,args.k,args.T,args.gamma)
+        cl_results = cl.clustering(sequences,args.beta,args.k,x)
+        df = cl.analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],cl_results[6],x,sequences,args.k,args.T,args.gamma)
         i1, i2 = minimin(df)
         res["best_min_e"].append(df["Cluster min energy"][i1])
         res["second_best_min_e"].append(df["Cluster min energy"][i2])
@@ -40,8 +40,8 @@ def main(args):
     
     #Then collecting results from the initial alignments (gapless)
     sequences = list(RNA.file_msa_read(args.infile)[2])
-    msa_res = cl.clustering(sequences,args.k,x)
-    df = cl.analyze_clusters(msa_res[0],msa_res[1],msa_res[2],msa_res[3],msa_res[4],msa_res[4],x,sequences,args.k,args.T,args.gamma)
+    msa_res = cl.clustering(sequences,args.beta,args.k,x)
+    df = cl.analyze_clusters(msa_res[0],msa_res[1],msa_res[2],msa_res[3],msa_res[4],msa_res[5],msa_res[6],x,sequences,args.k,args.T,args.gamma)
     i1, i2 = minimin(df)
     res["best_min_e"].append(df["Cluster min energy"][i1])
     res["second_best_min_e"].append(df["Cluster min energy"][i2])
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("--k",type=int, help="Number of clusters (default: 5)",default=5)
     parser.add_argument("--T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
     parser.add_argument("--gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
-
+    parser.add_argument("--beta",type=float, help="BetaScale for the sampling of structures",default= 2.0)
     parser.add_argument("--outcsv",type=str,default="background", help="Store the resulting DataFrame in a CSV file with the given filename")
 
     args=parser.parse_args()

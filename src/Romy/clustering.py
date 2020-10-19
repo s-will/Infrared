@@ -37,18 +37,42 @@ def cluster_kmeans(k,matrix):
     kmeans.fit(matrix)
     return kmeans 
 
-def clustering(sequences,k,n=15):
+def clustering(sequences,beta,k,n=15):
 
     s = len(sequences) #Number of sequences in alignment
-    N=  n*s #Total number of structures
+    N=  n #Total number of structures
 
-    fcs = [] #Fold compounds objects
+    #fcs = [] #Fold compounds objects
     structs = [] #Structures generated
+    structs_count = {} #Storing the occurences of each structure for each sequence
     base_pairs_list = [] #List of parsed structures: base pair pairs 
     diss_matrix=np.zeros((N,N)) #Dissimilarity matrix of base pair distances
+    similarity_matrix=np.zeros((N,N)) #Dissimilarity matrix of base pair distances
     clusters = [[] for _ in range(k)] #Clusters
-    for seq in sequences:
-       
+
+    # create model details
+    md = RNA.md()
+    # activate unique multibranch loop decomposition
+    md.uniq_ML = 1
+
+    md.betaScale = beta
+    # create fold compound object
+    fc = RNA.fold_compound(sequences, md)
+
+    mfe= fc.mfe()
+    pf = fc.pf()
+
+    for i in range(n):
+        structure = fc.pbacktrack()
+        structs.append(structure)
+        if structure not in structs_count:
+            structs_count[structure]=1
+        else:
+            structs_count[structure]+=1
+    
+
+    """     for i in range(s):
+        seq = sequences[i]
         # create model details
         md = RNA.md()
         # activate unique multibranch loop decomposition
@@ -65,15 +89,15 @@ def clustering(sequences,k,n=15):
         
         elements=0
         #Backtrace multiple structures non-redundantly
-        while(elements< n):
-            for struc in fc.pbacktrack(N,RNA.PBACKTRACK_NON_REDUNDANT):
-                #print(s,"\n")
-                if struc not in structs: 
-                    structs.append(struc)
-                    elements += 1
-                    if elements== n: break
         
-        fcs.append(fc)
+        for struc in fc.pbacktrack(n):
+            structs.append(struc)
+            if struc not in structs_count[i]:
+                structs_count[i][struc]=1
+            else:
+                structs_count[i][struc]+=1
+        
+        fcs.append(fc) """
         
 
     #Parse Vienna notation into a set of pairs using RNA.plist()
@@ -93,34 +117,39 @@ def clustering(sequences,k,n=15):
             diss_matrix[i][j] = diff
             diss_matrix[j][i] = diff
 
+            simm = len(A.intersection(B))
+            similarity_matrix[i][j]= simm
+            similarity_matrix[j][i]= simm
+
     
     #Clustering with k means
     kmeans = cluster_kmeans(k,diss_matrix)
     for i in range(N):
-        clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters """ """
+        clusters[kmeans.labels_[i]].append(i) #Put the structures in their clusters 
 
-
-
-    return [clusters,structs, base_pairs_list,fcs,s,diss_matrix, kmeans]
-    
-    
-"""     #Spectral clustering
-    spec_clus = SpectralClustering(n_clusters=k,affinity='precomputed').fit(similarity_matrix) 
+    #Spectral clustering
+    """     spec_clus = SpectralClustering(n_clusters=k,affinity='precomputed').fit(similarity_matrix) 
     for i in range(N):
         clusters[spec_clus.labels_[i]].append(i) """
 
+
+    return [clusters,structs, base_pairs_list,fc,structs_count,s,diss_matrix, kmeans]
+    #return [clusters,structs, base_pairs_list,fc,structs_count,s,diss_matrix, spec_clus]
     
     
 
 
-def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, diss_matrix, n, sequences,k ,T=310.15, gamma=1):
+    
+    
+
+
+def analyze_clusters(clusters, structs, base_pairs_list, fc, structs_count, s, diss_matrix, n, sequences,k ,T=310.15, gamma=1):
     
     #MEA structure for each cluster
-    structs[0]
     reps = [] #Representatives for each cluster
     probas=[]
     for cluster in clusters:
-        probas.append(base_pair_proba(cluster, structs, base_pairs_list, fcs, n,s))
+        probas.append(base_pair_proba(cluster, structs, base_pairs_list, n,structs_count,s))
         #probas.append(base_pair_proba_v2(cluster, structs, base_pairs_list, n,s))
         plist=[RNA.ep(k[0],k[1],v) for k,v in probas[-1].items()]
         reps.append(RNA.MEA_from_plist(plist,sequences[0], gamma)) #Does the sequence have an influence here?
@@ -130,10 +159,10 @@ def analyze_clusters(clusters, structs, base_pairs_list, fcs, s, diss_matrix, n,
     clusters_div = [cluster_diversity(i, probas) for i in range(k)]
 
     #Clusters' ensemble energy
-    clusters_ensemble_e = [cluster_ensemble_energy(cluster, structs,  T,fcs, n,s) for cluster in clusters]
+    clusters_ensemble_e = [cluster_ensemble_energy(cluster, structs,  T,fc, n,s) for cluster in clusters]
 
     #Clusters' minimum free energy
-    clusters_min_e = [min( [fcs[i// n].eval_structure(structs[i]) for i in cluster] ) for cluster in clusters]
+    clusters_min_e = [min( [fc.eval_structure(structs[i]) for i in cluster] ) for cluster in clusters]
 
 
     #Statistics on clusters
@@ -169,9 +198,9 @@ def main(args):
     
     sequences = list(RNA.file_msa_read(args.filename)[2])
 
-    cl_results = clustering(sequences,args.k, args.n)
+    cl_results = clustering(sequences,args.beta,args.k, args.n)
 
-    df = analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],args.n,sequences, args.k,args.T, args.gamma)
+    df = analyze_clusters(cl_results[0],cl_results[1],cl_results[2],cl_results[3],cl_results[4],cl_results[5],cl_results[6],args.n,sequences, args.k,args.T, args.gamma)
 
     print(df)
 
@@ -186,6 +215,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("filename",type=str, help="Name of the Stockholm file representing the RNA alignment (with path)")
     parser.add_argument("--n",type=int, help="Number of generated structures for each sequence of the alignment (default: 10)",default= 30)
+    parser.add_argument("--beta",type=float, help="BetaScale for the sampling of structures",default= 2.0)
     parser.add_argument("--k",type=int, help="Number of clusters (default: 5)",default=5)
     parser.add_argument("--T",type=int, help="Temperature for the computation of the cluster ensemble energy (default: 310.15)",default=310.15)
     parser.add_argument("--gamma",type=int, help="Value of the gamma constant for the computation of the MEA structure (default: 5)",default=5)
