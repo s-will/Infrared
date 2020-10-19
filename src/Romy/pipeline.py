@@ -26,7 +26,7 @@ def main(args):
     alignments=romy.main(args)
     if args.ss == -1: ss = len(alignments[0])
     else: ss = args.ss
-    x = int(1000/ss) #Number of structures to generate per sequence to have 1000 structures for the alignment
+    x = 1000 #Number of structures to generate for the alignment
     res= {"best_min_e":[], "best_ens_e" :[], "second_best_min_e" :[], "second_best_ens_e" :[]}
     for sequences in alignments:
         #print(sequences)
@@ -137,6 +137,8 @@ if __name__ == "__main__":
     parser.add_argument('--gc_weight', type=float, default=1, help="GC weight")
     parser.add_argument('--energy_weight', type=float, default=1, help="Energy weight")
     parser.add_argument('--distance_weight', type=float, default=1, help="Distance weight")
+    parser.add_argument("--plot_dependencies", action="store_true",
+                        help="Plot dependency graph")
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")
     parser.add_argument('--mdbs', action="store_true",

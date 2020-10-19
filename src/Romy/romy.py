@@ -694,7 +694,7 @@ def main(args):
                            )
 
     ## optionally, write dependency graph
-
+ 
     if args.plot_dependencies:
         dotfilename = "dependencies.dot"
         with open(dotfilename,"w") as dot:
@@ -791,7 +791,7 @@ if __name__ == "__main__":
     parser.add_argument("--newick",type=str,default=None,
                         help="Filename of the newick phylogenetic tree to use")
 
-    parser.add_argument('--plot_dependencies', action="store_true",
+    parser.add_argument("--plot_dependencies", action="store_true",
                         help="Plot dependency graph")
 
     parser.add_argument('--plot_td', action="store_true",
