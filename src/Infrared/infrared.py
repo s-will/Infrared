@@ -38,14 +38,21 @@ class ConstraintNetwork:
 
         self._constraints = constraints
         self._functions = functions
-    
+
     ## @brief infer dependencies from the functions and constraints
     ##
     ## @param non_redundant whether the dependency list is made non-redundant
     ## @returns list of lists of indices of variables that depend on each other either through functions or constraints
-    def get_dependencies(self, non_redundant=True):
-        deps = [ x.vars() for x in self.get_functions() + self.get_constraints() ]
-        
+    def get_dependencies(self, *, non_redundant=True, deduplicated=True):
+        deps = [ sorted(x.vars()) for x in self.get_functions() + self.get_constraints() if len(x.vars())>1 ]
+
+        if deduplicated:
+            xs = []
+            for x in deps:
+                if not x in xs:
+                    xs.append(x)
+            deps = xs
+
         if non_redundant:
             deps = self._remove_redundant_dependencies(deps)
 
@@ -58,7 +65,7 @@ class ConstraintNetwork:
     ## @brief list of all constraints
     def get_constraints(self):
         return self._constraints
-   
+
     def get_varnum(self):
         return len(self._domains)
 
@@ -338,9 +345,9 @@ class BoltzmannSampler:
     def plot_td(self, dotfilename):
         with open(dotfilename,"w") as dot:
             self.td.writeTD(dot)
-        import treedecomp
-        treedecomp.dotfile_to_pdf(dotfilename)
-        os.remove(dotfilename)
+            import treedecomp
+            treedecomp.dotfile_to_pdf(dotfilename)
+            os.remove(dotfilename)
 
     ## @brief Get tree width
     ## @return tree width

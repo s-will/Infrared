@@ -75,7 +75,7 @@ class GapPattern:
                 p += 1
             else:
                 self._ctp.append(None)
-        
+
         self._seqlen = len(self._gap_pattern) - sum(self._gap_pattern)
 
     def __getitem__(self, i):
@@ -220,13 +220,13 @@ class RomyConstraintNetworkFactory:
     ## @param structures list of target structures of all sequences
     ## @param features the features containing weights of energies and GC control
     def create( self, gap_patterns, alnsize, seqnum, phylotree, structures, features ):
-        self.gap_patterns = gap_patterns    
+        self.gap_patterns = gap_patterns
         self.alnsize = alnsize
         self.seqnum = seqnum
 
         # construct helper array for variable index computation
-        self.idx_offsets = [0] 
-        self.idx_offsets.extend( itertools.accumulate( [ self.gap_patterns[i].seqlen() for i in range(self.seqnum) ] ) ) 
+        self.idx_offsets = [0]
+        self.idx_offsets.extend( itertools.accumulate( [ self.gap_patterns[i].seqlen() for i in range(self.seqnum) ] ) )
 
         self.alnlen = len(gap_patterns[0]) # number of columns in the alignment
         self.phylotree = phylotree
@@ -249,16 +249,16 @@ class RomyConstraintNetworkFactory:
         assert( seq_id < self.seqnum )
         assert( 0 <= pos )
         assert( pos < self.idx_offsets[seq_id+1] )
-        return self.idx_offsets[seq_id] + pos 
-    
+        return self.idx_offsets[seq_id] + pos
+
     ## @brief Get variable id by alignment column
     ## @param seq_id sequence id
-    ## @param col alignment column 
+    ## @param col alignment column
     def vid_col(self, seq_id, col):
         assert( seq_id < self.seqnum )
         assert( 0 <= col )
         assert( col < self.alnlen )
-        return self.idx_offsets[seq_id] + self.gap_patterns[seq_id].col_to_pos(col) 
+        return self.idx_offsets[seq_id] + self.gap_patterns[seq_id].col_to_pos(col)
 
     ## @brief Generate constraint network constraints and functions
     def generate_constraints_and_functions(self):
@@ -278,7 +278,7 @@ class RomyConstraintNetworkFactory:
 
         # determine energy functions due to consensus structure
         self.energy_functions = list()
-        for i in range(self.alnsize): 
+        for i in range(self.alnsize):
             self.energy_functions.extend( [ rna_support.BPEnergy(self.vid_pos(i,p), self.vid_pos(i,q),
                                                not (p-1,q+1) in self.structures[i].basepairs(),
                                                self.features[("E",i)].weight )
@@ -443,7 +443,7 @@ def analyze_alignment(sequences,consensus_structure):
         fc.hc_add_from_db(projected_cs)
 
         mfe = fc.mfe()
-    
+
         structures.append(mfe[0])
         energies.append(mfe[1])
 
@@ -693,6 +693,17 @@ def main(args):
                            cn_factory = cn_factory
                            )
 
+    ## optionally, write dependency graph
+
+    if args.plot_dependencies:
+        dotfilename = "dependencies.dot"
+        with open(dotfilename,"w") as dot:
+            num_nodes = sampler.cn.get_varnum()
+            edges = sampler.cn.get_dependencies(deduplicated=False)
+            treedecomp.write_dot(dot,num_nodes,edges)
+        treedecomp.dotfile_to_pdf(dotfilename)
+        os.remove(dotfilename)
+
     ## optionally, write tree decomposition
     if args.plot_td:
         sampler.plot_td("treedecomp.dot")
@@ -779,6 +790,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--newick",type=str,default=None,
                         help="Filename of the newick phylogenetic tree to use")
+
+    parser.add_argument('--plot_dependencies', action="store_true",
+                        help="Plot dependency graph")
 
     parser.add_argument('--plot_td', action="store_true",
                         help="Plot tree decomposition")
