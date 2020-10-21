@@ -43,14 +43,14 @@ class ConstraintNetwork:
 
         self._constraints = constraints
         self._functions = functions
-    
+
     ## @brief infer dependencies from the functions and constraints
     ##
     ## @param non_redundant whether the dependency list is made non-redundant
     ## @returns list of lists of indices of variables that depend on each other either through functions or constraints
     def get_dependencies(self, non_redundant=True):
         deps = [ x.vars() for x in self.get_functions() + self.get_constraints() ]
-        
+
         if non_redundant:
             deps = self._remove_redundant_dependencies(deps)
 
@@ -63,7 +63,7 @@ class ConstraintNetwork:
     ## @brief list of all constraints
     def get_constraints(self):
         return self._constraints
-   
+
     def get_varnum(self):
         return len(self._domains)
 
@@ -346,20 +346,45 @@ class BoltzmannSampler:
 
         self._td_factory = td_factory
 
+    ## @brief flag that engine requires setup
+    def requires_reinitialization(self):
+        self.cn = None
+        self.td = None
+        self.ct = None
+
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
-    def setup_engine(self):
+    ##
+    ## @note do nothing, if the engine was already initialized before
+    ##
+    ## @param skip_ct skip the potentially expensive construction and evaluation of the cluster tree
+    def setup_engine(self, *, skip_ct=False):
+        # immediately return if ct exists and is not None
+        try:
+            assert( self.ct != None )
+        except:
+            pass
+        else:
+            return
+
         self.cn = self.gen_constraint_network(self.features)
         self.td = self._td_factory.create(self.cn.get_varnum(), self.cn.get_dependencies())
-        self.ct = self.gen_cluster_tree()
+        if not skip_ct:
+            self.ct = self.gen_cluster_tree()
 
     ## @brief Get the features
     ## @return features
     def get_features(self):
         return self.features
 
+    ## @brief is the network consistent?
+    def is_consistent(self):
+        self.setup_engine()
+        return ct.is_consistent()
+
     ## @brief Plot the tree decomposition to pdf file
     def plot_td(self, dotfilename):
+        self.setup_engine(skip_ct = True)
         with open(dotfilename,"w") as dot:
             self.td.writeTD(dot)
         import treedecomp
@@ -369,16 +394,17 @@ class BoltzmannSampler:
     ## @brief Get tree width
     ## @return tree width
     def treewidth(self):
+        self.setup_engine(skip_ct = True)
         return self.td.treewidth()
 
     ## @brief Compute next sample
     ## @return sample
     def sample(self):
+        self.setup_engine()
         return self.ct.sample()
 
     ## @brief Sample generator
     def samples(self):
-        self.setup_engine()
         while(True):
             yield self.sample()
 
@@ -432,7 +458,6 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
         counter = 0
         while True:
-            self.setup_engine()
             fstats = FeatureStatistics()
             for i in range(self.samples_per_round):
                 counter+=1
@@ -450,8 +475,5 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             for fid,f in self.features.items():
                 f.weight = f.weight *  self.tweak_base**(means[fid] -f.target)
 
-            #     print(" {} = {:3.2f}->{:3.2f} ({:3.2f})".format(f.idstring(), means[fid], f.target, f.weight))
-
-            # print("==============================")
-
+            self.requires_reinitialization()
 
