@@ -481,25 +481,50 @@ class TDLibTreeDecompositionFactory(TreeDecompositionFactoryBase):
 class NXTreeDecompositionFactory(TreeDecompositionFactoryBase):
     def __init__(self, maxdiffsize=1):
         self.maxdiffsize = maxdiffsize
+        self.iterations = 20
         pass
 
     ## @brief Create tree decomposition
     def create(self, size, dependencies):
+
+        # iterate tree decomposition heuristics over randomized graphs
+
+        def translate( xs, perm ):
+            return [ [ perm[y] for y in ys ] for ys in xs ]
+
         bindependencies = self.expand_to_cliques(dependencies)
 
         # produce networkx graph from size, dependencies
         from networkx import Graph
-        G = Graph()
-        G.add_nodes_from(range(size))
-        G.add_edges_from(bindependencies)
 
-        from networkx.algorithms.approximation.treewidth import treewidth_min_degree
-        width, tree = treewidth_min_degree(G)
+        from networkx.algorithms.approximation.treewidth import treewidth_min_fill_in, treewidth_min_degree
+
+        import random
+
+        perm = list( range(size) )
+
+        best_width = None
+
+        for k in range(self.iterations):
+            random.shuffle( perm )
+            inv_perm = { perm[i]:i for i in perm }
+
+            G = Graph()
+            G.add_nodes_from( range(size) )
+            G.add_edges_from( translate( bindependencies, perm ) )
         
-        bags = list(map(list, tree.nodes))
-        edges = [(bags.index(list(i)),bags.index(list(j))) for i,j in tree.edges]
+            width, tree = treewidth_min_fill_in(G)
+
+            if best_width is None or width < best_width:
+                 best_width, best_tree = width, tree
+                 best_inv_perm = inv_perm
+
+        bags = list(map(list, best_tree.nodes))
+        edges = [(bags.index(list(i)),bags.index(list(j))) for i,j in best_tree.edges]
+        bags = translate( bags, best_inv_perm )
         td = TreeDecomposition(bags, edges)
         td.expand_treedecomposition(self.maxdiffsize)
+
         return td
 
 ## @brief default tree decomposition factory
