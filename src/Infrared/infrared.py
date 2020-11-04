@@ -328,10 +328,7 @@ class FeatureStatistics:
     def report(self):
         means = self.means()
         stds= self.stds()
-        for fid in self.count:
-            print(" {}={:3.2f} +/-{:3.2f}"
-                  .format(self.idstring[fid],means[fid],stds[fid]),end='')
-        print()
+        return ' '.join(["{}={:3.2f} +/-{:3.2f}".format(self.idstring[fid],means[fid],stds[fid]) for fid in self.count])
 
 ## @brief Boltzmann sampler (abstract base class)
 class BoltzmannSampler:
