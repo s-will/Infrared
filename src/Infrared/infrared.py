@@ -13,12 +13,34 @@ import itertools
 import os
 
 import libinfrared as libir
-from libinfrared import seed,Constraint,Function
+from libinfrared import Constraint,Function
 
 from treedecomp import TreeDecomposition, TreeDecompositionFactory
 
 import abc
 import rna_support as rna
+
+import random
+
+def seed(seed):
+    """@brief seed random number generator
+
+    This seeds the RNG of lib infrared (C++ side) and as well
+    the random number generator used by randomization in the TreeDecomposition,
+    both with the same number
+
+    @param seed integer used as seed
+
+    Without argument or seed==None, use pythons built-in random.seed() to generate
+    a seed.
+    """
+
+    if seed is None:
+        random.seed()
+        seed = random.randint(0,2**31)
+
+    libir.seed(seed)
+    treedecomp.seed(seed)
 
 
 ## @brief exception to signal inconsistency, when consistency would be required

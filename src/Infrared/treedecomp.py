@@ -36,6 +36,15 @@ from math import sqrt,ceil
 import itertools
 import abc
 
+def seed(seed==None):
+    """
+    @brief seed treedecomposition random number generator
+
+    Seeds the python random number generator (globally!).
+    Without argument or seed==None, use pythons built-in random.seed() to generate
+    a seed.
+    """
+    random.seed()
 
 ## @brief Class to hold a tree decomposition
 ##
@@ -456,7 +465,7 @@ class HTDTreeDecompositionFactory(TreeDecompositionFactoryBase):
 class TDLibTreeDecompositionFactory(TreeDecompositionFactoryBase):
     ## @brief construct
     ## @param strategy TDlib's strategy (see help page of TDlib)
-    ## @param tmpfile file for tdlib's output 
+    ## @param tmpfile file for tdlib's output
     ## @todo automatically generate unique / thread-safe tmp name
     def __init__(self, strategy=2, tmpfile="/tmp/treedecomp-tmp~"):
         self.strategy = strategy
@@ -512,7 +521,7 @@ class NXTreeDecompositionFactory(TreeDecompositionFactoryBase):
             G = Graph()
             G.add_nodes_from( range(size) )
             G.add_edges_from( translate( bindependencies, perm ) )
-        
+
             width, tree = treewidth_min_fill_in(G)
 
             if best_width is None or width < best_width:
