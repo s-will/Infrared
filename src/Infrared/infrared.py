@@ -24,11 +24,13 @@ import rna_support as rna
 import random
 
 def seed(seed):
-    """@brief seed random number generator
+    """@brief seed random number generator of libinfrared and treedecomp
 
     This seeds the RNG of lib infrared (C++ side) and as well
     the random number generator used by randomization in the TreeDecomposition,
     both with the same number
+
+    This does not seed Python's global RNG
 
     @param seed integer used as seed
 

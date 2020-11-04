@@ -35,17 +35,21 @@ import re
 from math import sqrt,ceil
 import itertools
 import abc
-import random
+from random import Random
+
+MyRandom = Random()
 
 def seed(seed=None):
     """
     @brief seed treedecomposition random number generator
 
-    Seeds the python random number generator (globally!).
+    Seeds the a local random number generator.
+    This does not seed Python's global RNG (functions of module random)
+
     Without argument or seed==None, use pythons built-in random.seed() to generate
     a seed.
     """
-    random.seed(seed)
+    MyRandom.seed(seed)
 
 ## @brief Class to hold a tree decomposition
 ##
@@ -509,14 +513,12 @@ class NXTreeDecompositionFactory(TreeDecompositionFactoryBase):
 
         from networkx.algorithms.approximation.treewidth import treewidth_min_fill_in, treewidth_min_degree
 
-        import random
-
         perm = list( range(size) )
 
         best_width = None
 
         for k in range(self.iterations):
-            random.shuffle( perm )
+            MyRandom.shuffle( perm )
             inv_perm = { perm[i]:i for i in perm }
 
             G = Graph()
