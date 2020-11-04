@@ -15,6 +15,7 @@ import os
 import libinfrared as libir
 from libinfrared import Constraint,Function
 
+import treedecomp
 from treedecomp import TreeDecomposition, TreeDecompositionFactory
 
 import abc

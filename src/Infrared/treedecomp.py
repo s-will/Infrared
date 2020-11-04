@@ -35,8 +35,9 @@ import re
 from math import sqrt,ceil
 import itertools
 import abc
+import random
 
-def seed(seed==None):
+def seed(seed=None):
     """
     @brief seed treedecomposition random number generator
 
@@ -44,7 +45,7 @@ def seed(seed==None):
     Without argument or seed==None, use pythons built-in random.seed() to generate
     a seed.
     """
-    random.seed()
+    random.seed(seed)
 
 ## @brief Class to hold a tree decomposition
 ##
