@@ -377,7 +377,7 @@ class BoltzmannSampler:
     ## @brief is the network consistent?
     def is_consistent(self):
         self.setup_engine()
-        return ct.is_consistent()
+        return self.ct.is_consistent()
 
     ## @brief Plot the tree decomposition to pdf file
     def plot_td(self, dotfilename):
