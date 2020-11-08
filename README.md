@@ -29,24 +29,9 @@ sampling strategy to target specific feature values. Such
 functionality is made conveniently available via general Python
 classes.
 
-While the core library is agnostic to the origin of the tree
-decomposition, it comes with interfaces to TDlib and libhtd.
-
-## RNARedPrint 2
-
-On top of the Infrared library, we re-implemented
-RNARedPrint [<https://github.com/yannponty/RNARedPrint>], which is
-shipped together with the library and serves as non-trivial
-example for the use of the Infrared engine. RNARedprint samples RNA
-sequences from a Boltzmann distribution based on the energies of
-multiple target structures and GC-content. Our research paper on
-RNARedPrint
-> Stefan Hammer, Yann Ponty, Wei Wang, Sebastian Will. Fixed-Parameter Tractable Sampling for RNA Design with Multiple Target Structures. Proc. of the 22nd Annual International Conference on Research in Computational Molecular Biology, RECOMB'18. Apr 2018, Paris, France. 2018.
-
-describes many of the ideas that
-lead to the development of Infrared and points to the origins in
-cluster tree elimination and constraint networks. If you find this
-software useful for your own work, please do not forget to cite us.
+While the core library is agnostic to the origin of the tree decomposition,
+by default it interfaces networkx (optionally, libhtd and TDlib) to perform
+the tree decomposition .
 
 ## Installation
 
@@ -67,15 +52,23 @@ make && make install
 To use tree decomposition based on the Java tool TDlib, please obtain
 a copy and set the Java CLASSPATH accordingly.
 
-## API documentation
+## RNARedPrint 2
 
-Generate html documentation of the Infrared API by
-```
-make doxygen-doc
-```
-Documentation will be generated in Doc/html; find the main page at Doc/html/index.html
+On top of the Infrared library, we re-implemented
+RNARedPrint [<https://github.com/yannponty/RNARedPrint>], which is
+shipped together with the library and serves as non-trivial
+example for the use of the Infrared engine. RNARedprint samples RNA
+sequences from a Boltzmann distribution based on the energies of
+multiple target structures and GC-content. Our research paper on
+RNARedPrint
+> Stefan Hammer, Yann Ponty, Wei Wang, Sebastian Will. Fixed-Parameter Tractable Sampling for RNA Design with Multiple Target Structures. Proc. of the 22nd Annual International Conference on Research in Computational Molecular Biology, RECOMB'18. Apr 2018, Paris, France. 2018.
 
-## Running Redprint
+describes many of the ideas that
+lead to the development of Infrared and points to the origins in
+cluster tree elimination and constraint networks. If you find this
+software useful for your own work, please do not forget to cite us.
+
+## Running RNARedPrint 2 from the command line
 
 For running RNARedprint, one furthermore needs an installation of the
 ViennaRNA package; make sure that the Python module is found in the
@@ -107,58 +100,27 @@ time _inst/bin/redprint.py test.inp -n 20 --mdbs --gctarget=70 --gctol 3 \
 ```
 
 Further usage information is available by calling `redprint.py --help`
-
-```
-usage: redprint.py [-h] [--method METHOD] [-n NUMBER] [--seed SEED] [-v]
-                   [--model MODEL] [--turner] [--gc] [--checkvalid]
-                   [--no_red_constrs] [--gcweight GCWEIGHT] [--weight WEIGHT]
-                   [--mdbs] [--gctarget GCTARGET] [--target TARGET]
-                   [--gctolerance GCTOLERANCE] [--tolerance TOLERANCE]
-                   [--plot_td]
-                   infile
-
-Boltzmann sampling for RNA design with multiple target structures
-
-positional arguments:
-  infile                Input file
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --method METHOD       Method for tree decomposition (0: use htd; otherwise
-                        pass to TDlib as strategy)
-  -n NUMBER, --number NUMBER
-                        Number of samples
-  --seed SEED           Seed infrared's random number generator (def=auto)
-  -v, --verbose         Verbose
-  --model MODEL         Energy model used for sampling [bp=base pair
-                        model,stack=stacking model]
-  --turner              Report Turner energies of the single structures for
-                        each sample
-  --gc                  Report GC contents of the single structures for each
-                        sample
-  --checkvalid          Check base pair complementarity for each structure and
-                        for each sample
-  --no_red_constrs      Do not add redundant constraints
-  --gcweight GCWEIGHT   GC weight
-  --weight WEIGHT       Energy weight (def=1; in case, use last weight for
-                        remaining structures)
-  --mdbs                Perform multi-dim Boltzmann sampling to aim at targets
-  --gctarget GCTARGET   GC target
-  --target TARGET       Energy target (def=0; in case, use last target for
-                        remaining structures)
-  --gctolerance GCTOLERANCE
-                        GC tolerance
-  --tolerance TOLERANCE
-                        Energy tolerance (def=1; in case, use last tolerance
-                        for remaining structures)
-  --plot_td             Plot tree decomposition
-```
-
 A further tool `redprint_complexity.py` is provided to report tree
 widths for two energy models of different complexity (see our research
 paper for full details) and plot the dependency graphs and tree
 decompositions. This tool provides insight into the run time / space
 consumption behavior of redprint on specific instances.
+
+## API documentation
+
+We provide a tutorial as introduction to the Python high-level interface in
+ the jupyter notebook ```infrared-rnadesign-tutorial.ipynb```.
+
+The Infrared API is documented using doxygen comments, such that
+html documentation can be generated (in Doc/html) by 
+```
+make doxygen-doc
+```
+
+A further entry-point to using the library in novel sampling applications
+is provided by the code of RNARedPrint 2.
+
+More information on the library architecture is provided below.
 
 ## Infrared architecture and background
 
@@ -245,11 +207,11 @@ infrared.MultiDimensionalBoltzmannSampler
 
 ### treedecomp.py --- Generation of tree decompositions
 
-This python module provided by infrared supports the computation of
-tree decompositions based on external libs (interfaces the Java lib
-TDlib and the C++-lib libhtd; for the latter infrared implements a
-wrapper (module libhtdwrap), which exposes a specific variant of
-libthd-tree decomposition to Python.
+This python module provided by infrared supports the computation of tree
+decompositions based on the python framework networkx or (optionally)
+external libs (interfaces the Java lib TDlib and the C++-lib libhtd; for
+the latter infrared implements a wrapper (module libhtdwrap), which exposes
+a specific variant of libthd-tree decomposition to Python.
 
 ### redprint.py --- Multi-dimensional Boltzmann sampling for multi-target RNA design
 
