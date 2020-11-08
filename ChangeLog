@@ -1,3 +1,20 @@
+0.4
+	[Python Interface]
+	Refactor and streamline the Python interface
+	Support tree decomposition by networkx, improve the tree decomposition interface
+	Add access to partition function and provide consistency check in
+
+	[Documentation]
+	Add tutorial of the Python interface (Jupyter notebook)
+
+	[C++ library]
+	add tests, fix handling of inconsistent networks
+	revert to using boost::python (to resolve a bug in the use of pybind11)
+
+	[Installation and dependencies]
+	Improve installation via autotools
+	Replace dependency on libhtd by networkx
+	
 0.3
 	Generalize Python classes for Boltzmann sampler construction and
 	provide them in Python module infrared for simpler use of the lib
