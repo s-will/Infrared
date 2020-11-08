@@ -1,7 +1,7 @@
 AC_PREREQ([2.65])
 AC_INIT([InfraRed], [0.3], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
 
-dnl minimal required version of the boost library 
+dnl minimal required version of the boost library
 BOOST_REQUIRED_VERSION=1.50.0
 
 AC_CONFIG_AUX_DIR(config)
@@ -76,9 +76,9 @@ AC_ARG_WITH([htd],
       )
 )
 
-if test "x$HTD_PREFIX" = "x" ; then
+if test "$HTD_PREFIX" = "" ; then
     AC_MSG_CHECKING([where to find the htd tree decomposition library])
-    if test "x$with_htd" = "x" ; then
+    if test "$with_htd" = "" ; then
       if test -d "/usr/local/include/htd" ; then
         HTD_PREFIX="/usr/local"
     elif test -d "/usr/include/htd" ; then
@@ -107,7 +107,7 @@ AX_BOOST_PYTHON
 dnl AX_BOOST_GRAPH
 
 dnl ###########  CHECKS  ############################################
-AM_CONDITIONAL([HAVE_HTD], [test "x$HTD_PREFIX" != "x"])
+AM_CONDITIONAL([HAVE_HTD], [test "$HTD_PREFIX" != ""])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
@@ -121,7 +121,7 @@ dnl check boost test results
 dnl #########################################################################
 
 dnl FOUND_BOOST is only defined if want_boost is "yes"
-AS_IF([test $want_boost = "no" || test $FOUND_BOOST != 1], [
+AS_IF([test $want_boost = "no" || test "$FOUND_BOOST" != "1"], [
         AC_MSG_NOTICE([])
         AC_MSG_NOTICE([The Boost Library was not found!])
         AC_MSG_NOTICE([ -> If installed in a non-standard path, please use '--with-boost=PREFIX'.])
@@ -136,6 +136,12 @@ AS_IF([test $want_boost = "no" || test $FOUND_BOOST != 1], [
 AM_CXXFLAGS="$PYTHON_CPPFLAGS $AM_CXXFLAGS"
 AM_LDFLAGS="$PYTHON_LDFLAGS $AM_LDFLAGS"
 LIBS="$LIBS -l$BOOST_PYTHON_LIB"
+
+AS_IF([test "$BOOST_PYTHON_LIB" = "" ],
+    AC_MSG_ERROR([cannot find boost python]),
+    AC_MSG_NOTICE([boost python found])
+)
+
 
 dnl distribute additional compiler and linker flags
 dnl --> set these variables instead of CXXFLAGS or LDFLAGS
@@ -152,6 +158,11 @@ AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/Infrared/Makefile])
 AC_CONFIG_FILES([src/Redprint/Makefile])
 AC_CONFIG_FILES([src/Test/Makefile])
+
+
+AS_IF([ test "x$DEPENDENCYNOTFOUND" = "x1" ],
+    AC_MSG_ERROR([cannot find all dependencies])
+)
 
 dnl generate the final Makefile etc.
 AC_OUTPUT
