@@ -1,9 +1,6 @@
 AC_PREREQ([2.65])
 AC_INIT([InfraRed], [0.4], [], [infrared], [http://www.tbi.univie.ac.at/~will] )
 
-dnl minimal required version of the boost library
-BOOST_REQUIRED_VERSION=1.50.0
-
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([src/config.h:config.h.in])
 
@@ -22,6 +19,10 @@ AM_INIT_AUTOMAKE([1.11])
 
 dnl use the C++ compiler for the following checks
 AC_LANG([C++])
+
+dnl Checks for header files.
+AC_HEADER_STDC
+
 
 dnl ----------------------------------------
 dnl generate doxygen documentation
@@ -98,50 +99,10 @@ AC_SUBST([HTD_CPPFLAGS])
 AC_SUBST([HTD_LDFLAGS])
 AC_SUBST([HTD_LIBS])
 
-dnl ##############################################################################
-dnl BOOST CHECK
-dnl ##############################################################################
-
-AX_BOOST_BASE([$BOOST_REQUIRED_VERSION], [FOUND_BOOST=1;], [FOUND_BOOST=0;])
-AX_BOOST_PYTHON
-dnl AX_BOOST_GRAPH
-
-dnl ###########  CHECKS  ############################################
 AM_CONDITIONAL([HAVE_HTD], [test "$HTD_PREFIX" != ""])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
-
-dnl Checks for header files.
-AC_HEADER_STDC
-
-
-dnl #########################################################################
-dnl check boost test results
-dnl #########################################################################
-
-dnl FOUND_BOOST is only defined if want_boost is "yes"
-AS_IF([test $want_boost = "no" || test "$FOUND_BOOST" != "1"], [
-        AC_MSG_NOTICE([])
-        AC_MSG_NOTICE([The Boost Library was not found!])
-        AC_MSG_NOTICE([ -> If installed in a non-standard path, please use '--with-boost=PREFIX'.])
-        AC_MSG_NOTICE([])
-        DEPENDENCYNOTFOUND=1;
-], [
-        AM_CXXFLAGS="$BOOST_CPPFLAGS $AM_CXXFLAGS"
-        AM_LDFLAGS="$BOOST_LDFLAGS $AM_LDFLAGS"
-        LIBS="$LIBS"
-])
-
-AM_CXXFLAGS="$PYTHON_CPPFLAGS $AM_CXXFLAGS"
-AM_LDFLAGS="$PYTHON_LDFLAGS $AM_LDFLAGS"
-LIBS="$LIBS -l$BOOST_PYTHON_LIB"
-
-AS_IF([test "$BOOST_PYTHON_LIB" = "" ],
-    AC_MSG_ERROR([cannot find boost python]),
-    AC_MSG_NOTICE([boost python found])
-)
-
 
 dnl distribute additional compiler and linker flags
 dnl --> set these variables instead of CXXFLAGS or LDFLAGS
@@ -149,6 +110,19 @@ AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LIBS])
 AM_CONDITIONAL(enable_pkg_config, [test "x$HAVE_PKG_CONFIG" = "xyes"])
+
+dnl == PYTHON and pybind11
+dnl Check for python dev (Python.h) 
+AX_PYTHON_DEVEL([>= '3.5'])
+AM_CXXFLAGS="$PYTHON_CPPFLAGS $AM_CXXFLAGS"
+AM_LDFLAGS="$PYTHON_LDFLAGS $AM_LDFLAGS"
+dnl Check for pybind11
+CPPFLAGS="$CPPFLAGS $AM_CXXFLAGS"
+AC_CHECK_HEADER([pybind11/pybind11.h],[HAVE_PYBIND11="yes"])
+
+if test -z "$HAVE_PYBIND11" ; then
+  AC_MSG_ERROR(["The pybind11 header is not found!"], [-1])
+fi
 
 
 
