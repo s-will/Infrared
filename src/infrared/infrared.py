@@ -16,10 +16,10 @@ import libinfrared as libir
 from libinfrared import Constraint,Function
 
 import treedecomp
-from treedecomp import TreeDecomposition, TreeDecompositionFactory
+from .treedecomp import TreeDecomposition, TreeDecompositionFactory
 
 import abc
-import rna_support as rna
+import support as rna
 
 import random
 
