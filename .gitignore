@@ -16,3 +16,4 @@ _inst/
 build/
 dist/
 src/infrared.egg-info/
+__pycache__

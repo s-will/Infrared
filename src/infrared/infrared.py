@@ -9,18 +9,15 @@
 # Boltzmann sampling over constraint networks
 #
 
-import itertools
 import os
+import abc
+import random
 
 from . import libinfrared as libir
 
-from . import treedecomp
-from .treedecomp import TreeDecomposition, TreeDecompositionFactory
+from .treedecomp import TreeDecompositionFactory, dotfile_to_pdf
+from .treedecomp import seed as tdseed
 
-import abc
-from . import support as rna
-
-import random
 
 def seed(seed):
     """@brief seed random number generator of libinfrared and treedecomp
@@ -42,7 +39,7 @@ def seed(seed):
         seed = random.randint(0,2**31)
 
     libir.seed(seed)
-    treedecomp.seed(seed)
+    tdseed(seed)
 
 
 ## @brief exception to signal inconsistency, when consistency would be required
@@ -408,8 +405,7 @@ class BoltzmannSampler:
         self.setup_engine(skip_ct = True)
         with open(dotfilename,"w") as dot:
             self.td.writeTD(dot)
-        import treedecomp
-        treedecomp.dotfile_to_pdf(dotfilename)
+        dotfile_to_pdf(dotfilename)
         os.remove(dotfilename)
 
     ## @brief Get tree width
