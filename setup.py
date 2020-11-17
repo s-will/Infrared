@@ -95,7 +95,7 @@ class CMakeBuild(build_ext):
 setup(
     name='infrared',
     version='0.1',
-    author='Hi',
+    author='Sebastian Will',
     author_email='Hi@gmail.com',
     description='A hybrid Python/C++ test project',
     long_description='',
