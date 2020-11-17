@@ -20,7 +20,7 @@
 import re
 import collections
 
-import libinfrared as libir
+from . import libinfrared as libir
 
 
 ## @brief exception to signal inconsistency, when consistency would be required

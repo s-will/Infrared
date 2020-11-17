@@ -12,14 +12,13 @@
 import itertools
 import os
 
-import libinfrared as libir
-from libinfrared import Constraint,Function
+from . import libinfrared as libir
 
-import treedecomp
+from . import treedecomp
 from .treedecomp import TreeDecomposition, TreeDecompositionFactory
 
 import abc
-import support as rna
+from . import support as rna
 
 import random
 
