@@ -13,6 +13,10 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.test import test as TestCommand
 from shutil import copyfile, copymode
 
+with open("src/infrared/__init__.py") as f:
+    for line in f.readlines():
+        if line.startswith('__version__'):
+            VERSION = line.strip().split()[-1][1:-1]
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -92,17 +96,25 @@ class CMakeBuild(build_ext):
         copyfile(src_file, dest_file)
         copymode(src_file, dest_file)
 
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name='infrared',
-    version='0.1',
+    version=VERSION,
     author='Sebastian Will',
-    author_email='Hi@gmail.com',
-    description='A hybrid Python/C++ test project',
-    long_description='',
+    author_email='sebastian.will@polytechnique.edu',
+    maintainer='Sebastian Will',
+    maintainer_email='sebastian.will@polytechnique.edu',
+    description='A generic C++/Python hybrid library for efficient (fixed-parameter tractable) Boltzmann sampling',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=find_packages('src'),
     package_dir={'':'src'},
     ext_modules=[CMakeExtension('infrared/infrared')],
     cmdclass=dict(build_ext=CMakeBuild),
     # test_suite='tests',
     zip_safe=False,
+    python_requires='>=3.6'
 )

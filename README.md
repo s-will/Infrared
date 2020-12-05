@@ -43,61 +43,7 @@ requires boost.graph and boost.python. Compile and install Infrared
 itself by
 
 ```
-cd Infrared
-./autoreconf -i
-./configure --with-htd=$path_to_htd_installation --prefix=$path_to_infrared_installation
-make && make install
-```
 
-To use tree decomposition based on the Java tool TDlib, please obtain
-a copy and set the Java CLASSPATH accordingly.
-
-## RNARedPrint 2
-
-On top of the Infrared library, we re-implemented
-RNARedPrint [<https://github.com/yannponty/RNARedPrint>], which is
-shipped together with the library and serves as non-trivial
-example for the use of the Infrared engine. RNARedprint samples RNA
-sequences from a Boltzmann distribution based on the energies of
-multiple target structures and GC-content. Our research paper on
-RNARedPrint
-> Stefan Hammer, Yann Ponty, Wei Wang, Sebastian Will. Fixed-Parameter Tractable Sampling for RNA Design with Multiple Target Structures. Proc. of the 22nd Annual International Conference on Research in Computational Molecular Biology, RECOMB'18. Apr 2018, Paris, France. 2018.
-
-describes many of the ideas that
-lead to the development of Infrared and points to the origins in
-cluster tree elimination and constraint networks. If you find this
-software useful for your own work, please do not forget to cite us.
-
-## Running RNARedPrint 2 from the command line
-
-For running RNARedprint, one furthermore needs an installation of the
-ViennaRNA package; make sure that the Python module is found in the
-path described by the environment variable PYTHONPATH. PYTHONPATH must
-as well point to the libinfrared module from the Infrared
-installation, i.e. $path_to_infrared_installation/lib
-
-Redprint reads the multiple RNA target structures from an 'inp'-file, e.g.
-
-```
-....((((((..(((((((....))))((((((......))..))))..((((((....((((...)))).....)))))).))).))))))........
-..............((((((.....(((.(((((..((((..(((((...((......))....)))))..))))..))...)))))).)))))).....
-..((((.((.((.........((((((((.((.(((......))).)).))))))))..)))).)))).(((......................)))...
-;
-```
-
-A typical call to produce 20 Boltzmann samples with given weights looks like
-
-```
-redprint.py test.inp  -n 20 --model bp --gcweight=0.15 --weight 5 --method 0 --turner
-```
-
-Moreover, redprint supports targeting specific gc-content and
-energies, which is calculated by performing multi-dimensional
-Boltzmann sampling (mdbs). Here is a example call
-```
-time _inst/bin/redprint.py test.inp -n 20 --mdbs --gctarget=70 --gctol 3 \
-        --tar -15 --tar -20 --tar -20 --tol 1 --gc --turner -v
-```
 
 Further usage information is available by calling `redprint.py --help`
 A further tool `redprint_complexity.py` is provided to report tree
@@ -112,9 +58,7 @@ We provide a tutorial as introduction to the Python high-level interface in
  the jupyter notebook ```infrared-rnadesign-tutorial.ipynb```.
 
 The Infrared API is documented using doxygen comments, such that
-html documentation can be generated (in Doc/html) by 
-```
-make doxygen-doc
+html documentation can be generated (in Doc/html) by doxygen
 ```
 
 A further entry-point to using the library in novel sampling applications
@@ -205,22 +149,3 @@ infrared.MultiDimensionalBoltzmannSampler
                             additionally implements multi-dimensional Boltzmann sampling
 ```
 
-### treedecomp.py --- Generation of tree decompositions
-
-This python module provided by infrared supports the computation of tree
-decompositions based on the python framework networkx or (optionally)
-external libs (interfaces the Java lib TDlib and the C++-lib libhtd; for
-the latter infrared implements a wrapper (module libhtdwrap), which exposes
-a specific variant of libthd-tree decomposition to Python.
-
-### redprint.py --- Multi-dimensional Boltzmann sampling for multi-target RNA design
-
-Redprint uses the Infrared library to perform multi-dimensional
-Boltzmann sampling of sequences for given multi-target RNA design
-instances. For either the base pair or the stacking model, it computes
-the dependencies, calls the tree decomposition construction, and
-constructs and populates the cluster tree for Infrared. For this
-purpose, it specialized base classes of the module infrared. Finally,
-it generates samples and optionally reports (statistics over) features
-of the sampled sequences, again with the support of the infrared
-module.

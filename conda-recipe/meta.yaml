@@ -20,10 +20,10 @@ requirements:
   host:
     - pybind11
     - boost
-    - python <3.9
+    - python >=3.6
     - pip
   run:
-    - python <3.9
+    - python >=3.6
     - networkx >=2
     - treedecomp
 
@@ -32,8 +32,8 @@ test:
     - infrared
 
 about:
-  home: https://gitlab.inria.fr/amibio/Infrared
-  license: GPL-3.0
+  home: "https://gitlab.inria.fr/amibio/Infrared"
+  license: "GPL-3.0-only"
   license_family: GPL
   license_file: COPYING
   summary: 'A generic C++/Python hybrid library for efficient (fixed-parameter tractable) Boltzmann sampling'
@@ -46,3 +46,7 @@ about:
   doc_url: https://gitlab.inria.fr/amibio/Infrared
   dev_url: https://gitlab.inria.fr/amibio/Infrared
 
+extra:
+  recipe-maintainers:
+    - anthonyhtyao
+    - s-will
