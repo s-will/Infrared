@@ -15,8 +15,8 @@ import random
 
 from . import libinfrared as libir
 
-from .treedecomp import TreeDecompositionFactory, dotfile_to_pdf
-from .treedecomp import seed as tdseed
+from treedecomp import TreeDecompositionFactory, dotfile_to_pdf
+from treedecomp import seed as tdseed
 
 
 def seed(seed):

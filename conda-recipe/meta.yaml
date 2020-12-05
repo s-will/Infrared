@@ -25,6 +25,7 @@ requirements:
   run:
     - python <3.9
     - networkx >=2
+    - treedecomp
 
 test:
   imports:
