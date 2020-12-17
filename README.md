@@ -5,7 +5,8 @@ Infrared is a generic C++/Python hybrid library for efficient
 
 ## Disclaimer and license
 
-Infrared is free software. Note that the system is still in an early
+Infrared is free software. It was part of project [RNARedPrint](https://github.com/yannponty/RNARedPrint), then separated as a stand alone project.
+Note that the system is still in an early
 stage of development and is likely to still undergo significant
 changes. It is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,33 +30,33 @@ sampling strategy to target specific feature values. Such
 functionality is made conveniently available via general Python
 classes.
 
-While the core library is agnostic to the origin of the tree decomposition,
-by default it interfaces networkx (optionally, libhtd and TDlib) to perform
-the tree decomposition .
-
 ## Installation
 
-The software can be compiled and installed (after cloning the
-repository) on GNU/Linux or other Unix-like systems as follows.  In
-preparation, install libhtd
-<https://github.com/mabseher/htd/releases>. Moreover, compilation
-requires boost.graph and boost.python. Compile and install Infrared
-itself by
+There are two ways to install Infrared. The first option is using conda.
+Infrared is depolyed on conda-forge channel.
+Users can skip the first line command if it's already done.
 
+```
+conda config --add channels conda-forge 
+conda install infrared
 ```
 
 
-Further usage information is available by calling `redprint.py --help`
-A further tool `redprint_complexity.py` is provided to report tree
-widths for two energy models of different complexity (see our research
-paper for full details) and plot the dependency graphs and tree
-decompositions. This tool provides insight into the run time / space
-consumption behavior of redprint on specific instances.
+For users who don't want to use conda, Infrared can also be installed with standard pip install.
+The compilation requires [boost.graph](https://www.boost.org/), [pybind11](https://github.com/pybind/pybind11) (at least v2.4) and CMake.
+Note that pybind11 installed from standard ubuntu18.04 APT is outdated and the variable `PYBIND11_GLOBAL_SDIST` should be set for version before v2.6.0 as 
 
-## API documentation
+```
+PYBIND11_GLOBAL_SDIST=1 python3 -m pip install https://github.com/pybind/pybind11/archive/master.zip
+python3 -m pip install .
+```
+
+## Usage
 
 We provide a tutorial as introduction to the Python high-level interface in
  the jupyter notebook ```infrared-rnadesign-tutorial.ipynb```.
+
+## API documentation
 
 The Infrared API is documented using doxygen comments, such that
 html documentation can be generated (in Doc/html) by doxygen
