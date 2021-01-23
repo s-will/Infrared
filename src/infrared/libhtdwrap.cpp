@@ -26,15 +26,14 @@
 #include <config.h>
 #endif
 
-#include <boost/python.hpp>
-#include "boost_python_aux.hpp"
-
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <htd/main.hpp>
 #include <memory>
 #include <stack>
 #include <iterator>
 
-namespace bpy = boost::python;
+namespace py = pybind11;
 
 //! helper to wrap plain pointer into unique ptr
 template<class T>
@@ -201,18 +200,19 @@ private:
 /**
  * @brief module wrapping (some form of) tree decomposition by libhtd
  */
-BOOST_PYTHON_MODULE(libhtdwrap)
+PYBIND11_MODULE(libhtdwrap,htd)
 {
-    register_vector_conversions<int>();
-    register_vector_conversions<std::vector<int>>();
-
-    bpy::class_<HTD,
-                boost::noncopyable>
-        ("HTD", bpy::init<int, const std::vector<std::vector<int>>>())
-        .def("decompose",&HTD::decompose)
+    htd.doc() = "Wrapper for libhtd";
+    py::class_<HTD> // in boost::python, we had boost::noncopyable
+        (htd,"HTD")
+        .def(py::init<int, const std::vector<std::vector<int>>>())
+        .def("decompose",&HTD::decompose,
+             "Calculate the tree decomposition")
         .def("edges",&HTD::edges,
-             bpy::return_value_policy<bpy::copy_const_reference>())
+             py::return_value_policy::copy,
+             "Get the edges of the td")
         .def("bags",&HTD::bags,
-             bpy::return_value_policy<bpy::copy_const_reference>())
+             py::return_value_policy::copy,
+             "Get the bags of the td")
         ;
 }

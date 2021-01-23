@@ -20,8 +20,8 @@
 import re
 import collections
 
-from libinfrared import ComplConstraint, BPEnergy, StackEnergy, GCControl, SameComplClassConstraint, DifferentComplClassConstraint
-import libinfrared as libir
+from .libinfrared import BPEnergy, StackEnergy, GCcontrol, ComplConstraint,\
+    SameComplClassConstraint, DifferentComplClassConstraint
 
 
 ## @brief exception to signal inconsistency, when consistency would be required
@@ -216,7 +216,7 @@ def set_bpenergy_table(params = def_params_bp):
         params = list(map(lambda x: params[x],
                           [ "AU_IN", "GC_IN", "GU_IN",
                             "AU_TERM", "GC_TERM", "GU_TERM" ] ))
-    libir.BPEnergy.set_energy_table(params)
+    BPEnergy.set_energy_table(params)
 
 ## @brief set the stacking energy table for Infrared
 ##
@@ -236,7 +236,7 @@ def set_stacking_energy_table(params = def_params_stacking):
                             "GUAU", "GUUA",
                             "GUCG", "GUGC",
                             "GUGU", "GUUG" ] ))
-    libir.StackEnergy.set_energy_table(params)
+    StackEnergy.set_energy_table(params)
 
 
 if __name__ == "__main__":
