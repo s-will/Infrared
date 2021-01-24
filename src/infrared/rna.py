@@ -20,7 +20,7 @@
 import re
 import collections
 
-from .libinfrared import BPEnergy, StackEnergy, GCcontrol, ComplConstraint,\
+from .libinfrared import BPEnergy, StackEnergy, GCControl, ComplConstraint,\
     SameComplClassConstraint, DifferentComplClassConstraint
 
 
