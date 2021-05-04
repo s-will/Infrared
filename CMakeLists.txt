@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.4..3.18)
 project(Infrared)
 
 set(SOURCE_DIR "src/infrared")
