@@ -12,10 +12,11 @@
 import os
 import abc
 import random
+import re
 
 from . import libinfrared as libir
 
-from treedecomp import TreeDecompositionFactory, dotfile_to_pdf
+from treedecomp import TreeDecompositionFactory, dotfile_to_pdf, dotfile_to_png
 from treedecomp import seed as tdseed
 
 
@@ -401,12 +402,25 @@ class BoltzmannSampler:
         return self.ct.is_consistent()
 
     ## @brief Plot the tree decomposition to pdf file
-    def plot_td(self, dotfilename):
+    ## @param filename write to filename
+    ## @param to target format, support conversion to "pdf" or "png". Anything else writes graphviz dot format
+    def plot_td(self, filename, to="pdf"):
+        conversions = {
+                "pdf": dotfile_to_pdf,
+                "png": dotfile_to_png
+                }
+
+        if to in conversions:
+            filename = re.sub(f".{to}$","",filename)+".dot"
+
         self.setup_engine(skip_ct = True)
-        with open(dotfilename,"w") as dot:
+        with open(filename,"w") as dot:
             self.td.writeTD(dot)
-        dotfile_to_pdf(dotfilename)
-        os.remove(dotfilename)
+
+        if to in conversions:
+            conversions[to](filename)
+            os.remove(filename)
+
 
     ## @brief Get tree width
     ## @return tree width
