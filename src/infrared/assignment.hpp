@@ -170,7 +170,7 @@ namespace ired {
                 if ( all_of( f->vars().begin(), f->vars().end(), [&] (auto x) {return is_det(x);} ) )
                     {
                         // evaluate f
-                        x = EP::multiplies( x, (*f)(*this) );
+                        x = EP::mul( x, (*f)(*this) );
                     }
             }
             return x;
@@ -202,7 +202,7 @@ namespace ired {
      * Constraints and functions are evaluated as soon as all their
      * variables are determined. For this purpose, the iterator
      * precomputes tables ('boards').  Function values are combined
-     * via EvaluationPolicy::multiplies; partial products are tracked
+     * via EvaluationPolicy::mul; partial products are tracked
      * on the enumeration stack.
      */
     template<class ConstraintNetwork>
@@ -435,7 +435,7 @@ namespace ired {
             assert(top_>=0);
             auto x = value_stack_[top_];
             for ( const auto f: function_board_[top_] ) {
-                x = ep::multiplies( x, (*f)(a_) );
+                x = ep::mul( x, (*f)(a_) );
             }
             value_stack_[top_+1] = x;
         }

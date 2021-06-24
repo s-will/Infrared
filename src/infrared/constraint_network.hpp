@@ -31,16 +31,16 @@ namespace ired {
      * functions.
      *
      * An evaluation policy defines an algebra with operations
-     * multiplies and plus, as well as respective neutral elements one
+     * mul and plus, as well as respective neutral elements one
      * and zero. The following must hold
      *
-     * multiplies is associative and symmetric
+     * mul is associative and symmetric
      * plus is associative and symmetric
-     * multiplies(one,x) == x
-     * multiplies(zero,x) == 0.0
+     * mul(one,x) == x
+     * mul(zero,x) == 0.0
      * plus(zero,x) == x
      *
-     * In the standard policy multiplies corresponds to *, plus to +,
+     * In the standard policy mul corresponds to *, plus to +,
      * zero to 0.0, and one to 1.0
      */
     template<class FunValue>
@@ -58,7 +58,7 @@ namespace ired {
 
         static
         fun_value_t
-        multiplies(const fun_value_t &x, const fun_value_t &y) {
+        mul(const fun_value_t &x, const fun_value_t &y) {
             return x*y;
         }
 
@@ -82,7 +82,7 @@ namespace ired {
      *
      * Defines the arctic semiring
      *
-     * multiplies corresponds to +, plus to max,
+     * mul corresponds to +, plus to max,
      * zero to -infty, and one to 0
      *
      */
@@ -101,7 +101,7 @@ namespace ired {
 
         static
         fun_value_t
-        multiplies(const fun_value_t &x, const fun_value_t &y) {
+        mul(const fun_value_t &x, const fun_value_t &y) {
             return x + y;
         }
 
@@ -120,7 +120,7 @@ namespace ired {
 
     /**
      * @brief The evaluation policy to combine constraint values.  Here,
-     * multiplies corresponds to &&, plus to ||, one to true, and zero
+     * mul corresponds to &&, plus to ||, one to true, and zero
      * to false.
      */
     template<>
@@ -138,7 +138,7 @@ namespace ired {
 
         static
         fun_value_t
-        multiplies(const fun_value_t &x, const fun_value_t &y) {
+        mul(const fun_value_t &x, const fun_value_t &y) {
             return x && y;
         }
 
