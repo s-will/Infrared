@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <memory>
+#include <limits>
 
 #include "cluster.hpp"
 
@@ -36,7 +37,7 @@ namespace ired {
      * multiplies is associative and symmetric
      * plus is associative and symmetric
      * multiplies(one,x) == x
-     * multiplies(zero,x) == x
+     * multiplies(zero,x) == 0.0
      * plus(zero,x) == x
      *
      * In the standard policy multiplies corresponds to *, plus to +,
@@ -71,6 +72,49 @@ namespace ired {
         fun_value_t
         zero() {
             return fun_value_t();
+        }
+    };
+
+    /**
+     * @brief Evaluation Strategy for Optimization (max/+); defining the arctic semiring
+     * 
+     * @see StdEvaluationPolicy
+     *
+     * Defines the arctic semiring
+     *
+     * multiplies corresponds to +, plus to max,
+     * zero to -infty, and one to 0
+     *
+     */
+    template<class FunValue>
+    class ArcticEvaluationPolicy {
+    public:
+        using fun_value_t = FunValue;
+        using constraint_t = Function<bool>;
+        using function_t = Function<fun_value_t>;
+
+        static
+        fun_value_t
+        plus(const fun_value_t &x, const fun_value_t &y) {
+            return std::max(x,y);
+        }
+
+        static
+        fun_value_t
+        multiplies(const fun_value_t &x, const fun_value_t &y) {
+            return x + y;
+        }
+
+        static
+        fun_value_t
+        one() {
+            return fun_value_t();
+        }
+
+        static
+        fun_value_t
+        zero() {
+            return std::numeric_limits<fun_value_t>::min();
         }
     };
 
@@ -125,7 +169,7 @@ namespace ired {
      * constraints of the network. In this way, it guarantees their
      * existence as long as the network exists.
      */
-    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
+    template<class FunValue, class EvaluationPolicy>
     class ConstraintNetwork {
     public:
         using var_idx_t = int;

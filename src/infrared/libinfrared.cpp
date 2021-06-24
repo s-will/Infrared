@@ -58,6 +58,8 @@ struct PyFunction
     }
 };
 
+using ArcticClusterTree = ClusterTree< int, ArcticEvaluationPolicy<int> >;
+
 /**
  * @brief seed the random number generator (for sampling, as well as
  * tree decomposition via libhtd)
@@ -95,7 +97,17 @@ PYBIND11_MODULE(libinfrared,ir)
 
     function
         .def(py::init<const std::vector<int> &>())
-        //.def("__call__", &Function<>::operator ())
+        .def("__call__", &Function<>::operator ())
+        .def("vars", &Function<>::vars,
+             py::return_value_policy::copy)
+        ;
+
+    py::class_< Function<int>, PyFunction<int>, std::shared_ptr<Function<int>> >
+        intfunction(ir, "IntFunction");
+
+    function
+        .def(py::init<const std::vector<int> &>())
+        .def("__call__", &Function<>::operator ())
         .def("vars", &Function<>::vars,
              py::return_value_policy::copy)
         ;
@@ -141,5 +153,17 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("evaluate", &ClusterTree<>::evaluate)
         .def("is_consistent", &ClusterTree<>::is_consistent)
         .def("sample", &ClusterTree<>::sample)
+        ;
+
+    py::class_< ArcticClusterTree >(ir,"ArcticClusterTree")
+        .def(py::init<int,int>())
+        .def(py::init<const std::vector<int> &>())
+        .def("add_root_cluster", &ArcticClusterTree::add_root_cluster)
+        .def("add_child_cluster", &ArcticClusterTree::add_child_cluster)
+        .def("add_constraint", &ArcticClusterTree::add_constraint)
+        .def("add_function", &ArcticClusterTree::add_function)
+        .def("evaluate", &ArcticClusterTree::evaluate)
+        .def("is_consistent", &ArcticClusterTree::is_consistent)
+        .def("sample", &ArcticClusterTree::sample)
         ;
 }

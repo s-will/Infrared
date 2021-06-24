@@ -50,11 +50,11 @@ namespace ired {
      *
      * Ensuring those properties is the job of the user of this class!
      */
-    template<class FunValue=double>
+    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
     class ClusterTree {
 
     public:
-        using constraint_network_t = ConstraintNetwork<FunValue>;
+        using constraint_network_t = ConstraintNetwork<FunValue, EvaluationPolicy>;
 
         //! evaluation policy type
         using evaluation_policy_t = typename constraint_network_t::evaluation_policy_t;
@@ -364,9 +364,9 @@ namespace ired {
     // cluster exists or was generated before, simply return it;
     // otherwise, construct a new empty cluster, connect it as parent
     // to all existing roots, and return it.
-    template<class ConstraintNetwork>
+    template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<ConstraintNetwork>::single_empty_root() {
+    ClusterTree<FunValue,EvaluationPolicy>::single_empty_root() {
         if (single_empty_rooted_) {return root_;}
 
         // find all root nodes of the tree
@@ -403,9 +403,9 @@ namespace ired {
 
     // evaluate by running a specialized depth first search via
     // boost::graph; see struct evaluate_finish_edge
-    template<class ConstraintNetwork>
+    template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<ConstraintNetwork>
+    ClusterTree<FunValue,EvaluationPolicy>
     ::evaluate() {
         auto root = single_empty_root();
 
@@ -425,9 +425,9 @@ namespace ired {
     // sample by running a specialized depth first search via
     // boost::graph; see struct sample_examine_edge
 
-    template<class ConstraintNetwork>
+    template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<ConstraintNetwork>::sample() {
+    ClusterTree<FunValue,EvaluationPolicy>::sample() {
 
         assert(evaluated_);
         assert(is_consistent());
