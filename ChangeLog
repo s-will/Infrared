@@ -1,3 +1,6 @@
+0.5.1
+	[Bug Fix]
+	Update behavior of BoltzmannSampler.plot_td()
 0.5
 	[C++ library]
 	Use pybind11
