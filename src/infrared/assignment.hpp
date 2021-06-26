@@ -24,7 +24,7 @@
 #include <functional>
 
 namespace ired {
-    template<class EvaluationPolicy>
+    template<class ConstraintNetwork>
     class AssignmentIterator;
 
     /** @brief A (partial) assignment of variables to values
