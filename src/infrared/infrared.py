@@ -119,7 +119,7 @@ class WeightedFunction(libir.Function):
         _algebra = algebra
 
     def __call__(self, a):
-        return self._algebra.value( self._value(a), self.weight() )
+        return self._algebra.value( self.value(a), self.weight() )
 
 
 def def_function_class( classname, init, value, env=globals() ):
