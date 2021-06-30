@@ -58,6 +58,7 @@ struct PyFunction
     }
 };
 
+using PFClusterTree = ClusterTree<>;
 using ArcticClusterTree = ClusterTree< int, ArcticEvaluationPolicy<int> >;
 
 /**
@@ -143,7 +144,7 @@ PYBIND11_MODULE(libinfrared,ir)
             (ir, "GCControl", function)
             .def(py::init<int, double>());
 
-    py::class_< ClusterTree<> >(ir,"ClusterTree")
+    py::class_< PFClusterTree >(ir,"PFClusterTree")
         .def(py::init<int,int>())
         .def(py::init<const std::vector<int> &>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)
@@ -164,6 +165,5 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("add_function", &ArcticClusterTree::add_function)
         .def("evaluate", &ArcticClusterTree::evaluate)
         .def("is_consistent", &ArcticClusterTree::is_consistent)
-        .def("sample", &ArcticClusterTree::sample)
         ;
 }

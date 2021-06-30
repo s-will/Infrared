@@ -19,6 +19,7 @@ from . import libinfrared as libir
 from treedecomp import TreeDecompositionFactory, dotfile_to_pdf, dotfile_to_png
 from treedecomp import seed as tdseed
 
+from abc import ABC, abstractmethod
 
 def seed(seed):
     """@brief seed random number generator of libinfrared and treedecomp
@@ -47,6 +48,162 @@ def seed(seed):
 class ConsistencyError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
+
+class EvaluationAlgebra(ABC):
+    """
+    Defines how to evaluate the constraint network
+    """
+
+    @staticmethod
+    @abstractmethod
+    def cluster_tree(*args,**kwargs):
+        """
+        @brief the infrared cluster tree
+        @return the cluster tree that evaluates under the specific algebra"
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def value( weight, value ):
+        """
+        @brief Combine weight and value of weighted function
+        @param weight the weight
+        @param value the value
+
+        @return combination of weight and value according to concrete algebra
+        """
+        pass
+
+class PFEvaluationAlgebra(EvaluationAlgebra):
+    def cluster_tree(*args,**kwargs):
+        return libir.PFClusterTree(*args,**kwargs)
+
+    def value( weight, value ):
+        return weight ** value
+
+class ArcticEvaluationAlgebra(EvaluationAlgebra):
+    def cluster_tree(*args,**kwargs):
+        return libir.ArcticClusterTree(*args,**kwargs)
+
+    def value( weight, value ):
+        return weight * value
+
+class WeightedFunction(libir.Function):
+    """
+    @brief function of a constraint network
+
+    WeightedFunction have methods value() and weight(); value depends
+    on the variables defined at construction and returned by vars().
+
+    An object of WeightedFunction is 'casted' to ir.Function by ConstraintNetwork, according
+    to the evaluation algebra.
+    """
+
+    _algebra = PFEvaluationAlgebra
+
+    def __init__( self, vars ):
+        super().__init__(vars)
+
+    @abstractmethod
+    def value(self):
+        pass
+
+    @property
+    @abstractmethod
+    def weight(self):
+        pass
+
+    @staticmethod
+    def set_algebra(algebra):
+        _algebra = algebra
+
+    def __call__(self, a):
+        return self._algebra.value( self._value(a), self.weight() )
+
+
+def def_function_class( classname, init, value, env=globals() ):
+    """
+    @brief Create a class of infrared weighted functions
+    @param init function to create dependency list from constructor argument(s)
+    @param value function to compute the weighted functions's value from assignment values
+    @param env environment, in which the class is created (users could e.g. pass env=locals())
+
+    Defines a new class with name 'classname' (by default in the module's namespace)
+
+    Objects of the defined class can be used in the construction of the infrared constraint network.
+    Note that `init` defines the dependencies in the order of the (positional) arguments of `value`.
+
+    @note the value function can depend on arguments to the function init,
+    which will be automatically stored in the class and passed on.
+    """
+    def _init(self, weight, **args):
+        super(self.__class__, self).__init__(init(**args))
+
+        # use inspection to optionally make 'constructor' arguments of
+        # the function init available in the function value
+        sig = inspect.signature(value)
+        self._args = { k:args[k] for k in args if k in sig.parameters }
+
+        self._weight = weight
+
+    def _value(self,a):
+        a = a.values()
+        params = [ a[var] for var in self._vars ]
+        return value( *params, **self._args )
+
+    def _weight(self):
+        return self._weight
+
+    def _str(self):
+        return '{} on {}'.format(self.__class__, self._vars)
+
+    newclass = type( classname, (WeightedFunction,),
+                {"__init__": _init,
+                    "value": _value,
+                    "weight": _weight,
+                    "__str__": _str})
+
+    env[classname] = newclass
+
+def def_constraint_class( classname, init, value, env=globals() ):
+    """
+    @brief Create a class of infrared constraint
+    @param classname name of the new class
+    @param init function to create dependency list from constructor argument(s)
+    @param value function to compute the constraint's truth value from assignment values
+    @param env environment, in which the class is created (users could e.g. pass env=locals())
+
+    Defines a new class with name 'classname' (by default in the module's namespace)
+
+    Objects of the defined class can be used in the construction of the infrared constraint network.
+    Note that `init` defines the dependencies in the order of the (positional) arguments of `value`.
+
+    @see def_function_class
+    """
+
+    def _init(self, **args):
+        super(self.__class__, self).__init__(init(**args))
+        sig = inspect.signature(value)
+        self._args = { k:args[k] for k in args if k in sig.parameters }
+
+    def _call(self,a):
+        a = a.values()
+        params = [ a[var] for var in self._vars ]
+        return value( *params, **self._args )
+
+    def _str(self):
+        return '{} on {}'.format(self.__class__, self._vars)
+
+    newclass = type(classname, (Constraint,),
+                {
+                "__init__": _init,
+                "__call__": _call,
+                "__str__": _str
+                })
+
+    env[classname] = newclass
+
 
 ## @brief Constraint network base class
 ##
@@ -111,17 +268,31 @@ class ConstraintNetwork:
 
 ## @brief Cluster tree (wrapping the cluster tree class of the C++ engine)
 class ClusterTree:
-    def __init__(self, cn, *, td_factory=TreeDecompositionFactory(), td=None):
+    def __init__(self, cn, *, td_factory = TreeDecompositionFactory(), td = None, EvalAlg = PFEvaluationAlgebra):
         if td is None:
             td = td_factory.create(cn.get_varnum(), cn.get_dependencies())
 
-        self.cn = cn
+        self._EvalAlg = EvalAlg
+
+        self._cn = cn
 
         self._bagsets = list( map(set, td.get_bags()) )
 
 
-        self.td = td
-        self.ct = self.construct_cluster_tree( cn.get_domains(), td )
+        self._td = td
+        self._ct = self.construct_cluster_tree( cn.get_domains(), td )
+
+    @property
+    def cn(self):
+        return self._cn
+
+    @property
+    def td(self):
+        return self._td
+
+    @property
+    def ct(self):
+        return self._ct
 
     ## @brief Construct the cluster tree object of the C++ engine
     ##
@@ -130,7 +301,7 @@ class ClusterTree:
     def construct_cluster_tree(self, domains, td):
         bagconstraints, bagfunctions = self.get_bag_assignments()
 
-        ct = libir.ClusterTree(domains);
+        ct = self._EvalAlg.cluster_tree(domains);
 
         # keep record of all non-root nodes
         children = set()
@@ -166,14 +337,14 @@ class ClusterTree:
     ## @note Evaluation is a potentially (depending on the treewidth) costly operation.
     ## The method does not re-evaluate the tree if this was already done
     def evaluate(self):
-        return self.ct.evaluate()
+        return self._ct.evaluate()
 
     ## @brief evaluates the cluster tree (and thereby checks consistency)
     ## @return whether the constraints are consistent
     ##
     ## @note does not re-evaluate the tree if this was already done
     def is_consistent(self):
-        return self.ct.is_consistent()
+        return self._ct.is_consistent()
 
     ## @brief generate sample
     ## @returns a raw sample
@@ -184,10 +355,10 @@ class ClusterTree:
     def sample(self):
         if not self.is_consistent():
             raise ConsistencyError("Inconsistent constraint model")
-        return self.ct.sample()
+        return self._ct.sample()
 
     def get_td(self):
-        return self.td
+        return self._td
 
     def get_bagsets(self):
         return self._bagsets
@@ -197,10 +368,10 @@ class ClusterTree:
     ## straightforward non-redundant assignment of constraints and functions,
     ## each to some bag that contains all of their variables
     ##
-    ## assumes constraints and functions specified in self.cn
+    ## assumes constraints and functions specified in self._cn
     def get_bag_assignments(self):
-        bagconstraints = self.assign_to_bags(self.cn.get_constraints())
-        bagfunctions = self.assign_to_bags(self.cn.get_functions())
+        bagconstraints = self.assign_to_bags(self._cn.get_constraints())
+        bagfunctions = self.assign_to_bags(self._cn.get_functions())
         return (bagconstraints, bagfunctions)
 
 
@@ -367,9 +538,21 @@ class BoltzmannSampler:
 
     ## @brief flag that engine requires setup
     def requires_reinitialization(self):
-        self.cn = None
-        self.td = None
-        self.ct = None
+        self._cn = None
+        self._td = None
+        self._ct = None
+
+    @property
+    def cn(self):
+        return self._cn
+
+    @property
+    def td(self):
+        return self._td
+
+    @property
+    def ct(self):
+        return self._ct
 
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
@@ -380,16 +563,16 @@ class BoltzmannSampler:
     def setup_engine(self, *, skip_ct=False):
         # immediately return if ct exists and is not None
         try:
-            assert( self.ct != None )
+            assert( self._ct != None )
         except:
             pass
         else:
             return
 
-        self.cn = self.gen_constraint_network(self.features)
-        self.td = self._td_factory.create(self.cn.get_varnum(), self.cn.get_dependencies())
+        self._cn = self.gen_constraint_network(self.features)
+        self._td = self._td_factory.create(self._cn.get_varnum(), self._cn.get_dependencies())
         if not skip_ct:
-            self.ct = self.gen_cluster_tree()
+            self._ct = self.gen_cluster_tree()
 
     ## @brief Get the features
     ## @return features
@@ -399,7 +582,7 @@ class BoltzmannSampler:
     ## @brief is the network consistent?
     def is_consistent(self):
         self.setup_engine()
-        return self.ct.is_consistent()
+        return self._ct.is_consistent()
 
     ## @brief Plot the tree decomposition to pdf file
     ## @param filename write to filename
@@ -415,7 +598,7 @@ class BoltzmannSampler:
 
         self.setup_engine(skip_ct = True)
         with open(filename,"w") as dot:
-            self.td.writeTD(dot)
+            self._td.writeTD(dot)
 
         if to in conversions:
             conversions[to](filename)
@@ -426,13 +609,13 @@ class BoltzmannSampler:
     ## @return tree width
     def treewidth(self):
         self.setup_engine(skip_ct = True)
-        return self.td.treewidth()
+        return self._td.treewidth()
 
     ## @brief Compute next sample
     ## @return sample
     def sample(self):
         self.setup_engine()
-        return self.ct.sample()
+        return self._ct.sample()
 
     ## @brief Sample generator
     def samples(self):
@@ -451,7 +634,7 @@ class BoltzmannSampler:
     ## @return cluster tree
     def gen_cluster_tree(self):
         ## make cluster tree
-        return ClusterTree(self.cn, td = self.td)
+        return ClusterTree(self._cn, td = self._td)
 
 ## @brief Multi-dimensional Boltzmann sampler (abstract base class)
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
