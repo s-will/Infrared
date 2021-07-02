@@ -26,11 +26,9 @@
 #include <memory>
 
 #include "infrared.hpp"
-#include "rnadesign.hpp"
 
-namespace py = pybind11; 
+namespace py = pybind11;
 using namespace ired;
-using namespace ired::rnadesign;
 
 /**@brief trampoline / wrapper class
  *
@@ -41,14 +39,14 @@ template<class FunValue=double>
 struct PyFunction
     : public Function<FunValue> {
     using var_idx_t = int;
-    using parent_t = Function<FunValue>;  
+    using parent_t = Function<FunValue>;
 
     // inherit constructor
     //PyFunction(const std::vector<var_idx_t> &vars) : Function<FunValue>(vars) {}
     using parent_t::parent_t;
 
     FunValue
-    operator () (const Assignment & a) const override { 
+    operator () (const Assignment & a) const override {
         PYBIND11_OVERLOAD_PURE_NAME(
                 FunValue,
                 parent_t,
@@ -85,7 +83,7 @@ PYBIND11_MODULE(libinfrared,ir)
 
     py::class_< Constraint, PyFunction<bool>, std::shared_ptr<Constraint> >
         constraint(ir, "Constraint");
-    
+
     constraint
         .def(py::init<const std::vector<int> &>())
         .def("__call__", &Constraint::operator ())
@@ -112,37 +110,6 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("vars", &Function<>::vars,
              py::return_value_policy::copy)
         ;
-
-    py::class_< ComplConstraint >
-        (ir, "ComplConstraint", constraint)
-        .def(py::init<int,int>())
-       ;
-
-    py::class_< SameComplClassConstraint >
-        (ir, "SameComplClassConstraint", constraint)
-        .def(py::init<int,int>())
-       ;
-
-    py::class_< DifferentComplClassConstraint >
-        (ir, "DifferentComplClassConstraint", constraint )
-        .def(py::init<int,int>())
-       ;
-
-    py::class_< BPEnergy >
-        (ir, "BPEnergy", function)
-        .def(py::init<int, int, bool, double>())
-        .def("set_energy_table", &BPEnergy::set_energy_table)
-        ;
-
-    py::class_< StackEnergy >
-        (ir, "StackEnergy", function)
-        .def(py::init<int, int, double>())
-        .def("set_energy_table", &StackEnergy::set_energy_table)
-        ;
-
-    py::class_< GCControl >
-            (ir, "GCControl", function)
-            .def(py::init<int, double>());
 
     py::class_< PFClusterTree >(ir,"PFClusterTree")
         .def(py::init<int,int>())

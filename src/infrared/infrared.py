@@ -13,6 +13,8 @@ import os
 import abc
 import random
 import re
+import sys
+import inspect
 
 from . import libinfrared as libir
 
@@ -119,10 +121,10 @@ class WeightedFunction(libir.Function):
         _algebra = algebra
 
     def __call__(self, a):
-        return self._algebra.value( self.value(a), self.weight() )
+        return self._algebra.value( self.weight(), self.value(a) )
 
 
-def def_function_class( classname, init, value, env=globals() ):
+def def_function_class( classname, init, value, module="__main__" ):
     """
     @brief Create a class of infrared weighted functions
     @param init function to create dependency list from constructor argument(s)
@@ -137,6 +139,7 @@ def def_function_class( classname, init, value, env=globals() ):
     @note the value function can depend on arguments to the function init,
     which will be automatically stored in the class and passed on.
     """
+
     def _init(self, weight, **args):
         super(self.__class__, self).__init__(init(**args))
 
@@ -149,7 +152,7 @@ def def_function_class( classname, init, value, env=globals() ):
 
     def _value(self,a):
         a = a.values()
-        params = [ a[var] for var in self._vars ]
+        params = [ a[var] for var in self.vars() ]
         return value( *params, **self._args )
 
     def _weight(self):
@@ -164,9 +167,9 @@ def def_function_class( classname, init, value, env=globals() ):
                     "weight": _weight,
                     "__str__": _str})
 
-    env[classname] = newclass
+    sys.modules[module].__dict__[classname] = newclass
 
-def def_constraint_class( classname, init, value, env=globals() ):
+def def_constraint_class( classname, init, value, module="__main__" ):
     """
     @brief Create a class of infrared constraint
     @param classname name of the new class
@@ -189,20 +192,20 @@ def def_constraint_class( classname, init, value, env=globals() ):
 
     def _call(self,a):
         a = a.values()
-        params = [ a[var] for var in self._vars ]
+        params = [ a[var] for var in self.vars() ]
         return value( *params, **self._args )
 
     def _str(self):
         return '{} on {}'.format(self.__class__, self._vars)
 
-    newclass = type(classname, (Constraint,),
+    newclass = type(classname, (libir.Constraint,),
                 {
                 "__init__": _init,
                 "__call__": _call,
                 "__str__": _str
                 })
 
-    env[classname] = newclass
+    sys.modules[module].__dict__[classname] = newclass
 
 
 ## @brief Constraint network base class

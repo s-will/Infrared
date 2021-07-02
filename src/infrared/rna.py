@@ -19,15 +19,25 @@
 
 import re
 import collections
+import math
 
-from .libinfrared import BPEnergy, StackEnergy, GCControl, ComplConstraint,\
-    SameComplClassConstraint, DifferentComplClassConstraint
-
+from .infrared import def_constraint_class, def_function_class
 
 ## @brief exception to signal inconsistency, when consistency would be required
 class ParseError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
+
+
+## define some constraints and functions for RNA design
+_compltab = [(0,3),(1,2),(2,1),(2,3),(3,0),(3,2)]
+def_constraint_class( 'ComplConstraint', lambda i,j: [i,j], lambda x,y: (x,y) in _compltab, module = __name__ )
+def_function_class( 'GCControl', lambda i: [i], lambda x: 1 if x==1 or x==2 else 0, module  = __name__ )
+def_function_class( 'BPEnergy', lambda i,j,is_terminal: [i,j], lambda x,y,is_terminal: - _bpenergy(x,y,is_terminal), module  = __name__ )
+def_function_class( 'StackEnergy', lambda i,j: [i,j,i+1,j-1], lambda x,y,x1,y1: - _stackenergy(x,y,x1,y1), module  = __name__ )
+
+def_constraint_class( 'SameComplClassConstraint', lambda i,j: [i,j], lambda x,y: x&1 == y&1, __name__ )
+def_constraint_class( 'DifferentComplClassConstraint', lambda i,j: [i,j], lambda x,y: x&1 != y&1, __name__ )
 
 
 ## @brief Parse RNA structure including pseudoknots
@@ -195,6 +205,9 @@ def value_to_nucleotide(x):
 def values_to_sequence(xs):
     return "".join(map(value_to_nucleotide, xs))
 
+## ------------------------------------------------
+## RNA energy models / parameters
+
 ## Parameters for the base pair model (magic params from the Redprint paper)
 def_params_bp = { "GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
                   "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566 }
@@ -210,18 +223,19 @@ def_params_stacking = { "AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
 ## @brief set the bp energy table for Infrared
 ##
 ## @param params dictionary of parameters or a table of the parameters
-## as expected by infrared::rnadesign
+## as expected by _bpenergy
 def set_bpenergy_table(params = def_params_bp):
     if type(params) == dict:
         params = list(map(lambda x: params[x],
                           [ "AU_IN", "GC_IN", "GU_IN",
                             "AU_TERM", "GC_TERM", "GU_TERM" ] ))
-    BPEnergy.set_energy_table(params)
+    global _params_bp
+    _params_bp = params
 
 ## @brief set the stacking energy table for Infrared
 ##
 ## @param params dictionary of parameters or a table of the parameters
-## as expected by infrared::rnadesign
+## as expected by _stackenergy
 def set_stacking_energy_table(params = def_params_stacking):
     if type(params) == dict:
         params = list(map(lambda x: params[x],
@@ -236,7 +250,53 @@ def set_stacking_energy_table(params = def_params_stacking):
                             "GUAU", "GUUA",
                             "GUCG", "GUGC",
                             "GUGU", "GUUG" ] ))
-    StackEnergy.set_energy_table(params)
+    global _params_stacking
+    _params_stacking = params
+
+## run table initialization
+set_bpenergy_table()
+set_stacking_energy_table()
+
+_bpindex_tab = [[-1,-1,-1, 0],
+                [-1,-1, 2,-1],
+                [-1, 3,-1, 4],
+                [ 1,-1, 5,-1]]
+
+def _bpenergy( x, y, is_terminal=False ):
+    """
+    @brief Energy of base pair
+    @param x base in internal 0..3 representation
+    @param y base in internal 0..3 representation
+    @param is_terminal flag, True if the base pair is terminating a stem
+    @return energy of the base pair according to current bp energy table
+
+    @see set_bpenergy_table()
+    """
+    bpidx = _bpindex_tab[x][y]
+    return _params_bp[ bpidx//2 + (3 if is_terminal else 0) ] if bpidx >= 0 else -math.inf
+
+def _stackenergy( x, y, x1, y1 ):
+    """
+    @brief Energy of stack of base pairs
+    @param x base in internal 0..3 representation
+    @param y base in internal 0..3 representation
+    @param x1 base in internal 0..3 representation, inner stacked base pair
+    @param y1 base in internal 0..3 representation, inner stacked base pair
+    @return energy of the base pair stack according to current stacking energy table
+
+    @see set_stacking_energy_table()
+    """
+    bpidx = _bpindex_tab[x][y]
+    bpidx1 = _bpindex_tab[x1][y1]
+
+    if bpidx < 0 or bpidx1 < 0:
+        return -math.inf
+
+    if bpidx & 1:
+        bpidx,bpidx1 = bpidx1,bpidx
+        bpidx1 ^= 1
+
+    return _params_stacking[ 6 * (bpidx//2) + bpidx1 ]
 
 
 if __name__ == "__main__":
