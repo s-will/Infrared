@@ -55,9 +55,12 @@ namespace ired {
          *
          * @param vars vector of indices of variables in the cluster
          */
+        explicit
         Cluster(const std::vector<var_idx_t> &vars)
             : vars_(vars) {
         }
+
+        ~Cluster() {}
 
         /**
          * @brief Get variables
@@ -121,15 +124,15 @@ namespace ired {
          */
         auto
         sep_vars(const Cluster &parent) const {
-            auto vars = std::vector<var_idx_t>();
+            auto sepvars = std::vector<var_idx_t>();
             const auto &pvars = parent.vars();
             for ( auto &var : vars_ ) {
                 if (std::find(pvars.begin(), pvars.end(),var)
                     != pvars.end()) {
-                    vars.push_back(var);
+                    sepvars.push_back(var);
                 }
             }
-            return vars;
+            return sepvars;
         }
 
         /**
@@ -143,15 +146,15 @@ namespace ired {
          */
         auto
         diff_vars(const Cluster &parent) const {
-            auto vars = std::vector<var_idx_t>();
+            auto diffvars = std::vector<var_idx_t>();
             const auto &pvars = parent.vars();
             for ( auto &var : vars_ ) {
                 if (std::find(pvars.begin(), pvars.end(),var)
                     == pvars.end()) {
-                    vars.push_back(var);
+                    diffvars.push_back(var);
                 }
             }
-            return vars;
+            return diffvars;
         }
 
     private:

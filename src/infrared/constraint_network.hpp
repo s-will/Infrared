@@ -21,6 +21,7 @@
 #include <vector>
 #include <memory>
 #include <limits>
+#include <iterator>
 
 #include "cluster.hpp"
 
@@ -77,7 +78,7 @@ namespace ired {
 
     /**
      * @brief Evaluation Strategy for Optimization (max/+); defining the arctic semiring
-     * 
+     *
      * @see StdEvaluationPolicy
      *
      * Defines the arctic semiring
@@ -194,6 +195,7 @@ namespace ired {
         /**
          * @brief Construct with domains
          */
+        explicit
         ConstraintNetwork(const std::vector<int> &domsizes)
             : domsizes_(domsizes) {
         };
@@ -204,6 +206,10 @@ namespace ired {
         ConstraintNetwork(int num_vars, int domsize)
             : domsizes_(num_vars, domsize) {
         };
+
+
+        ~ConstraintNetwork() {};
+
 
         /**
          * @brief add variable with domain size
@@ -220,12 +226,28 @@ namespace ired {
          * @brief add constraint
          *
          * @param x shared pointer to constraint
+         * @return the added constraint
          *
-         * The network holds a shared pointer to *x.
+         * If the virtual method x->auto_materialize() returns true,
+         * then the constraint *x is materialized as mx and the cn holds
+         * a shared pointer to *mx. Otherwise, the network holds a
+         * shared pointer to *x.
          */
         auto
         add_constraint(const std::shared_ptr<constraint_t> &x) {
-            constraints_.push_back( x );
+            if ( x->auto_materialize() ) {
+                //materialize it
+
+                // for evaluating the constraints, construct a
+                // constraint network with the same variables
+                // and domains as this one, which evaluates constraints
+                auto cn = ConstraintNetwork<bool, StdEvaluationPolicy<bool>>(domsizes_);
+                auto mx = std::make_shared<MaterializedFunction<bool, vecS>>(x.get(),cn);
+
+                constraints_.push_back( mx );
+            } else {
+                constraints_.push_back( x );
+            }
             return constraints_.back().get();
         }
 
@@ -233,6 +255,7 @@ namespace ired {
          * @brief add function
          *
          * @param x shared pointer to function
+         * @return the added function
          *
          * If the virtual method x->auto_materialize() returns true,
          * then the function *x is materialized as mx and the cn holds

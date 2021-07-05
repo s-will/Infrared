@@ -100,6 +100,7 @@ namespace ired {
          * @param domsizes vector of domain sizes for each variable;
          * its length specifies the number of variables
          */
+        explicit
         ClusterTree(const std::vector<int> &domsizes)
             : cn_(domsizes) {
         };
@@ -114,6 +115,7 @@ namespace ired {
             : cn_(num_vars, domsize) {
         };
 
+        ~ClusterTree() {}
 
         //! @brief read access to constraint network
         const auto & constraint_network() const {
@@ -430,7 +432,7 @@ namespace ired {
     ClusterTree<FunValue,EvaluationPolicy>::sample() {
 
         assert(evaluated_);
-        assert(is_consistent());
+        //assert(is_consistent());
 
         auto a = assignment_t(cn_.num_vars());
 

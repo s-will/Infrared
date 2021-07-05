@@ -32,8 +32,8 @@ using namespace ired;
 
 /**@brief trampoline / wrapper class
  *
- * @note this is needed to support overriding of the virtual function
- * '__call__' from Python
+ * @note this is needed to support overriding of virtual functions
+ * in Function/Constraint objects from Python
  */
 template<class FunValue=double>
 struct PyFunction
@@ -47,12 +47,30 @@ struct PyFunction
 
     FunValue
     operator () (const Assignment & a) const override {
-        PYBIND11_OVERLOAD_PURE_NAME(
+        PYBIND11_OVERRIDE_PURE_NAME(
                 FunValue,
                 parent_t,
                 "__call__",
                 operator (),
                 a);
+    }
+
+    std::string
+    name() const override {
+        PYBIND11_OVERRIDE(
+            std::string,
+            parent_t,
+            name
+            );
+    }
+
+    bool
+    auto_materialize() const override {
+        PYBIND11_OVERRIDE(
+            bool,
+            parent_t,
+            auto_materialize
+            );
     }
 };
 

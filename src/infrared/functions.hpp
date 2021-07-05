@@ -18,7 +18,7 @@
  * Custom functions and constraints inherit from the abstract classes
  * Functions<FunVal> and Constraint and specialize by overriding (at
  * least) operator ().
- * 
+ *
  * MaterializedFunction offers functions that tabulate their
  * values. This is used for messages in the cluster tree
  * evaluation and pre-computing of function values.
@@ -28,6 +28,9 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <iterator>
+#include <cassert>
+#include <numeric>
 
 #include "assignment.hpp"
 
@@ -43,10 +46,14 @@ namespace ired {
     public:
         using var_idx_t = int;
 
+        explicit
         Dependency(const std::vector<var_idx_t> &vars) : vars_(vars) {}
 
         const std::vector<var_idx_t> &
         vars() const {return vars_;}
+
+        virtual
+        ~Dependency() {}
 
     private:
         const std::vector<var_idx_t> vars_;
@@ -63,9 +70,8 @@ namespace ired {
         using assignment_t = Assignment;
         using fun_value_t = FunValue;
 
+        explicit
         Function(const std::vector<var_idx_t> &vars) : Dependency(vars) {}
-
-        // Function(const Function &fun) : Dependency(fun) {}
 
         virtual
         fun_value_t
@@ -93,6 +99,15 @@ namespace ired {
         ~Function() {}
     };
 
+    template <class T>
+    inline
+    std::ostream & operator << (std::ostream &out, const Function<T> &f) {
+        out << f.name() << "(";
+        for (auto i : f.vars()) { out << i << ", "; }
+        out << ") <"<<&f<<">";
+        return out;
+    }
+
     /**
      * @brief map selector class
      *
@@ -116,14 +131,15 @@ namespace ired {
     struct container_selector {
         using type = T;
     };
-    
+
     /**
      * @brief Class implementing the specializations to enable
      * instantiation of non-sparse materialized function classes
      */
     template<class FunValue>
     struct container_selector<FunValue,vecS> {
-        using type = std::vector<FunValue>;
+        //using type = std::vector<FunValue>;
+        using type = typename vector_nbv_sel<FunValue>::type;
         static void init(type &x, size_t size, const FunValue &zero) {
             x.resize(size);
             std::fill(x.begin(),x.end(),zero);
@@ -131,7 +147,10 @@ namespace ired {
         static bool guaranteed_zero(const type &x, size_t i) {
             return false;
         }
-        static const FunValue& get(const type &x, size_t i, const FunValue &zero) {return x[i];}
+        static FunValue get(const type &x, size_t i, const FunValue &zero) {
+            assert(i<x.size());
+            return x[i];
+        }
         static void set(type &x,size_t i, const FunValue &v, const FunValue &zero) {x[i]=v;}
     };
 
@@ -201,8 +220,9 @@ namespace ired {
                              )
             :
             parent_t(vars),
-            domsizes_(cn.domsizes()),
-            zero_(ConstraintNetwork::evaluation_policy_t::zero())
+            domsizes_(extract_domsizes(cn.domsizes())),
+            zero_(ConstraintNetwork::evaluation_policy_t::zero()),
+            name_("Message")
         {
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
         }
@@ -223,23 +243,28 @@ namespace ired {
                              )
             :
             parent_t(function->vars()),
-            domsizes_(cn.domsizes()),
-            zero_(ConstraintNetwork::evaluation_policy_t::zero())
+            domsizes_(extract_domsizes(cn.domsizes())),
+            zero_(ConstraintNetwork::evaluation_policy_t::zero()),
+            name_(function->name())
         {
-            using ep = typename ConstraintNetwork::evaluation_policy_t;
+            using constraint_network_t = ConstraintNetwork;
+
+            using ep = typename constraint_network_t::evaluation_policy_t;
 
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
 
             auto a = Assignment(cn.num_vars());
 
-            auto constraints = std::vector<const typename ConstraintNetwork::constraint_t *>();
-            auto functions = std::vector<const typename ConstraintNetwork::function_t *> {function};
+            auto constraints = std::vector<const typename constraint_network_t::constraint_t *>();
+            auto functions = std::vector<const typename constraint_network_t::function_t *> {function};
+
+            auto initial_value = a.eval_determined(functions, ep()); //evaluate 0-ary functions
 
             auto it = a.make_iterator(function->vars(),
                                       cn,
                                       constraints,
                                       functions,
-                                      a.eval_determined(functions, ep()) //evaluate 0-ary functions
+                                      initial_value
                                       );
 
             for(; ! it.finished() ; ++it ) {
@@ -285,25 +310,38 @@ namespace ired {
         //! @brief name of the class
         virtual
         std::string
-        name() const override { return "MaterializedFunction"; }
+        name() const override { return "Materialized"+name_; }
 
         //! @brief number of stored function values
         auto
         datasize() const {return data_.size();}
 
     private:
-        const std::vector<int> &domsizes_;
+        const std::vector<int> domsizes_;
         data_t data_;
         fun_value_t zero_;
+        std::string name_;
+
+        auto
+        extract_domsizes(const std::vector<int> &v) {
+            auto ds = std::vector<int>();
+            for ( auto x: this->vars() ) {
+                ds.push_back(v[x]);
+            }
+            return ds;
+        }
+
 
         //! @brief unique index calculated from the values of the
         //! function vars in the assignment
         auto
         index( const assignment_t & a ) const {
             size_t x = 0;
-            for ( auto var : this->vars()) {
-                x *= domsizes_[var];
-                x += a[var];
+            size_t i = 0;
+            auto vars = this->vars();
+            for ( size_t i=0; i < domsizes_.size(); i++) {
+                x *= domsizes_[i];
+                x += a[vars[i]];
             }
             return x;
         }
@@ -312,11 +350,7 @@ namespace ired {
         //! values
         auto
         calc_size() const {
-            size_t x=1;
-            for ( auto var : this->vars()) {
-                x *= domsizes_[var];
-            }
-            return x;
+            return std::accumulate( domsizes_.begin(), domsizes_.end(), 1, std::multiplies<int>() );
         }
     };
 

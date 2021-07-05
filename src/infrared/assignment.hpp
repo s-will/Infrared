@@ -27,6 +27,24 @@ namespace ired {
     template<class ConstraintNetwork>
     class AssignmentIterator;
 
+    //@brief Vector type selector "no bit vector"
+    //!
+    //! define a selector for std::vector while avoiding the bit-vector
+    //! implementation for vector<bool>
+    //!
+    //! This was introduced to fix a bug: vector<bool> as value stack does not work for yet
+    //! unknown reason; the use of vector<int> resolves the problem
+    template<class T>
+    struct vector_nbv_sel {
+        using type = std::vector<T>;
+    };
+
+    template<>
+    struct vector_nbv_sel<bool> {
+        using type = std::vector<char>;
+    };
+
+
     /** @brief A (partial) assignment of variables to values
      *
      * An object of Assignment associates values to a series of
@@ -73,6 +91,7 @@ namespace ired {
          *
          * after construction, all variables are undetermined
          */
+        explicit
         Assignment(int size)
             :values_(size, Undetermined)
         {
@@ -189,6 +208,8 @@ namespace ired {
         std::vector<var_value_t> values_;
     }; // end class Assignment
 
+
+
     /**
      * @brief Iterate over the assignments of a subset of variables
      *
@@ -233,7 +254,7 @@ namespace ired {
          * After construction with non-empty vars, the assignment is
          * either set to the first valid assignment or finished() is
          * true. After construction with empty vars, assignment is
-         * unchanged but finished() is false exactly, but will be true
+         * unchanged and finished() is false, but will be true
          * immediately after a call to operator ++()!
          */
         AssignmentIterator(assignment_t &a,
@@ -253,6 +274,7 @@ namespace ired {
 
             // set up value stack
             value_stack_.resize(vars_.size()+1);
+
             value_stack_[0] = initial_value;
 
             if ( value_stack_[0]==ep::zero() ) {
@@ -396,7 +418,9 @@ namespace ired {
         typename board_t<function_t>::type function_board_;
         int top_;
 
-        std::vector<fun_value_t> value_stack_;
+
+        using value_stack_t = typename vector_nbv_sel<fun_value_t>::type;
+        value_stack_t value_stack_;
 
         int stage1_size_;
         std::function<void()> finish_stage2_hook_;
@@ -437,6 +461,7 @@ namespace ired {
             for ( const auto f: function_board_[top_] ) {
                 x = ep::mul( x, (*f)(a_) );
             }
+
             value_stack_[top_+1] = x;
         }
 

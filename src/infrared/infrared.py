@@ -162,10 +162,13 @@ def def_function_class( classname, init, value, module="__main__" ):
         return '{} on {}'.format(self.__class__, self._vars)
 
     newclass = type( classname, (WeightedFunction,),
-                {"__init__": _init,
-                    "value": _value,
-                    "weight": _weight,
-                    "__str__": _str})
+                {
+                 "__init__": _init,
+                 "value": _value,
+                 "weight": _weight,
+                 "__str__": _str,
+                 "name": lambda self: classname
+                 })
 
     sys.modules[module].__dict__[classname] = newclass
 
@@ -200,9 +203,10 @@ def def_constraint_class( classname, init, value, module="__main__" ):
 
     newclass = type(classname, (libir.Constraint,),
                 {
-                "__init__": _init,
-                "__call__": _call,
-                "__str__": _str
+                 "__init__": _init,
+                 "__call__": _call,
+                 "__str__": _str,
+                 "name": lambda self: classname
                 })
 
     sys.modules[module].__dict__[classname] = newclass

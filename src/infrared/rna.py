@@ -32,6 +32,10 @@ class ParseError(RuntimeError):
 ## define some constraints and functions for RNA design
 _compltab = [(0,3),(1,2),(2,1),(2,3),(3,0),(3,2)]
 def_constraint_class( 'ComplConstraint', lambda i,j: [i,j], lambda x,y: (x,y) in _compltab, module = __name__ )
+
+# for testing: deactivate materialization of the complementarity constraint
+# ComplConstraint.auto_materialize = lambda self: False
+
 def_function_class( 'GCControl', lambda i: [i], lambda x: 1 if x==1 or x==2 else 0, module  = __name__ )
 def_function_class( 'BPEnergy', lambda i,j,is_terminal: [i,j], lambda x,y,is_terminal: - _bpenergy(x,y,is_terminal), module  = __name__ )
 def_function_class( 'StackEnergy', lambda i,j: [i,j,i+1,j-1], lambda x,y,x1,y1: - _stackenergy(x,y,x1,y1), module  = __name__ )
