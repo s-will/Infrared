@@ -37,8 +37,8 @@ def_constraint_class( 'ComplConstraint', lambda i,j: [i,j], lambda x,y: (x,y) in
 # ComplConstraint.auto_materialize = lambda self: False
 
 def_function_class( 'GCControl', lambda i: [i], lambda x: 1 if x==1 or x==2 else 0, module  = __name__ )
-def_function_class( 'BPEnergy', lambda i,j,is_terminal: [i,j], lambda x,y,is_terminal: - _bpenergy(x,y,is_terminal), module  = __name__ )
-def_function_class( 'StackEnergy', lambda i,j: [i,j,i+1,j-1], lambda x,y,x1,y1: - _stackenergy(x,y,x1,y1), module  = __name__ )
+def_function_class( 'BPEnergy', lambda i,j,is_terminal: [i,j], lambda x,y,is_terminal: _bpenergy(x,y,is_terminal), module  = __name__ )
+def_function_class( 'StackEnergy', lambda i,j: [i,j,i+1,j-1], lambda x,y,x1,y1: _stackenergy(x,y,x1,y1), module  = __name__ )
 
 def_constraint_class( 'SameComplClassConstraint', lambda i,j: [i,j], lambda x,y: x&1 == y&1, __name__ )
 def_constraint_class( 'DifferentComplClassConstraint', lambda i,j: [i,j], lambda x,y: x&1 != y&1, __name__ )
