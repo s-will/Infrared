@@ -50,36 +50,47 @@ def rename_dfa(dfa):
 ## @brief Return constraints given a dfa
 ##
 ## States Id are name
-def dfa_to_constraints(dfa, start, end, state_start):
+def dfa_to_constraints(dfa, start, end, state_start, stop_at_final=True, avoid=False):
     states_nb = len(dfa.states)
 
     def to_dfa_state(state):
         return 'q'+str(state)
 
     # Transition
-    def_constraint_class('Transition', lambda i: [start+i, state_start+i, state_start+i+1], lambda x, s1, s2: rule_stop_at_final(str(x), to_dfa_state(s1), to_dfa_state(s2), dfa), module=__name__)
+    def_constraint_class('Transition', lambda i: [start+i, state_start+i, state_start+i+1], lambda x, s1, s2: eval_transition(str(x), to_dfa_state(s1), to_dfa_state(s2), dfa, stop_at_final, avoid), module=__name__)
 
     # Start State
     def_constraint_class('StartState', lambda i: [i], lambda s: to_dfa_state(s) == dfa.initial_state, module= __name__)
     # Final State
     def_constraint_class('FinalState', lambda i: [i], lambda s: to_dfa_state(s) in dfa.final_states, module=__name__)
 
-    return [states_nb]*(end-start+2), [Transition(i= i-start) for i in range(start, end+1)] + [StartState(i=state_start), FinalState(i=state_start+end-start)]
+    constraints = [Transition(i=i-start) for i in range(start, end+1)] + [StartState(i=state_start)]
+    if not avoid:
+        constraints.append(FinalState(i=state_start + end - start))
+    return [states_nb]*(end-start+2), constraints
 
 
 ## @brief Stay at final states once arrived
 ##
 ##
-def rule_stop_at_final(x, s1, s2, dfa):
-    if s1 in dfa.final_states:
-        return s1 == s2
-    else:
-        return dfa.transitions[s1][x] == s2
+def eval_transition(x, s1, s2, dfa, stop, avoid):
+    if avoid:
+        return (dfa.transitions[s1][x] == s2) and (not s2 in dfa.final_states)
+    if stop:
+        if s1 in dfa.final_states:
+            return s1 == s2
+        else:
+            return dfa.transitions[s1][x] == s2
 
 
 def words_to_accept(words, end, state_start, start=0):
     dfa = words_to_dfa(words)
     variables, constraints = dfa_to_constraints(dfa, start, end, state_start)
+    return variables, constraints
+
+def words_to_avoid(words, end, state_start, start=0):
+    dfa = words_to_dfa(words)
+    variables, constraints = dfa_to_constraints(dfa, start, end, state_start, stop_at_final=False, avoid=True)
     return variables, constraints
 
 if __name__ == '__main__':
