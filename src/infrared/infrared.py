@@ -689,6 +689,8 @@ class BoltzmannSampler:
         self._model = model
         self.features = model.features
 
+        self.requires_reinitialization()
+
     ## @brief flag that engine requires setup
     def requires_reinitialization(self):
         self._cn = None
@@ -715,15 +717,14 @@ class BoltzmannSampler:
     ## @param skip_ct skip the potentially expensive construction and evaluation of the cluster tree
     def setup_engine(self, *, skip_ct=False):
         # immediately return if ct exists and is not None
-        try:
-            assert( self._ct != None )
-        except:
-            pass
-        else:
+        if self._ct != None:
             return
 
         self._cn = self.gen_constraint_network()
-        self._td = self._td_factory.create(self._cn.get_varnum(), self._cn.dependencies())
+
+        if self._td is None:
+            self._td = self._td_factory.create(self._cn.get_varnum(), self._cn.dependencies())
+
         if not skip_ct:
             self._ct = self.gen_cluster_tree()
 
