@@ -81,7 +81,7 @@ class PFEvaluationAlgebra(EvaluationAlgebra):
         return libir.PFClusterTree(*args,**kwargs)
 
     def value( weight, value ):
-        return math.exp( weight * value ) 
+        return math.exp( weight * value )
 
 class ArcticEvaluationAlgebra(EvaluationAlgebra):
     """!@brief Maximization algebra for optimization"""
@@ -101,8 +101,8 @@ class WeightedFunction(libir.Function):
 
     _algebra = PFEvaluationAlgebra
 
-    def __init__( self, vars ):
-        super().__init__(vars)
+    def __init__( self, variables ):
+        super().__init__(variables)
         self._weight = 1
 
     @abstractmethod
@@ -126,8 +126,9 @@ class WeightedFunction(libir.Function):
         return self._algebra.value( self.weight, self.value(a) )
 
 
-def def_function_class( classname, init, value, module="__main__" ):
-    """!@brief Create a class of infrared weighted functions
+def _generic_def_function_class( classname, init, value, module="__main__",
+            parentclass = WeightedFunction, valuefunname = "value" ):
+    """!@brief Create a class of infrared weighted functions or constraints
     @param init function to create dependency list from constructor argument(s)
     @param value function to compute the weighted functions's value from assignment values
     @param env environment, in which the class is created (users could e.g. pass env=locals())
@@ -142,7 +143,10 @@ def def_function_class( classname, init, value, module="__main__" ):
     """
 
     def _init(self, *args, **kwargs):
-        super(self.__class__, self).__init__(init(*args,**kwargs))
+
+        variables = init(*args,**kwargs)
+        super(self.__class__, self).__init__( variables )
+
         siginit = inspect.signature(init)
         sigvalue = inspect.signature(value)
         for i,kw in zip( range(len(args)), siginit.parameters ):
@@ -157,57 +161,21 @@ def def_function_class( classname, init, value, module="__main__" ):
     def _str(self):
         return '{} on {}'.format(self.__class__, self._vars)
 
-    newclass = type( classname, (WeightedFunction,),
+    newclass = type( classname, (parentclass,),
                 {
                  "__init__": _init,
-                 "value": _value,
+                 valuefunname: _value,
                  "__str__": _str,
                  "name": lambda self: classname
                  })
 
     sys.modules[module].__dict__[classname] = newclass
 
+def def_function_class( classname, init, value, module="__main__" ):
+    _generic_def_function_class( classname, init, value, module, WeightedFunction, "value" )
+
 def def_constraint_class( classname, init, value, module="__main__" ):
-    """!@brief Create a class of infrared constraint
-    @param classname name of the new class
-    @param init function to create dependency list from constructor argument(s)
-    @param value function to compute the constraint's truth value from assignment values
-    @param env environment, in which the class is created (users could e.g. pass env=locals())
-
-    Defines a new class with name 'classname' (by default in the module's namespace)
-
-    Objects of the defined class can be used in the construction of the infrared constraint network.
-    Note that `init` defines the dependencies in the order of the (positional) arguments of `value`.
-
-    @see def_function_class
-    """
-
-    def _init(self, *args, **kwargs):
-        super(self.__class__, self).__init__(init(*args,**kwargs))
-        siginit = inspect.signature(init)
-        sigvalue = inspect.signature(value)
-        for i,kw in zip( range(len(args)), siginit.parameters ):
-            kwargs[kw] = args[i]
-        self._args = { k:kwargs[k] for k in kwargs if k in sigvalue.parameters }
-
-    def _call(self,a):
-        a = a.values()
-        params = [ a[var] for var in self.vars() ]
-        return value( *params, **self._args )
-
-    def _str(self):
-        return '{} on {}'.format(self.__class__, self._vars)
-
-    newclass = type(classname, (libir.Constraint,),
-                {
-                 "__init__": _init,
-                 "__call__": _call,
-                 "__str__": _str,
-                 "name": lambda self: classname
-                })
-
-    sys.modules[module].__dict__[classname] = newclass
-
+    _generic_def_function_class( classname, init, value, module, libir.Constraint, "__call__" )
 
 class Model:
     """!@brief A constraint model
@@ -215,32 +183,32 @@ class Model:
     def __init__( self ):
         self._constraints = []
         self._functions = dict()
-        self._domains = []
+        self._domains = dict()
 
         self._features = dict()
 
-    def add_variables(self, number, domain, name = None):
+    def add_variables( self, number, domain, name = 'X' ):
         """!@brief add variable domains
         @param number number of variables
         @param domain domain size; defines the domain values as 0..domain-1
         @param name assign a name to the variable(s)
         """
 
-        assert( name == None )
+        if name not in self._domains:
+            self._domains[name] = []
 
-        self._domains.extend( [domain] * number )
+        self._domains[name].extend( [domain] * number )
 
     def add_constraints(self, constraints):
         """!@brief add constraints to the model
         @param constraints an iterable of constraints or a single constraint
         """
-        try:
-            self._constraints.extend(constraints)
-            return
-        except:
-            pass
+        if hasattr(constraints, '__iter__'):
+            constraints = list(constraints)
+        else:
+            constraints = [constraints]
 
-        self._constraints.append(constraints)
+        self._constraints.extend(constraints)
 
     def add_functions( self, functions, group = '*' ):
         """!@brief add constraints to the model
@@ -253,14 +221,13 @@ class Model:
         # reserve auto feature entry for group or invalidate cached feature
         self._features[group] = None
 
-        try:
-            self._functions[group].extend( functions )
-            return
-        except:
-            pass
+        if hasattr(functions, '__iter__'):
+            functions = list(functions)
+        else:
+            functions = [functions]
 
-        self._functions[group].append( functions )
-    
+        self._functions[group].extend(functions)
+
 
     @property
     def domains( self ):
@@ -304,6 +271,15 @@ class Model:
             fs.extend( self._functions[k] )
         return fs
 
+    @property
+    def all_domains( self ):
+        """!@brief list of all domain indices
+        """
+        doms = []
+        for k in self._domains:
+            doms.extend( self._domains[k] )
+        return doms
+
     def _automatic_feature( self, group ):
         """!@brief Automatic feature for function group
         @return the feature
@@ -318,7 +294,7 @@ class Model:
     def add_feature( self, name, group, eval_fun ):
         """!@brief Add a (custom) feature
         @param name name of the feature
-        @param group one or several groups of feature controlled functions  
+        @param group one or several groups of feature controlled functions
         @param eval_fun function to evaluate the feature at an assignment
         """
         self._features[name] = Feature(name, eval_fun, group = group)
@@ -355,8 +331,35 @@ class Model:
             for f in self._functions[group]:
                 f.weight = weight
 
+    def idx( self, variables ):
+        take1 = False
+        try:
+            variables = list(variables)
+        except:
+            variables = [ variables ]
+            take1 = True
 
-## @brief Constraint network base class
+        def convert(var):
+            try:
+                (name,idx) = var
+            except:
+                return var
+            offset = 0
+            for k in self._domains:
+                if k==name:
+                    break
+                offset += len(self._domains[k])
+            return offset + idx
+
+        variables = [ convert(var) for var in variables ]
+
+        if take1:
+            variables = variables[0]
+
+        return variables
+
+## @brief Constraint network
+## @todo: merge with Model
 ##
 ## The constraint network typically holds the problem instance-specific
 ## constraints and functions. The fields and methods of this class are
@@ -364,7 +367,7 @@ class Model:
 ## functions, and constraints.
 class ConstraintNetwork:
     def __init__(self, model):
-        self._domains = model.domains
+        self._domains = model.all_domains
         self._constraints = model.constraints
         self._functions = model.all_functions
 
@@ -570,7 +573,7 @@ class Feature:
     A feature is one component of the sampling energy functions, which
     can be targeted due to a dedicated weight. It defines a method
     value, which determines the feature's value for a sample.
-    
+
     A feature defines weight, target value, and tolerance. The latter
     two are used only in case of multi-dimensional Boltzmann sampling,
     which modifies the features weight based on the difference between
@@ -615,7 +618,7 @@ class FeatureStatistics:
 
     ## @brief Record feature values
     ## @param features a dictionary of features
-    ## @param values a corresponding dictionary of the feature values 
+    ## @param values a corresponding dictionary of the feature values
     ## @param sample a sample that can be evaluated by the feature(s)
     ## @return pair of feature id string and value
     def record_features(self, features, values):
@@ -624,7 +627,7 @@ class FeatureStatistics:
         for k in features:
             value = values[k]
             fid = features[k].identifier
-    
+
             if fid not in self.count:
                 self.idstring[fid] = features[k].idstring()
                 self.count[fid] = 0
@@ -632,14 +635,14 @@ class FeatureStatistics:
                 self.sqsums[fid] = 0
                 if self.keep:
                     self.features[fid] = []
-    
+
             self.count[fid] += 1
             self.sums[fid] += value
             self.sqsums[fid] += value**2
-    
+
             if self.keep:
                 self.features[fid].append(value)
-    
+
 
     ## @brief check whether any features have been recorded
     ## @return whether empty (since no feature has been recorded)
@@ -668,7 +671,15 @@ class FeatureStatistics:
         stds= self.stds()
         return ' '.join(["{}={:3.2f} +/-{:3.2f}".format(self.idstring[fid],means[fid],stds[fid]) for fid in self.count])
 
-## @brief Boltzmann sampler (abstract base class)
+## @brief Boltzmann sampler
+## @todo simplify class, remove methods that were introduced to be overridable (which is not
+## needed anymore)
+##
+## @todo define how precisely BoltzmannSampler is distinguished from ClusterTree !
+## (considering that ClusterTree already offers sampling functionality;
+## probably, it should not or we rename to PFClusterTree... !
+## this gets important, especially when algebras shall be integrated)
+##
 class BoltzmannSampler:
 
     ## @brief Construct from model
@@ -770,13 +781,13 @@ class BoltzmannSampler:
         ## make cluster tree
         return ClusterTree(self._cn, td = self._td)
 
-## @brief Multi-dimensional Boltzmann sampler (abstract base class)
+## @brief Multi-dimensional Boltzmann sampler
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     def __init__( self, model, td_factory=TreeDecompositionFactory() ):
         super().__init__( model, td_factory )
 
         self.samples_per_round = 1000
-        
+
         # TODO: rename and rethink update
         self.tweak_factor = 0.01
 
@@ -800,7 +811,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         """!@brief Set target of a feature
         @todo fix details
         """
-        f = self.features[featureid] 
+        f = self.features[featureid]
         f.target = target
         f.tolerance = tolerance
 
@@ -822,10 +833,10 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             for i in range(self.samples_per_round):
                 counter+=1
                 sample = self.sample()
-                
+
                 ## evaluate all features
                 values = { k:self.features[k].eval(sample) for k in self.features }
-                
+
                 ## record the features
                 fstats.record_features( self.features, values )
 
@@ -839,7 +850,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             for fid,f in self.features.items():
                 new_weight = 1
                 try:
-                    new_weight = f.weight + self.tweak_factor*( f.target - means[fid] )  
+                    new_weight = f.weight + self.tweak_factor*( f.target - means[fid] )
                     self._model.set_feature_weight( new_weight, fid )
                 except:
                     pass
