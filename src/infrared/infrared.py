@@ -622,7 +622,9 @@ class FeatureStatistics:
     ## @param sample a sample that can be evaluated by the feature(s)
     ## @return pair of feature id string and value
     def record_features(self, features, values):
-        assert(type(features) == dict)
+        if not type(features) is dict:
+            features = { 'dummy': features }
+            values = { 'dummy': values }
 
         for k in features:
             value = values[k]
@@ -789,7 +791,6 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
         self.samples_per_round = 1000
 
-        # TODO: rename and rethink update
         self.tweak_factor = 0.01
 
     ## @brief whether the sample is of good quality
