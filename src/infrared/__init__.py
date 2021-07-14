@@ -6,4 +6,4 @@ from .infrared import seed, Model, ConstraintNetwork, ClusterTree, Feature,\
 from . import rna
 
 
-__version__ = '0.5.1'
+__version__ = '0.5.5'
