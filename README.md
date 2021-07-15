@@ -6,8 +6,7 @@ Infrared is a generic C++/Python hybrid library for efficient
 ## Disclaimer and license
 
 Infrared is free software. It was part of project [RNARedPrint](https://github.com/yannponty/RNARedPrint), then separated as a stand alone project.
-Note that the system is still in an early
-stage of development and is likely to still undergo significant
+Note that the system is in active development and is likely to still undergo significant
 changes. It is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
@@ -19,16 +18,17 @@ General Public License for more details
 Infrared provides a fast and flexible C++ engine that evaluates a
 constraint network consisting of variables, multi-ary functions, and
 multi-ary constraints. Functions and constraints are C++ or Python
-objects, where new functions and constraints are easily added in C++
-or in Python! The evaluation is performed efficiently using cluster
+objects, where new functions and constraints are easily defined in Python
+(or in C++). The evaluation is performed efficiently using cluster
 tree elimination following a (hyper-)tree decomposition of the
-dependencies (due to functions and constraints).  Interpreting the
+dependencies (due to functions and constraints). Interpreting the
 evaluations as partition functions, the system supports sampling of
 variable assignments from the corresponding Boltzmann distribution.
 Finally, Infrared implements a generic multi-dimensional Boltzmann
 sampling strategy to target specific feature values. Such
 functionality is made conveniently available via general Python
-classes.
+classes. In particular, the interface was defined to allow the
+straightforward and declarative specification of the constraint model.
 
 ## Installation
 
@@ -54,13 +54,13 @@ python3 -m pip install .
 ## Usage
 
 We provide a tutorial as introduction to the Python high-level interface in
- the jupyter notebook ```infrared-rnadesign-tutorial.ipynb```.
+ the jupyter notebook ```Doc/rnadesign-tutorial.ipynb``` and further
+ examples in Doc.
 
 ## API documentation
 
 The Infrared API is documented using doxygen comments, such that
-html documentation can be generated (in Doc/html) by doxygen
-```
+html documentation can be generated (in Doc/html) by doxygen.
 
 A further entry-point to using the library in novel sampling applications
 is provided by the code of RNARedPrint 2.
@@ -69,8 +69,9 @@ More information on the library architecture is provided below.
 
 ## Infrared architecture and background
 
-The system is build to separate the core "Infrared" from applications
-like Redprint.
+The system was build to separate the core "Infrared" from applications
+like [RNARedprint 2](https://gitlab.inria.fr/amibio/RNARedPrint) or
+[RNAPOND](https://gitlab.inria.fr/amibio/RNAPOND).
 
 ### ired --- Infrared core
 
@@ -95,6 +96,7 @@ tree (or forest), such that the following properties hold
    that contain all of their variables.
 
 The infrared core (namespace ired) defines the following classes
+
 ```
 ired::Assignment           an assignment of variables to values
 ired::AssignmentIterator   provides iteration over sub-assignments; the work horse of ired
@@ -113,40 +115,37 @@ the same core for evaluation (even not necessarily of partition
 functions, e.g. instead optimizing energy/fitness) and sampling in
 very different domains just by writing domain-specific Python code.
 
-### ired::rnadesign --- RNA design specific extension of Infrared
-
-In namespace ired::rnadesign, the system provides domain-specific
-constraints and functions for rna design, as such it specializes the
-classes ired::Function<double> and ired::Constraint, e.g.
-```
-ired::rnadesign::ComplConstraint  complementarity constraint
-ired::rnadesign::GCControl        function for control of GC-content
-ired::rnadesign::BPEnergy         evaluate base pair energy (base pair model)
-ired::rnadesign::StackEnergy      evaluate stacking energy (stacking model)
-```
 
 ### infrared / libinfrared --- Python modules exposing infrared core and extensions
 
-Using boost::python, we expose classes of ired and ired::rnadesign to
+Using pylib11, we expose classes of ired and ired::rnadesign to
 Python, such that cluster trees can be constructed and populated with
 exposed C++ constraints/functions and/or derived Python
-constraints/functions. Python programs like `redprint.py` that want to
-use the infrared library, typically import only module infrared, which
-provides base classes that can be specialized to generate
-application-specific constraint networks and cluster trees for
-Infrared. Moreover the module provides classes to generate samples
+constraints/functions. 
+Python programs  using the infrared library,
+typically import module infrared, create an instance of Model and
+populate it with variables (specifying their finite domains), constraints
+and functions. The model automatically generates features from the
+functions; in order to generate and control several features, the functions
+can be assigned to function groups. Moreover, the user can define
+additional features.
+
+The model is passed to Samplers that can generate samples
 from a specific Boltzmann distrubition as well as samples targeted at
 specific feature values. The latter performed by multi-dimensional
 Boltzmann sampling. The module provides access to the Infrared core and
 exports the additional base classes 
+
 ```
-infrared.Feature            derived classes represent features like GC-content, or Turner energy
-infrared.FeatureStatistics  gathers statistsics of the feature values for a series of samples
-infrared.ConstraintNetwork  derived to construct the constraint network (variables,
-                            constraints, functions) of a problem instance 
-infrared.TreeDecomposition  derived to construct and represent the tree decomposition
+infrared.Model              allows to specify the constraint model by adding variables,
+                            domains, constraints, functions and features.
 infrared.BoltzmannSampler   wraps the Boltzmann sampling functionality
 infrared.MultiDimensionalBoltzmannSampler
                             additionally implements multi-dimensional Boltzmann sampling
+infrared.FeatureStatistics  gathers statistsics of the feature values for a series of samples
+infrared.Feature            derived classes represent features like GC-content, or Turner energy
+infrared.ClusterTree        wrapper for ired::ClusterTree
+infrared.ConstraintNetwork  derived to construct the constraint network (variables,
+                            constraints, functions) of a problem instance 
 ```
 
