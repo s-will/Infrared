@@ -228,6 +228,19 @@ class Model:
 
         self._functions[group].extend(functions)
 
+    def num_variables( self, name='X' ):
+        """@brief number of variables
+        @param name name of the variables series
+        @return number of variables of the given series
+        """
+        if name not in self._domains: return 0
+        return len( self._domains[name] )
+
+    def num_all_variables( self ):
+        """@brief number of all variables
+        @return number of all variables
+        """
+        return sum( len( self._domains[name] ) for name in self._domains )
 
     @property
     def domains( self ):
@@ -710,6 +723,10 @@ class BoltzmannSampler:
     @property
     def ct(self):
         return self._ct
+
+    @property
+    def model(self):
+        return self._model
 
     ## @brief Sets up the constraint network / cluster tree sampling
     ## engine
