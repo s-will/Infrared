@@ -1,4 +1,4 @@
-from .libinfrared import Function, Constraint
+from .libinfrared import Function, Constraint, FiniteDomain
 from . import libinfrared as libir
 from .infrared import seed, Model, ConstraintNetwork, ClusterTree, Feature,\
     FeatureStatistics, BoltzmannSampler, MultiDimensionalBoltzmannSampler,\
@@ -6,4 +6,4 @@ from .infrared import seed, Model, ConstraintNetwork, ClusterTree, Feature,\
 from . import rna
 
 
-__version__ = '0.6.0-alpha'
+__version__ = '0.7.0-alpha'

@@ -24,6 +24,7 @@
 #include <iterator>
 
 #include "cluster.hpp"
+#include "finite_domain.hpp"
 
 namespace ired {
 
@@ -165,16 +166,14 @@ namespace ired {
      *  - functions
      *
      * The variables in a contraint network are indexed (0..n-1). Each
-     * variable has a domain of values 0..domsize.  A constraint
-     * network object holds shared pointers to the functions and
-     * constraints of the network. In this way, it guarantees their
-     * existence as long as the network exists.
+     * variable has a finite domain.  A constraint network object holds
+     * shared pointers to the functions and constraints of the network. In
+     * this way, it guarantees their existence as long as the network
+     * exists.
      */
-    template<class FunValue, class EvaluationPolicy>
-    class ConstraintNetwork {
-    public:
-        using var_idx_t = int;
-        using var_value_t = int;
+    template<class FunValue, class EvaluationPolicy> class
+    ConstraintNetwork { public: using var_idx_t = int; using var_value_t =
+        int;
 
         using fun_value_t = FunValue;
 
@@ -196,15 +195,15 @@ namespace ired {
          * @brief Construct with domains
          */
         explicit
-        ConstraintNetwork(const std::vector<int> &domsizes)
-            : domsizes_(domsizes) {
+        ConstraintNetwork(const FiniteDomains &domains)
+            : domains_(domains) {
         };
 
         /**
-         * @brief Construct with uniform domains
+         * @brief Construct with domains of equal size
          */
-        ConstraintNetwork(int num_vars, int domsize)
-            : domsizes_(num_vars, domsize) {
+        ConstraintNetwork(int num_vars, FiniteDomain domain)
+            : domains_(num_vars, domain) {
         };
 
 
@@ -217,9 +216,9 @@ namespace ired {
          * @returns 0-based index of the new variable
          */
         var_idx_t
-        add_variable(int domainsize) {
-            domsizes_.push_back(domainsize);
-            return domsizes_.size()-1;
+        add_variable(FiniteDomain domain) {
+            domains_.push_back(domain);
+            return domains_.size()-1;
         }
 
         /**
@@ -241,7 +240,7 @@ namespace ired {
                 // for evaluating the constraints, construct a
                 // constraint network with the same variables
                 // and domains as this one, which evaluates constraints
-                auto cn = ConstraintNetwork<bool, StdEvaluationPolicy<bool>>(domsizes_);
+                auto cn = ConstraintNetwork<bool, StdEvaluationPolicy<bool>>(domains_);
                 auto mx = std::make_shared<MaterializedFunction<bool, vecS>>(x.get(),cn);
 
                 constraints_.push_back( mx );
@@ -278,23 +277,21 @@ namespace ired {
          * @brief Number of variables
          */
         int
-        num_vars() const {return domsizes_.size();}
+        num_vars() const {return domains_.size();}
 
         /**
-         * @brief Get vector of domain sizes (read only)
+         * @brief Get vector of domains (read only)
          */
         const
-        auto & domsizes() const {
-            return domsizes_;
+        auto & domains() const {
+            return domains_;
         }
 
     private:
-        std::vector<int> domsizes_;
+        FiniteDomains domains_;
 
         std::vector<std::shared_ptr<function_t>> functions_;
         std::vector<std::shared_ptr<constraint_t>> constraints_;
-
-
     };
 
 }

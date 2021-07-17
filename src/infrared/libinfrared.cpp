@@ -94,7 +94,6 @@ PYBIND11_MODULE(libinfrared,ir)
 
     py::class_< Assignment >
         (ir, "Assignment")
-        .def(py::init<int>())
         .def("values", &Assignment::values,
              py::return_value_policy::copy)
         ;
@@ -129,7 +128,20 @@ PYBIND11_MODULE(libinfrared,ir)
              py::return_value_policy::copy)
         ;
 
+    py::class_< FiniteDomain >(ir, "FiniteDomain" )
+        .def(py::init<int>())
+        .def(py::init<int,int>())
+        .def(py::init<std::pair<int,int>>())
+        .def("lb", &FiniteDomain::lb)
+        .def("ub", &FiniteDomain::ub)
+        .def("size", &FiniteDomain::size)
+        .def("undet", &FiniteDomain::undet)
+        .def("in", &FiniteDomain::in)
+        ;
+
     py::class_< PFClusterTree >(ir,"PFClusterTree")
+        .def(py::init<int,FiniteDomain>())
+        .def(py::init<const FiniteDomains &>())
         .def(py::init<int,int>())
         .def(py::init<const std::vector<int> &>())
         .def("add_root_cluster", &ClusterTree<>::add_root_cluster)

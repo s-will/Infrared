@@ -23,6 +23,9 @@
 #include <iostream>
 #include <functional>
 
+
+#include "finite_domain.hpp"
+
 namespace ired {
     template<class ConstraintNetwork>
     class AssignmentIterator;
@@ -54,9 +57,8 @@ namespace ired {
      *
      * In an assignment for the CN, variables are associated to values
      * in their finite integer domain (according to CN) or are
-     * undetermined (implemented as special value
-     * Undetermined=-1). Assignments are total, if no variable is
-     * undetermined.
+     * undetermined (encoded domain specifically!).
+     * Assignments are total, if no variable is undetermined.
      *
      * Partial assignments can be enumerated using objects of class
      * AssignmentIterator. Such iterators are generated for an
@@ -87,14 +89,18 @@ namespace ired {
         /**
          * @brief construct empty
          *
-         * @param size number of variables
+         * @param domains domains of the variables; attention: domains must
+         * stay available
          *
          * after construction, all variables are undetermined
          */
         explicit
-        Assignment(int size)
-            :values_(size, Undetermined)
+        Assignment(const FiniteDomains &domains)
+            :values_(domains.size()), domains_(domains)
         {
+            for ( int i=0; i <= values_.size(); ++i ) {
+                set_undet(i);
+            }
         }
 
         /**
@@ -131,18 +137,18 @@ namespace ired {
          */
         auto
         is_det(var_idx_t i) const {
-            return values_[i] != Undetermined;
+            return values_[i] != domains_[i].undet();
         }
-
+ 
         /**
          * @brief set variables to undetermined
          * @param i index of variable
          */
         void
         set_undet(var_idx_t i) {
-            values_[i] = Undetermined;
+            values_[i] = domains_[i].undet();
         }
-
+ 
         /**
          * @brief set variables to undetermined
          * @param xs vector of variable indices
@@ -152,6 +158,15 @@ namespace ired {
             for (auto x: xs) {
                 set_undet(x);
             }
+        }
+
+        /**
+         * @brief increment value of variable
+         * @param i index of variable
+         */
+        void
+        inc(var_idx_t i) {
+            domains_[i].inc( values_[i] );
         }
 
         /**
@@ -186,7 +201,8 @@ namespace ired {
             // for each function
             auto x = EP::one();
             for( const auto &f : functions ) {
-                if ( all_of( f->vars().begin(), f->vars().end(), [&] (auto x) {return is_det(x);} ) )
+                if ( all_of( f->vars().begin(), f->vars().end(),
+                             [&] (auto v) { return is_det(v); } ) )
                     {
                         // evaluate f
                         x = EP::mul( x, (*f)(*this) );
@@ -197,15 +213,11 @@ namespace ired {
 
     private:
         /**
-         * @brief special variable value signalling 'Undetermined'
-         */
-        static const int Undetermined = -1;
-
-        /**
          * @brief vector holding a value (or Undetermined) for each
          * variable
          */
         std::vector<var_value_t> values_;
+        const FiniteDomains &domains_;
     }; // end class Assignment
 
 
@@ -266,11 +278,11 @@ namespace ired {
                            )
             : a_(a),
               vars_(vars),
-              domsizes_(cn.domsizes()),
+              domains_(cn.domains()),
               top_( 0 ),
               stage1_size_( -1 ) // init without staging
         {
-            a_.set_undet(vars_);
+            a_.set_undet( vars_ );
 
             // set up value stack
             value_stack_.resize(vars_.size()+1);
@@ -353,9 +365,9 @@ namespace ired {
 
                 // determine the next valid candidate partial assignment
                 do {
-                    a_[vars_[top_]] ++;
+                    a_.inc( vars_[top_] );
 
-                    while ( a_[vars_[top_]] >= domsizes_[vars_[top_]] ) {
+                    while ( a_[vars_[top_]] > domains_[vars_[top_]].ub() ) {
 
                         // call hook after each complete enum of stage2
                         // (i.e. at return to stage1)
@@ -363,14 +375,14 @@ namespace ired {
                             finish_stage2_hook_();
                         }
 
-                        a_.set_undet(vars_[top_]);
+                        a_.set_undet( vars_[top_] );
+
                         top_ --;
                         if ( top_ < 0 ) {
                             // terminate if stack is empty
                             return *this;
                         }
-
-                        a_[vars_[top_]] ++;
+                        a_.inc( vars_[top_] );
                     }
 
                     //repeat until the top variable has a valid value
@@ -413,7 +425,7 @@ namespace ired {
 
         assignment_t &a_;
         const std::vector<var_idx_t> &vars_;
-        const std::vector<int> &domsizes_;
+        const FiniteDomains &domains_;
         typename board_t<constraint_t>::type constraint_board_;
         typename board_t<function_t>::type function_board_;
         int top_;
@@ -491,7 +503,7 @@ namespace ired {
                 int last_idx = -1;
                 for ( auto var : f->vars() ) {
                     // skip determined variables of f
-                    if ( a_.is_det(var)  ) continue;
+                    if ( a_.is_det(var) ) continue;
 
                     // determine maximum index of this variable (in the order of the variables
                     // of the assignment iterator)
@@ -514,7 +526,7 @@ namespace ired {
         }
     }; // end class AssignmentIterator
 
-    const int Assignment::Undetermined;
+    // const int Assignment::Undetermined;
 
     template<class CN>
     auto

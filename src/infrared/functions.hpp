@@ -208,7 +208,7 @@ namespace ired {
          * @brief construct 'empty' with variables, domains, and zero value
          *
          * @param vars vector of indices of variable in a cn
-         * @param domsizes domain sizes of the variables in the cn; domsizes must outlife this object
+         * @param domains domains of the variables in the cn
          * @param zero value (default for not explicitly set function values)
          *
          * The (non-zero) function values are typically set after
@@ -220,7 +220,7 @@ namespace ired {
                              )
             :
             parent_t(vars),
-            domsizes_(extract_domsizes(cn.domsizes())),
+            domains_(extract_domains(cn.domains())),
             zero_(ConstraintNetwork::evaluation_policy_t::zero()),
             name_("Message")
         {
@@ -243,7 +243,7 @@ namespace ired {
                              )
             :
             parent_t(function->vars()),
-            domsizes_(extract_domsizes(cn.domsizes())),
+            domains_(extract_domains(cn.domains())),
             zero_(ConstraintNetwork::evaluation_policy_t::zero()),
             name_(function->name())
         {
@@ -253,7 +253,7 @@ namespace ired {
 
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
 
-            auto a = Assignment(cn.num_vars());
+            auto a = Assignment(cn.domains());
 
             auto constraints = std::vector<const typename constraint_network_t::constraint_t *>();
             auto functions = std::vector<const typename constraint_network_t::function_t *> {function};
@@ -317,14 +317,14 @@ namespace ired {
         datasize() const {return data_.size();}
 
     private:
-        const std::vector<int> domsizes_;
+        FiniteDomains domains_;
         data_t data_;
         fun_value_t zero_;
         std::string name_;
 
         auto
-        extract_domsizes(const std::vector<int> &v) {
-            auto ds = std::vector<int>();
+        extract_domains(const FiniteDomains &v) {
+            auto ds = FiniteDomains();
             for ( auto x: this->vars() ) {
                 ds.push_back(v[x]);
             }
@@ -339,9 +339,9 @@ namespace ired {
             size_t x = 0;
             size_t i = 0;
             auto vars = this->vars();
-            for ( size_t i=0; i < domsizes_.size(); i++) {
-                x *= domsizes_[i];
-                x += a[vars[i]];
+            for ( size_t i=0; i < domains_.size(); i++) {
+                x *= domains_[i].size();
+                x += a[vars[i]] - domains_[i].lb();
             }
             return x;
         }
@@ -350,7 +350,8 @@ namespace ired {
         //! values
         auto
         calc_size() const {
-            return std::accumulate( domsizes_.begin(), domsizes_.end(), 1, std::multiplies<int>() );
+            return std::accumulate( domains_.begin(), domains_.end(), 1,
+                       [](int acc, const FiniteDomain &x) { return x.size()*acc; } );
         }
     };
 

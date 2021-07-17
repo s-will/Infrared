@@ -197,7 +197,24 @@ class Model:
         if name not in self._domains:
             self._domains[name] = []
 
-        self._domains[name].extend( [domain] * number )
+        self._domains[name].extend( [ libir.FiniteDomain(domain) for _ in range(number) ] )
+
+    def restrict_domains( self, vars, domain ):
+        """!@brief restrict the domain of a variable
+        @param vars variable or list of variables, each specified by (name,index); or simply index, then addressing ('X',index)
+        @param domain the domain
+
+        @note the domain bounds must be stricter than the original domain
+        """
+        newdom = libir.FiniteDomain(domain)
+        if type(vars) != list:
+            vars = [vars]
+        for v in vars:
+            name,i = v if type(v) == tuple else ('X',v)
+
+            assert(self._domains[name][i].lb() <= newdom.lb())
+            assert(self._domains[name][i].ub() >= newdom.ub())
+            self._domains[name][i] = newdom
 
     def add_constraints(self, constraints):
         """!@brief add constraints to the model
@@ -345,13 +362,10 @@ class Model:
                 f.weight = weight
 
     def idx( self, variables ):
-        take1 = False
-        try:
-            variables = list(variables)
-        except:
-            variables = [ variables ]
-            take1 = True
-
+        """!@brief raw indices of named variables
+        @param variables list of (potentially) names variables; default name 'X'
+        @return list of (internal) variable indices
+        """
         def convert(var):
             try:
                 (name,idx) = var
@@ -365,10 +379,6 @@ class Model:
             return offset + idx
 
         variables = [ convert(var) for var in variables ]
-
-        if take1:
-            variables = variables[0]
-
         return variables
 
 ## @brief Constraint network
@@ -457,8 +467,7 @@ class ClusterTree:
 
     ## @brief Construct the cluster tree object of the C++ engine
     ##
-    ## domains can either specify a uniform domain size, or a
-    ## list of all domain sizes
+    ## @param domains description of the domains 
     def construct_cluster_tree(self, domains, td):
         bagconstraints, bagfunctions = self.get_bag_assignments()
 

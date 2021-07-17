@@ -101,8 +101,26 @@ namespace ired {
          * its length specifies the number of variables
          */
         explicit
-        ClusterTree(const std::vector<int> &domsizes)
-            : cn_(domsizes) {
+        ClusterTree(const FiniteDomains &domains)
+            : cn_( domains ) {
+        };
+
+        /**
+         * @brief construct from vector of upper bounds
+         */
+        explicit 
+        ClusterTree(std::vector<int> domsizes) 
+            : cn_( domains_from_domsizes( domsizes ) ) {
+        }
+
+        /**
+         * @brief Construct with uniform domains
+         *
+         * @param num_vars the number of variables in the underlying constraint network
+         * @param domsize uniform domain size of each variable
+         */
+        ClusterTree(int num_vars, const FiniteDomain &domain)
+            : cn_(num_vars, domain) {
         };
 
         /**
@@ -112,7 +130,7 @@ namespace ired {
          * @param domsize uniform domain size of each variable
          */
         ClusterTree(int num_vars, int domsize)
-            : cn_(num_vars, domsize) {
+            : cn_( num_vars, FiniteDomain(0, domsize-1) ) {
         };
 
         ~ClusterTree() {}
@@ -247,6 +265,15 @@ namespace ired {
         auto
         single_empty_root();
 
+        auto domains_from_domsizes( std::vector<int> &domsizes ) {
+            auto domains = FiniteDomains();
+            for (auto x: domsizes) { 
+                domains.push_back( FiniteDomain( 0, x - 1 ) );
+            }
+            return domains;
+        }
+
+
         // Define the method used for evaluating the tree. It will be
         // called by boost::graph's depth first search algorithm at
         // edges after leaving the corresponding subtree.
@@ -275,7 +302,7 @@ namespace ired {
 
                 auto message = std::make_unique<message_t>(sep, cn_);
 
-                auto a = Assignment(cn_.num_vars());
+                auto a = assignment_t(cn_.domains());
 
                 auto it = a.make_iterator
                     (sep_diff,
@@ -360,7 +387,7 @@ namespace ired {
             assignment_t &a_;
         };
 
-    };
+    }; // end class ClusterTree
 
     // return single empty cluster that roots the tree; if such a
     // cluster exists or was generated before, simply return it;
@@ -416,7 +443,7 @@ namespace ired {
 
             boost::depth_first_search(tree_, visitor(cte_visitor).root_vertex(root));
 
-            auto a = Assignment(cn_.num_vars());
+            auto a = assignment_t(cn_.domains());
             evaluation_result_ = a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
 
             evaluated_ = true;
@@ -434,7 +461,7 @@ namespace ired {
         assert(evaluated_);
         //assert(is_consistent());
 
-        auto a = assignment_t(cn_.num_vars());
+        auto a = assignment_t(cn_.domains());
 
         auto sample_visitor = boost::make_dfs_visitor(sample_examine_edge(cn_,a));
 
