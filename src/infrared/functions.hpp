@@ -33,6 +33,7 @@
 #include <numeric>
 
 #include "assignment.hpp"
+#include "simple_map.hpp"
 
 namespace ired {
 
@@ -117,6 +118,14 @@ namespace ired {
     struct mapS {};
 
     /**
+     * @brief simple map selector class
+     *
+     * for selecting an extra space saving, specialized sparse table to represent
+     * materialized functions
+     */
+    struct simple_mapS {};
+
+    /**
      * @brief vector selector class
      *
      * for selecting a non-sparse table to represent
@@ -180,6 +189,36 @@ namespace ired {
     };
 
     /**
+     * @brief Class implementing the specializations to enable
+     * space saving instantiation of sparse materialized function classes
+     * using the specialized 'map' implementation simple_map
+     * @note this requires strictly in order write access and has log
+     * read access time
+     */
+    template<class FunValue>
+    struct container_selector<FunValue,simple_mapS> {
+        using type = SimpleMap<int,FunValue>;
+        static void init(type &x, size_t size, const FunValue &zero) {
+        }
+        static const FunValue& get(const type &x, size_t i, const FunValue &zero) {
+            auto it = x.find(i);
+            if (it != x.end()) return it->second; else return zero;
+        }
+        static bool guaranteed_zero(const type &x, size_t i) {
+            return x.find(i) == x.end();
+        }
+        static void set( type &x, size_t i, const FunValue &v, const FunValue &zero ) {
+            if (v!=zero) {
+                x.push_ascending(i,v);
+            } else {
+                // x.erase(i); //erases key i if it exists
+            }
+        }
+    };
+
+
+
+    /**
      * @brief A materialized function
      *
      * A function that holds a table of function values. It is used to
@@ -190,7 +229,7 @@ namespace ired {
      * value table. The choice is made by a template mechanism using
      * selector classes.
      */
-    template< class FunValue, class ContainerS=mapS >
+    template< class FunValue, class ContainerS = simple_mapS >
     class MaterializedFunction : public Function<FunValue> {
     public:
         using self_t = MaterializedFunction<FunValue,ContainerS>;

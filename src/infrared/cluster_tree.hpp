@@ -66,7 +66,7 @@ namespace ired {
         using constraint_t = typename constraint_network_t::constraint_t;
         using function_t = typename constraint_network_t::function_t;
 
-        using message_t = MaterializedFunction<fun_value_t,mapS>;
+        using message_t = MaterializedFunction<fun_value_t>;
 
         //! @brief information at a vertex (=cluster/bag) of the tree
         struct vertex_info_t {
