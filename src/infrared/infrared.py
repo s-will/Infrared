@@ -135,7 +135,7 @@ def _generic_def_function_class( classname, init, value, module="__main__",
 
     Defines a new class with name 'classname' (by default in the module's namespace)
 
-    Objects of the defined class can be used in the construction of the infrared constraint network.
+    Objects of the defined class can be used in the construction of the infrared constraint model.
     Note that `init` defines the dependencies in the order of the (positional) arguments of `value`.
 
     @note the value function can depend on arguments to the function init,
@@ -227,7 +227,7 @@ class Model:
 
         self._constraints.extend(constraints)
 
-    def add_functions( self, functions, group = '*' ):
+    def add_functions( self, functions, group = 'base' ):
         """!@brief add constraints to the model
         @param constraints an iterable of constraints or a single constraint
         """
@@ -245,7 +245,7 @@ class Model:
 
         self._functions[group].extend(functions)
 
-    def num_variables( self, name='X' ):
+    def num_named_variables( self, name ):
         """@brief number of variables
         @param name name of the variables series
         @return number of variables of the given series
@@ -253,46 +253,23 @@ class Model:
         if name not in self._domains: return 0
         return len( self._domains[name] )
 
-    def num_all_variables( self ):
+    @property
+    def num_variables( self ):
         """@brief number of all variables
         @return number of all variables
         """
         return sum( len( self._domains[name] ) for name in self._domains )
 
     @property
-    def domains( self ):
-        """
-        @brief Domains of the model
-
-        @return A list of the domainsizes of all variables
-        """
-        return self._domains
-
-    @property
     def constraints( self ):
         """
-        @brief Functions of the model
+        @brief Constraints of the model
         @return specification of the model's functions
         """
         return self._constraints
 
     @property
     def functions( self ):
-        """
-        @brief Functions of the model
-        @return specification of the model's functions
-
-        Functions can be either specified as list or dictionary of function groups.
-        If defined as list, all functions will be assigned to a single group "Total".
-        Functions can be assigned to more than one group.
-        @todo: remember to set weights and make functions unique before feeding them to the CN
-
-        Function groups are used to derive the features of the model.
-        """
-        return self._functions
-
-    @property
-    def all_functions( self ):
         """!@brief All functions of the model
         @return list of all functions
         """
@@ -302,8 +279,8 @@ class Model:
         return fs
 
     @property
-    def all_domains( self ):
-        """!@brief list of all domain indices
+    def domains( self ):
+        """!@brief list of all domain descriptions
         """
         doms = []
         for k in self._domains:
@@ -317,7 +294,7 @@ class Model:
         Feature with value that is derived as sum of the feature functions
         """
         def eval_fun(sample):
-            return sum( f.value(sample) for f in self.functions[group] )
+            return sum( f.value(sample) for f in self._functions[group] )
 
         return Feature(group, eval_fun, group = group)
 
@@ -381,55 +358,26 @@ class Model:
         variables = [ convert(var) for var in variables ]
         return variables
 
-## @brief Constraint network
-## @todo: merge with Model
-##
-## The constraint network typically holds the problem instance-specific
-## constraints and functions. The fields and methods of this class are
-## up to the user; typically, one could define fields dependencies,
-## functions, and constraints.
-class ConstraintNetwork:
-    def __init__(self, model):
-        self._domains = model.all_domains
-        self._constraints = model.constraints
-        self._functions = model.all_functions
-
-    ## @brief infer dependencies from the functions and constraints
-    ##
-    ## @param non_redundant whether the dependency list is made non-redundant
-    ## @returns list of lists of indices of variables that depend on each other either through functions or constraints
     def dependencies(self, non_redundant=True):
-        deps = [ x.vars() for x in self.get_functions() + self.get_constraints() ]
-
+        """!@brief dependencies due to constraints and functoins
+        @param non_redundant whether the dependency list is made non-redundant
+        @returns list of lists of indices of variables that depend on each
+        other either through functions or constraints
+        """
+        deps = [ x.vars() for x in self.functions + self.constraints ]
         if non_redundant:
             deps = self._remove_redundant_dependencies(deps)
 
         return deps
 
-    ## @brief list of all functions
-    def get_functions(self):
-        return self._functions
-
-    ## @brief list of all constraints
-    def get_constraints(self):
-        return self._constraints
-
-    def get_varnum(self):
-        return len(self._domains)
-
-    # list of the domain sizes of each variable
-    def get_domains(self):
-        return self._domains
-
-    ## @brief Removes redundant dependencies
-    ##
-    ## @param deps list of dependencies (where a dependency is a list of indices)
-    ##
-    ## Removes all dependencies that are subsumed by other dependencies in deps
-    ##
-    ## @return pruned list of dependencies
     @staticmethod
     def _remove_redundant_dependencies(deps):
+        """!@brief Removes redundant dependencies
+        @param deps list of dependencies (where a dependency is a list of indices)
+
+        Removes all dependencies that are subsumed by other dependencies in deps
+        @return pruned list of dependencies
+        """
         def sublist(xs,ys):
             return all(x in ys for x in xs)
         def subsumed(dep,deps):
@@ -439,23 +387,20 @@ class ConstraintNetwork:
 
 ## @brief Cluster tree (wrapping the cluster tree class of the C++ engine)
 class ClusterTree:
-    def __init__(self, cn, *, td_factory = TreeDecompositionFactory(), td = None, EvalAlg = PFEvaluationAlgebra):
-        if td is None:
-            td = td_factory.create(cn.get_varnum(), cn.dependencies())
-
+    def __init__(self, model, td, *, EvalAlg = PFEvaluationAlgebra):
         self._EvalAlg = EvalAlg
 
-        self._cn = cn
+        self._model = model
 
         self._bagsets = list( map(set, td.get_bags()) )
 
 
         self._td = td
-        self._ct = self.construct_cluster_tree( cn.get_domains(), td )
+        self._ct = self.construct_cluster_tree( model.domains, td )
 
     @property
-    def cn(self):
-        return self._cn
+    def model(self):
+        return self._model
 
     @property
     def td(self):
@@ -519,7 +464,7 @@ class ClusterTree:
     ## @brief generate sample
     ## @returns a raw sample
     ##
-    ## @note raises exception ConsistencyError if the network is inconsistent.
+    ## @note raises exception ConsistencyError if the model is inconsistent.
     ## If the cluster tree was not evaluated (or consistency checked) before,
     ## it will be evaluated once on-demand.
     def sample(self):
@@ -538,10 +483,10 @@ class ClusterTree:
     ## straightforward non-redundant assignment of constraints and functions,
     ## each to some bag that contains all of their variables
     ##
-    ## assumes constraints and functions specified in self._cn
+    ## assumes constraints and functions specified in self._model
     def get_bag_assignments(self):
-        bagconstraints = self.assign_to_bags(self._cn.get_constraints())
-        bagfunctions = self.assign_to_bags(self._cn.get_functions())
+        bagconstraints = self.assign_to_bags(self._model.constraints)
+        bagfunctions = self.assign_to_bags(self._model.functions)
         return (bagconstraints, bagfunctions)
 
 
@@ -717,13 +662,12 @@ class BoltzmannSampler:
 
     ## @brief flag that engine requires setup
     def requires_reinitialization(self):
-        self._cn = None
         self._td = None
         self._ct = None
 
     @property
-    def cn(self):
-        return self._cn
+    def model(self):
+        return self._model
 
     @property
     def td(self):
@@ -733,11 +677,7 @@ class BoltzmannSampler:
     def ct(self):
         return self._ct
 
-    @property
-    def model(self):
-        return self._model
-
-    ## @brief Sets up the constraint network / cluster tree sampling
+    ## @brief Sets up the constraint model / cluster tree sampling
     ## engine
     ##
     ## @note do nothing, if the engine was already initialized before
@@ -748,10 +688,8 @@ class BoltzmannSampler:
         if self._ct != None:
             return
 
-        self._cn = self.gen_constraint_network()
-
         if self._td is None:
-            self._td = self._td_factory.create(self._cn.get_varnum(), self._cn.dependencies())
+            self._td = self._td_factory.create(self._model.num_variables, self._model.dependencies())
 
         if not skip_ct:
             self._ct = self.gen_cluster_tree()
@@ -797,18 +735,12 @@ class BoltzmannSampler:
         while(True):
             yield self.sample()
 
-    ## @brief Generate the constraint network
-    ## @param features the features (containing their weights)
-    ## @return the constraint network
-    def gen_constraint_network( self ):
-        return ConstraintNetwork( self._model )
-
     ## @brief Generate the populated cluster tree
     ## @param td tree decomposition
     ## @return cluster tree
     def gen_cluster_tree(self):
         ## make cluster tree
-        return ClusterTree(self._cn, td = self._td)
+        return ClusterTree(self._model, td = self._td)
 
 ## @brief Multi-dimensional Boltzmann sampler
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
