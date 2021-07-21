@@ -18,3 +18,17 @@ dist/
 src/infrared.egg-info/
 __pycache__
 .ipynb_checkpoints/
+
+Doc/html/
+Doc/latex/
+Makefile
+PKAlign/
+Papers/
+RNAPOND/
+RNARedPrint-untracked/
+RNARedPrint/
+TreeDecomp/
+cmake_install.cmake
+libinfrared.cpython-39-x86_64-linux-gnu.so
+varna-api/
+
