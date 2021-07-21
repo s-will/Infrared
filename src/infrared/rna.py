@@ -54,7 +54,7 @@ def_constraint_class( 'DifferentComplClassConstraint', lambda i,j: [i,j], lambda
 ##
 ## @return array bps encoding the structure like bps[i]=j for each bp
 ## {i,j}
-def parseRNAStructure(structure, *, opening = "([{<", closing = ")]}>"):
+def parse_RNA_array(structure, *, opening = "([{<", closing = ")]}>"):
     stack = { op:list() for op in opening }
     bps = [-1]*len(structure)
 
@@ -78,11 +78,11 @@ def parseRNAStructure(structure, *, opening = "([{<", closing = ")]}>"):
 ## @brief Parse RNA structure, returning list of base pairs
 ##
 ## @param structure dot bracket string of RNA structure
-## @see parseRNAStructure
+## @see parse_RNA_array
 ##
 ## @returns list of base pairs (i,j)
-def parseRNAStructureBps(structure, **kwargs):
-    s = parseRNAStructure(structure, **kwargs)
+def parse_RNA(structure, **kwargs):
+    s = parse_RNA_array(structure, **kwargs)
     bps = list()
     for i,j in enumerate(s):
         if i != -1 and i<j:
@@ -105,7 +105,7 @@ def is_complementary(x,y):
 ## @return list of base pairs that violate the complementarity constraints
 def invalid_bps(seq, struc):
     if type(struc)==str:
-        bps = parseRNAStructureBps(struc)
+        bps = parse_RNA(struc)
     else:
         bps = struc
     invalids = []
@@ -204,10 +204,16 @@ def read_inp(inpfh):
 def value_to_nucleotide(x):
     return "ACGU"[x]
 
-## @brief Convert list of integers (variable values) to string
-## (sequence) of nucleotides
-def values_to_sequence(xs):
+##! @brief Convert list of integers (variable values) to string
+##! (sequence) of nucleotides
+def values_to_seq(xs):
     return "".join(map(value_to_nucleotide, xs))
+
+##! @brief Convert assignment to sequence string
+##! @param ass assignment
+def ass_to_seq(ass):
+    return values_to_seq(ass.values())
+
 
 ## ------------------------------------------------
 ## RNA energy models / parameters

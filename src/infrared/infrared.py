@@ -385,15 +385,18 @@ class Model:
         return [ dep for dep in deps if not subsumed(dep,deps) ]
 
 
-## @brief Cluster tree (wrapping the cluster tree class of the C++ engine)
 class ClusterTree:
+    """!@brief Cluster tree (wrapping the cluster tree class of the C++ engine)
+
+    The functionality of this class should rather be used through higher
+    level interface classes like BoltzmannSampler
+    """
     def __init__(self, model, td, *, EvalAlg = PFEvaluationAlgebra):
         self._EvalAlg = EvalAlg
 
         self._model = model
 
         self._bagsets = list( map(set, td.get_bags()) )
-
 
         self._td = td
         self._ct = self.construct_cluster_tree( model.domains, td )
@@ -406,13 +409,9 @@ class ClusterTree:
     def td(self):
         return self._td
 
-    @property
-    def ct(self):
-        return self._ct
-
     ## @brief Construct the cluster tree object of the C++ engine
     ##
-    ## @param domains description of the domains 
+    ## @param domains description of the domains
     def construct_cluster_tree(self, domains, td):
         bagconstraints, bagfunctions = self.get_bag_assignments()
 
@@ -471,12 +470,6 @@ class ClusterTree:
         if not self.is_consistent():
             raise ConsistencyError("Inconsistent constraint model")
         return self._ct.sample()
-
-    def get_td(self):
-        return self._td
-
-    def get_bagsets(self):
-        return self._bagsets
 
     ## @brief Get assignments of functions and constraints to the bags
     ##
@@ -643,12 +636,6 @@ class FeatureStatistics:
 ## @brief Boltzmann sampler
 ## @todo simplify class, remove methods that were introduced to be overridable (which is not
 ## needed anymore)
-##
-## @todo define how precisely BoltzmannSampler is distinguished from ClusterTree !
-## (considering that ClusterTree already offers sampling functionality;
-## probably, it should not or we rename to PFClusterTree... !
-## this gets important, especially when algebras shall be integrated)
-##
 class BoltzmannSampler:
 
     ## @brief Construct from model
@@ -671,6 +658,7 @@ class BoltzmannSampler:
 
     @property
     def td(self):
+        self.setup_engine(skip_ct=True)
         return self._td
 
     @property
@@ -693,6 +681,15 @@ class BoltzmannSampler:
 
         if not skip_ct:
             self._ct = self.gen_cluster_tree()
+
+    def evaluate(self):
+        """!@brief evaluates the cluster tree
+        @return partition function
+        @note Evaluation is a potentially (depending on the treewidth) costly operation.
+        The method does not re-evaluate the tree if this was already done
+        """
+        self.setup_engine()
+        return self._ct.evaluate()
 
     def is_consistent(self):
         self.setup_engine()
@@ -824,3 +821,6 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             self._targeted_samples = self.targeted_samples()
 
         return next(self._targeted_samples)
+
+## Assign alias Sampler to MultiDimensionalBoltzmannSampler
+Sampler = MultiDimensionalBoltzmannSampler
