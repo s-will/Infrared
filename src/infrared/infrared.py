@@ -16,10 +16,11 @@ import re
 import sys
 import inspect
 import math
+import subprocess
 
 from . import libinfrared as libir
 
-from treedecomp import TreeDecompositionFactory, dotfile_to_pdf, dotfile_to_png
+from treedecomp import TreeDecompositionFactory
 from treedecomp import seed as tdseed
 
 from abc import ABC, abstractmethod
@@ -283,7 +284,7 @@ class Model:
         """!@brief list of all domain descriptions
         """
         doms = []
-        for k in self._domains:
+        for k in sorted( self._domains.keys() ):
             doms.extend( self._domains[k] )
         return doms
 
@@ -349,7 +350,7 @@ class Model:
             except:
                 return var
             offset = 0
-            for k in self._domains:
+            for k in sorted(self._domains.keys()):
                 if k==name:
                     break
                 offset += len(self._domains[k])
@@ -359,20 +360,36 @@ class Model:
         return variables
 
     def dependencies(self, non_redundant=True):
-        """!@brief dependencies due to constraints and functoins
+        """!@brief dependencies due to constraints and functions
         @param non_redundant whether the dependency list is made non-redundant
         @returns list of lists of indices of variables that depend on each
         other either through functions or constraints
         """
         deps = [ x.vars() for x in self.functions + self.constraints ]
         if non_redundant:
-            deps = self._remove_redundant_dependencies(deps)
+            deps = self._remove_subsumed_dependencies(deps)
+            deps = list(set(map(tuple,deps)))
 
         return deps
 
+    def bindependencies(self, non_redundant=True):
+        return self._expand_to_cliques( self.dependencies(non_redundant) )
+
     @staticmethod
-    def _remove_redundant_dependencies(deps):
-        """!@brief Removes redundant dependencies
+    def _expand_to_cliques(dependencies):
+        """! @brief Expand non-binary dependencies to cliques of binary deps
+        @param dependencies list of dependencies
+        @return list of binary dependencies
+        """
+        import itertools
+        bindeps = list()
+        for d in dependencies:
+            bindeps.extend( itertools.combinations(d,2) )
+        return bindeps
+
+    @staticmethod
+    def _remove_subsumed_dependencies(deps):
+        """!@brief Removes redundant dependencies that are subsumed by others
         @param deps list of dependencies (where a dependency is a list of indices)
 
         Removes all dependencies that are subsumed by other dependencies in deps
@@ -382,7 +399,34 @@ class Model:
             return all(x in ys for x in xs)
         def subsumed(dep,deps):
             return any( len(dep)<len(dep2) and sublist(dep,dep2) for dep2 in deps )
-        return [ dep for dep in deps if not subsumed(dep,deps) ]
+        deps = [ dep for dep in deps if not subsumed(dep,deps) ]
+        return deps
+
+    def write_graph(self, out, non_redundant=True):
+        """!@brief Write dependency graph
+        @param out a filehandle of name of the target file
+        Writes the dependency graph to file in dot format.
+        """
+        if type(out) == str:
+            out = open(out, 'w')
+
+        out.write("graph G {\n\n")
+
+        for name in sorted(self._domains.keys()):
+            for idx,domain in enumerate(self._domains[name]):
+                label = name+str(idx)
+                out.write( "\tvar{} [label=\"{}\"];\n".format(idx, label) )
+        out.write("\n\n")
+
+        for dep in self.dependencies(non_redundant):
+            edgelabel = ''
+            if len(dep) == 2:
+                x,y = dep
+                out.write( "\tvar{} -- var{}  [label=\"{}\"];\n".format(x,y,edgelabel) )
+            if len(dep) > 2:
+                print("WARNING: Model.write_graph: hyper-edges not written")
+
+        out.write("\n}\n")
 
 
 class ClusterTree:
@@ -824,3 +868,23 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
 ## Assign alias Sampler to MultiDimensionalBoltzmannSampler
 Sampler = MultiDimensionalBoltzmannSampler
+
+
+## @brief Convert dot graph file format to png/pdf
+##
+## @param graphfile file of graph in dot format
+##
+## The graph is plotted and written to a pdf file by calling
+## graphviz's dot tool on th dot file.
+##
+def dotfile_to_tgt(graphfile, tgt, outfile=None):
+    if outfile is None:
+        outfile = re.sub(r".dot$","",graphfile)+"."+tgt
+    subprocess.check_output(["dot",f"-T{tgt}","-o",outfile,graphfile])
+
+def dotfile_to_pdf(graphfile, outfile=None):
+    dotfile_to_tgt(graphfile, "pdf", outfile)
+
+def dotfile_to_png(graphfile, outfile=None):
+    dotfile_to_tgt(graphfile, "png", outfile)
+
