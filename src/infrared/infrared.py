@@ -17,6 +17,7 @@ import sys
 import inspect
 import math
 import subprocess
+import copy
 
 from . import libinfrared as libir
 
@@ -96,7 +97,7 @@ class ArcticEvaluationAlgebra(EvaluationAlgebra):
 class WeightedFunction(libir.Function):
     """!@brief function of a constraint network
 
-    WeightedFunction have methods value() and weight(); value depends
+    WeightedFunction have properties value and weight; value depends
     on the variables defined at construction and returned by vars().
     """
 
@@ -330,8 +331,15 @@ class Model:
         """!@brief set the weight of a feature and its function group
         @param weight the weight
         @param name the feature name
+
+        This method sets the weight for the Feature itself and in
+        all the functions (currently!) in its group.
+
+        The method should be called after all functions of its group are defined.
+        Otherwise, weights of the feature and its functions get out of sync (but
+        can be re-synced by another call to this method.)
         """
-        self.features[name].weight = weight
+        self.features[name]._weight = weight
         groups = self.features[name].group
         if type(groups) != list:
             groups = [groups]
@@ -571,37 +579,44 @@ class ClusterTree:
                 bagconstraints[bidx].append(cons)
         return bagconstraints
 
-
 class Feature:
     """!@brief Feature in multi-dimensional Boltzmann sampling
-    A feature is one component of the sampling energy functions, which
+
+    A feature defines a (partial) evaluation/score of a sample, which
     can be targeted due to a dedicated weight. It defines a method
     value, which determines the feature's value for a sample.
 
-    A feature defines weight, target value, and tolerance. The latter
-    two are used only in case of multi-dimensional Boltzmann sampling,
-    which modifies the features weight based on the difference between
-    the estimated mean feature value and the target value.
     Moreover, a feature controls one or several groups of functions.
+
+    Features should belong to exactly one Model. Features have weights,
+    but their weights have to be synchronized with their functions.
+    The weight must be changed only by the model in sync
+    with the corresponding functions (set_feature_weight). For this reason,
+    weight is defined as a read-only property.
     """
-    def __init__(self, identifier, eval_function, weight = 0, target = None, tolerance = None, group = []):
+    def __init__(self, identifier, eval_function, group = []):
         """@brief Construct feature
         """
-        self.identifier = identifier
-        self.weight = weight
-        self.target = target
-        self.tolerance = tolerance
-        self.group = group
-        self.eval_function = eval_function
+        self._identifier = identifier
+        self._eval_function = eval_function
+        self._weight = 0
+        self._group = group
 
-    ## @brief Printable identifier
-    def idstring(self):
-        return str(self.identifier)
+    @property
+    def identifier(self):
+        return self._identifier
 
-    ## @brief Evaluate feature for given sample
-    def eval(self, sample):
-        return self.eval_function(sample)
+    def eval( self, sample ):
+        """!@brief Evaluate feature for given sample and weight"""
+        return self._eval_function(sample)
 
+    @property
+    def group( self ):
+        return self._group
+
+    @property
+    def weight( self ):
+        return self._weight
 
 ## @brief Keeping statistics on features
 ##
@@ -614,7 +629,7 @@ class FeatureStatistics:
     def __init__(self, keep=False):
         self.keep = keep
 
-        self.idstring = dict()
+        self.identifier = dict()
         self.count = dict()
         self.sums = dict()
         self.sqsums = dict()
@@ -635,7 +650,7 @@ class FeatureStatistics:
             fid = features[k].identifier
 
             if fid not in self.count:
-                self.idstring[fid] = features[k].idstring()
+                self.identifier[fid] = features[k].identifier
                 self.count[fid] = 0
                 self.sums[fid] = 0
                 self.sqsums[fid] = 0
@@ -675,20 +690,17 @@ class FeatureStatistics:
     def report(self):
         means = self.means()
         stds= self.stds()
-        return ' '.join(["{}={:3.2f} +/-{:3.2f}".format(self.idstring[fid],means[fid],stds[fid]) for fid in self.count])
+        return ' '.join(["{}={:3.2f} +/-{:3.2f}".format(self.identifier[fid],means[fid],stds[fid]) for fid in self.count])
 
-## @brief Boltzmann sampler
-## @todo simplify class, remove methods that were introduced to be overridable (which is not
-## needed anymore)
 class BoltzmannSampler:
+    """! @brief Boltzmann sampler
+    """
 
     ## @brief Construct from model
     ## @param model the constraint model
     def __init__( self, model, td_factory = TreeDecompositionFactory() ):
         self._td_factory = td_factory
         self._model = model
-        self.features = model.features
-
         self.requires_reinitialization()
 
     ## @brief flag that engine requires setup
@@ -783,14 +795,55 @@ class BoltzmannSampler:
         ## make cluster tree
         return ClusterTree(self._model, td = self._td)
 
-## @brief Multi-dimensional Boltzmann sampler
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
+    """!@brief Multi-dimensional Boltzmann sampler
+    """
+
     def __init__( self, model, td_factory=TreeDecompositionFactory() ):
         super().__init__( model, td_factory )
 
-        self.samples_per_round = 1000
+        # Copy the weighted functions of the model, such that we can change their weights
+        # during mdbs without altering the input model.
+        self.copy_model()
 
+        ## parameters controlling the mdbs procedure
+        self.samples_per_round = 1000
         self.tweak_factor = 0.01
+
+    def copy_model(self):
+        """!@ make specialized copy of the model
+        
+        Shallow copies most of the model, but construct new weighted function objects
+        and 'upcast' features
+        """
+        self._model = copy.copy(self._model)
+
+        def copy_function(f):
+            return f
+        
+        self._model._functions = { k:copy.copy(f) for k,f in self._model._functions.items() }
+
+        # 'up-cast' features into targetable features
+        self._model._features = { k:self.TargetableFeature(f) 
+                                    for k,f in self._model.features.items() }
+
+    class TargetableFeature(Feature):
+        """!@brief Feature with parameters
+
+        A targetable feature defines, for a specific feature,
+        its weight, target value, and tolerance. The latter
+        two are used only in case of multi-dimensional Boltzmann sampling,
+        which modifies the features weight based on the difference between
+        the estimated mean feature value and the target value.
+
+        TargetableFeatures should belong to exactly one Sampler.
+        """
+        def __init__(self, feature, target = None, tolerance = None):
+            super().__init__(feature._identifier,
+                    feature._eval_function,
+                    feature._group)
+            self.target = target
+            self.tolerance = tolerance
 
     ## @brief whether the sample is of good quality
     ## @param features dictionary of features
@@ -812,7 +865,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         """!@brief Set target of a feature
         @todo fix details
         """
-        f = self.features[featureid]
+        f = self._model.features[featureid]
         f.target = target
         f.tolerance = tolerance
 
@@ -826,6 +879,8 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     ##
     ## self.tweak_factor controls the speed of recalibration of weights
     def targeted_samples(self):
+        features = self._model.features
+
         means=None
 
         counter = 0
@@ -836,19 +891,19 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                 sample = self.sample()
 
                 ## evaluate all features
-                values = { k:self.features[k].eval(sample) for k in self.features }
+                values = { k:features[k].eval(sample) for k in features }
 
                 ## record the features
-                fstats.record_features( self.features, values )
+                fstats.record_features( features, values )
 
-                if self.is_good_sample( self.features, values ):
+                if self.is_good_sample( features, values ):
                     yield sample
 
             last_means=means
             means = fstats.means()
 
             # modify weight of each targeted feature
-            for fid,f in self.features.items():
+            for fid,f in features.items():
                 new_weight = 1
                 try:
                     new_weight = f.weight + self.tweak_factor*( f.target - means[fid] )
