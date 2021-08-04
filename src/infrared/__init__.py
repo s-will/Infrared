@@ -6,4 +6,4 @@ from .infrared import seed, Model, ClusterTree, Feature, FeatureStatistics, \
 from . import rna
 
 
-__version__ = '0.8.0-alpha'
+__version__ = '0.8.5-alpha'
