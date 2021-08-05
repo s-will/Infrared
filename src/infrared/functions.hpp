@@ -281,7 +281,7 @@ namespace ired {
                              const ConstraintNetwork &cn
                              )
             :
-            parent_t(function->vars()),
+            parent_t(unique(function->vars())),
             domains_(extract_domains(cn.domains())),
             zero_(ConstraintNetwork::evaluation_policy_t::zero()),
             name_(function->name())
@@ -299,7 +299,7 @@ namespace ired {
 
             auto initial_value = a.eval_determined(functions, ep()); //evaluate 0-ary functions
 
-            auto it = a.make_iterator(function->vars(),
+            auto it = a.make_iterator(this->vars(),
                                       cn,
                                       constraints,
                                       functions,
@@ -360,6 +360,14 @@ namespace ired {
         data_t data_;
         fun_value_t zero_;
         std::string name_;
+
+        template<class T>
+        auto unique( const std::vector<T> &xs ) {
+            auto vec = xs;
+            std::sort( vec.begin(), vec.end() );
+            vec.erase( std::unique( vec.begin(), vec.end() ), vec.end() );
+            return vec;
+        }
 
         auto
         extract_domains(const FiniteDomains &v) {

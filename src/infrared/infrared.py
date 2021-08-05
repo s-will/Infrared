@@ -461,7 +461,7 @@ class ClusterTree:
     The functionality of this class should rather be used through higher
     level interface classes like BoltzmannSampler
     """
-    def __init__(self, model, td, *, EvalAlg = PFEvaluationAlgebra):
+    def __init__( self, model, td, *, EvalAlg = PFEvaluationAlgebra ):
         self._EvalAlg = EvalAlg
 
         self._model = model
@@ -491,12 +491,13 @@ class ClusterTree:
         children = set()
 
         for bagidx in td.toposorted_bag_indices():
-            if not bagidx in children:
-                # enumerate subtree
-                stack = [(None,bagidx)]
+            if not bagidx in children: # --> bagidx is a root
+                # perform DFS of subtree of bagidx:
+                #   add cluster to cluster tree
+                #    and populate them with functions and constraints
+                stack = [(None,bagidx)] # stack entries: parent cluster index, bag index
                 while stack:
-                    (p,i) = stack[-1]
-                    stack = stack[:-1]
+                    (p,i) = stack.pop()
                     bagvars = sorted(list(self._bagsets[i]))
 
                     if p==None:
@@ -824,7 +825,7 @@ class BoltzmannSampler:
     ## @return cluster tree
     def gen_cluster_tree(self):
         ## make cluster tree
-        return ClusterTree(self._model, td = self._td)
+        return ClusterTree( self._model, td = self._td, EvalAlg = PFEvaluationAlgebra )
 
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     """!@brief Multi-dimensional Boltzmann sampler
