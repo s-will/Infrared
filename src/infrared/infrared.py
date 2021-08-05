@@ -105,7 +105,7 @@ class WeightedFunction(libir.Function):
 
     def __init__( self, variables ):
         super().__init__(variables)
-        self._weight = 1
+        self._weight = 0
 
     @abstractmethod
     def value(self):
@@ -122,11 +122,10 @@ class WeightedFunction(libir.Function):
     @staticmethod
     @property
     def algebra(algebra):
-        _algebra = algebra
+        return _algebra
 
     def __call__(self, a):
         return self._algebra.value( self.weight, self.value(a) )
-
 
 def _generic_def_function_class( classname, init, value, module="__main__",
             parentclass = WeightedFunction, valuefunname = "value" ):
@@ -145,6 +144,10 @@ def _generic_def_function_class( classname, init, value, module="__main__",
     """
 
     def _init(self, *args, **kwargs):
+        if "__direct_super__" in kwargs:
+            del kwargs["__direct_super__"]
+            super(self.__class__, self).__init__( *args,**kwargs )
+            return
 
         variables = init(*args,**kwargs)
         super(self.__class__, self).__init__( variables )
@@ -161,13 +164,25 @@ def _generic_def_function_class( classname, init, value, module="__main__",
         return value( *params, **self._args )
 
     def _str(self):
-        return '{} on {}'.format(self.__class__, self._vars)
+        return '{} on {}'.format( self.__class__, self.vars() )
+
+    def _copy( self ):
+        cp = (type(self))( self.vars(), __direct_super__ = True )
+        cp.__dict__.update(self.__dict__)
+        return cp
+
+    def _deepcopy( self, memo ):
+        cp = (type(self))( self.vars(), __direct_super__ = True )
+        cp.__dict__.update(self.__dict__)
+        return cp
 
     newclass = type( classname, (parentclass,),
                 {
                  "__init__": _init,
                  valuefunname: _value,
                  "__str__": _str,
+                 "__copy__": _copy,
+                 "__deepcopy__": _deepcopy,
                  "name": lambda self: classname
                  })
 
@@ -230,8 +245,11 @@ class Model:
         self._constraints.extend(constraints)
 
     def add_functions( self, functions, group = 'base' ):
-        """!@brief add constraints to the model
-        @param constraints an iterable of constraints or a single constraint
+        """!@brief add functions to the model
+        @param functions [const] an iterable of constraints or a single constraint
+        @param group indentifier of function group
+
+        @note deep copies the input functions
         """
 
         if group not in self._functions:
@@ -245,7 +263,7 @@ class Model:
         else:
             functions = [functions]
 
-        self._functions[group].extend(functions)
+        self._functions[group].extend( copy.deepcopy(functions) )
 
     def num_named_variables( self, name ):
         """@brief number of variables
@@ -698,10 +716,23 @@ class BoltzmannSampler:
 
     ## @brief Construct from model
     ## @param model the constraint model
-    def __init__( self, model, td_factory = TreeDecompositionFactory() ):
+    def __init__( self, model, td_factory = TreeDecompositionFactory(), lazy = True):
+        """!@brief Construct with model and optional td_factory
+
+        @param model [const] Constraint network model
+        @param td_factory Factory for tree decomposition
+        @param lazy delay construction of the data structures until required
+
+        @note the model is deepcopied such that it won't be modified and/or
+        later modifications of the model don't have effect on the sampler
+        """
+
+        self._model = copy.deepcopy(model)
         self._td_factory = td_factory
-        self._model = model
+
         self.requires_reinitialization()
+        if not lazy:
+            self.setup_engine()
 
     ## @brief flag that engine requires setup
     def requires_reinitialization(self):
@@ -799,51 +830,20 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     """!@brief Multi-dimensional Boltzmann sampler
     """
 
-    def __init__( self, model, td_factory=TreeDecompositionFactory() ):
-        super().__init__( model, td_factory )
+    def __init__( self, model, td_factory=TreeDecompositionFactory(), lazy = True ):
+        """!@brief Construct with model and optional td_factory
+        @param model [const] Constraint network model
+        @param td_factory Factory for tree decomposition
+        @param lazy delay construction of the data structures until required
 
-        # Copy the weighted functions of the model, such that we can change their weights
-        # during mdbs without altering the input model.
-        self.copy_model()
+        @see BoltzmannSampler.__init__()
+        """
+        super().__init__( model, td_factory, lazy )
 
         ## parameters controlling the mdbs procedure
         self.samples_per_round = 1000
         self.tweak_factor = 0.01
 
-    def copy_model(self):
-        """!@ make specialized copy of the model
-        
-        Shallow copies most of the model, but construct new weighted function objects
-        and 'upcast' features
-        """
-        self._model = copy.copy(self._model)
-
-        def copy_function(f):
-            return f
-        
-        self._model._functions = { k:copy.copy(f) for k,f in self._model._functions.items() }
-
-        # 'up-cast' features into targetable features
-        self._model._features = { k:self.TargetableFeature(f) 
-                                    for k,f in self._model.features.items() }
-
-    class TargetableFeature(Feature):
-        """!@brief Feature with parameters
-
-        A targetable feature defines, for a specific feature,
-        its weight, target value, and tolerance. The latter
-        two are used only in case of multi-dimensional Boltzmann sampling,
-        which modifies the features weight based on the difference between
-        the estimated mean feature value and the target value.
-
-        TargetableFeatures should belong to exactly one Sampler.
-        """
-        def __init__(self, feature, target = None, tolerance = None):
-            super().__init__(feature._identifier,
-                    feature._eval_function,
-                    feature._group)
-            self.target = target
-            self.tolerance = tolerance
 
     ## @brief whether the sample is of good quality
     ## @param features dictionary of features

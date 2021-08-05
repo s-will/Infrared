@@ -22,6 +22,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+//#include <pybind11/operators.h>
 #include <vector>
 #include <memory>
 
@@ -137,6 +138,10 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("size", &FiniteDomain::size)
         .def("undet", &FiniteDomain::undet)
         .def("in", &FiniteDomain::in)
+        .def("__copy__", [](const FiniteDomain &fd) {return FiniteDomain(fd);})
+        .def("__deepcopy__",
+                [](const FiniteDomain &fd, py::dict)
+                  {return FiniteDomain(fd);}, "memo" )
         ;
 
     py::class_< PFClusterTree >(ir,"PFClusterTree")
