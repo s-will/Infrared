@@ -208,7 +208,7 @@ namespace ired {
          *
          * @return evaluation result
          *
-         * Call this once before generating samples with sample()
+         * Call this once before generating tracebacks with traceback()
          *
          * @note multiple calls will not rerun the evaluation algorithm,
          * but return the stored evaluation result
@@ -223,32 +223,36 @@ namespace ired {
          *
          * @note Implicitely evaluates the cluster tree by calling @see
          * evaluate().  Consequently, after this method returned true,
-         * valid samples can be produced by @see sample().
+         * valid tracebacks can be produced by @see traceback().
          */
         bool is_consistent() {
             return evaluate() != evaluation_policy_t::zero();
         }
 
         /**
-         * @brief Generate a sample
+         * @brief Generate a traceback
          *
-         * @return assignment ("sample")
+         * @return assignment obtained by traceback
          *
-         * Generates one sample assignment. Requires that the cluster tree
+         * @note The nature of this traceback depends on the evaluation
+         * policy!
+         *
+         * Generates one traceback assignment. Requires that the cluster tree
          * was evaluated and is consistent.
-         * Arbitrarily many samples can be generated after a single
-         * evaluation.
+         * Arbitrarily many tracebacks can be generated after a single
+         * evaluation (which is of course mostly reasonable for non-det tb,
+         * like stochastic traceback)
          *
          * Results are NOT defined if the cluster tree was never evaluated (due to a call
          * to evaluate() or is_consistent()) or is not consistent. Calling
-         * sample on an inconsistent tree may even result in termination.
+         * traceback on an inconsistent tree may even result in termination.
          *
-         * On evaluated and consistent trees, we sample from a distribution
-         * controlled by the functions and constraints. When functions that
-         * return Boltzmann weights, assignments are sampled from a
+         * On evaluated and consistent trees, stochastic traceback, samples from a distribution
+         * controlled by the functions and constraints. When the functions
+         * return Boltzmann weights, assignments are traced back from a
          * Boltzmann distribution.
          */
-        auto sample();
+        auto traceback();
 
     private:
         constraint_network_t cn_;
@@ -340,13 +344,13 @@ namespace ired {
             tree_t &tree_;
         };
 
-        // Define the method used for sampling from the tree. It will
+        // Define the method used for trace back from the tree. It will
         // be called by boost::graph's depth first search algorithm at
         // edges before entering the corresponding subtree.
-        struct sample_examine_edge {
+        struct traceback_examine_edge {
             using event_filter = boost::on_examine_edge;
 
-            sample_examine_edge(constraint_network_t &cn,assignment_t &a)
+            traceback_examine_edge(constraint_network_t &cn,assignment_t &a)
                 : cn_(cn), a_(a) {}
 
             template <class Edge, class Graph>
@@ -359,26 +363,34 @@ namespace ired {
 
                 const auto &message = graph[e].message;
 
-                double r = rand()/(RAND_MAX+1.0) * (*message)(a_);
+                // evaluate message at partial assignment a_;
+                auto message_value = (*message)(a_);
+
+                // initialize the Selector
+                auto selector = typename evaluation_policy_t::selector(message_value);
 
                 assert ( a_.eval_determined(child.constraints(),
                                             StdEvaluationPolicy<bool>()) );
 
                 a_.set_undet(diff);
 
-                auto x = evaluation_policy_t::zero();
                 auto it = a_.make_iterator(diff, cn_,
                                            child.constraints(),
                                            child.functions(),
                                            a_.eval_determined(child.functions(),
                                                               evaluation_policy_t())
                                            );
+
+                // enumerate all combinations of values assigned to diff variables;
+                // recompute SUM_a(PROD_f(f(a))), where a runs over these
+                // combinations
+                auto x = evaluation_policy_t::zero();
                 for( ; ! it.finished(); ++it ) {
                     x = evaluation_policy_t::plus( x, it.value() );
 
-                    if ( x > r ) {
+                    if (selector.select(x)) {
                         break;
-                    }
+                    } 
                 }
             }
 
@@ -451,22 +463,22 @@ namespace ired {
         return evaluation_result_;
     }
 
-    // sample by running a specialized depth first search via
-    // boost::graph; see struct sample_examine_edge
+    // traceback by running a specialized depth first search via
+    // boost::graph; see struct traceback_examine_edge
 
     template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<FunValue,EvaluationPolicy>::sample() {
+    ClusterTree<FunValue,EvaluationPolicy>::traceback() {
 
         assert(evaluated_);
         //assert(is_consistent());
 
         auto a = assignment_t(cn_.domains());
 
-        auto sample_visitor = boost::make_dfs_visitor(sample_examine_edge(cn_,a));
+        auto traceback_visitor = boost::make_dfs_visitor(traceback_examine_edge(cn_,a));
 
         boost::depth_first_search(tree_,
-                                  visitor(sample_visitor)
+                                  visitor(traceback_visitor)
                                   .root_vertex(single_empty_root()));
 
         return a;

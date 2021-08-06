@@ -22,7 +22,6 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-//#include <pybind11/operators.h>
 #include <vector>
 #include <memory>
 
@@ -122,10 +121,10 @@ PYBIND11_MODULE(libinfrared,ir)
     py::class_< Function<int>, PyFunction<int>, std::shared_ptr<Function<int>> >
         intfunction(ir, "IntFunction");
 
-    function
+    intfunction
         .def(py::init<const std::vector<int> &>())
-        .def("__call__", &Function<>::operator ())
-        .def("vars", &Function<>::vars,
+        .def("__call__", &Function<int>::operator ())
+        .def("vars", &Function<int>::vars,
              py::return_value_policy::copy)
         ;
 
@@ -149,23 +148,24 @@ PYBIND11_MODULE(libinfrared,ir)
         .def(py::init<const FiniteDomains &>())
         .def(py::init<int,int>())
         .def(py::init<const std::vector<int> &>())
-        .def("add_root_cluster", &ClusterTree<>::add_root_cluster)
-        .def("add_child_cluster", &ClusterTree<>::add_child_cluster)
-        .def("add_constraint", &ClusterTree<>::add_constraint)
-        .def("add_function", &ClusterTree<>::add_function)
-        .def("evaluate", &ClusterTree<>::evaluate)
-        .def("is_consistent", &ClusterTree<>::is_consistent)
-        .def("sample", &ClusterTree<>::sample)
+        .def("add_root_cluster", &PFClusterTree::add_root_cluster)
+        .def("add_child_cluster", &PFClusterTree::add_child_cluster)
+        .def("add_constraint", &PFClusterTree::add_constraint)
+        .def("add_function", &PFClusterTree::add_function)
+        .def("evaluate", &PFClusterTree::evaluate)
+        .def("is_consistent", &PFClusterTree::is_consistent)
+        .def("sample", &PFClusterTree::traceback)
         ;
 
     py::class_< ArcticClusterTree >(ir,"ArcticClusterTree")
-        .def(py::init<int,int>())
-        .def(py::init<const std::vector<int> &>())
+        .def(py::init<int,FiniteDomain>())
+        .def(py::init<const FiniteDomains &>())
         .def("add_root_cluster", &ArcticClusterTree::add_root_cluster)
         .def("add_child_cluster", &ArcticClusterTree::add_child_cluster)
         .def("add_constraint", &ArcticClusterTree::add_constraint)
         .def("add_function", &ArcticClusterTree::add_function)
         .def("evaluate", &ArcticClusterTree::evaluate)
         .def("is_consistent", &ArcticClusterTree::is_consistent)
+        .def("optimize", &ArcticClusterTree::traceback)
         ;
 }

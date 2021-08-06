@@ -55,60 +55,78 @@ class ConsistencyError(RuntimeError):
         self.args = [arg]
 
 
+###########
+# classes to support different algebras;
+# switch between optimization and sampling
+#
+
 class EvaluationAlgebra(ABC):
     """!@brief Algebra for evaluating a constraint network
     """
 
     @staticmethod
     @abstractmethod
-    def cluster_tree(*args, **kwargs):
-        """!@brief the infrared cluster tree
-        @return the cluster tree that evaluates under the specific algebra"
+    def function(weighted_function):
+        """!@brief Translate weighted function to suitable libinfrared function
+        @param weighted_function an object of class WeightedFunction
         """
         pass
 
-    @staticmethod
-    @abstractmethod
-    def value(weight, value):
-        """!@brief Combine weight and value of weighted function
-        @param weight the weight
-        @param value the value
+    def interpret(self, value):
+        return value
 
-        @return combination of weight and value according to concrete algebra
-        """
-        pass
+class PFFunctionAdapter(libir.Function):
+    def __init__(self, wf):
+        super().__init__(wf.vars())
+        self._wf = wf
 
+    def __call__(self, a):
+        return math.exp(self._wf.weight * self._wf.value(a))
+
+    def __str__(self):
+        return f"<PFFunctionAdapter of {self._wf}>"
 
 class PFEvaluationAlgebra(EvaluationAlgebra):
-    """!@brief Partition function algebra for sampling"""
-    def cluster_tree(*args, **kwargs):
-        return libir.PFClusterTree(*args, **kwargs)
+    """!@brief Adapt to partition function algebra for sampling"""
+    
+    def function(self, weighted_function):
+        return PFFunctionAdapter(weighted_function)
 
-    def value(weight, value):
-        return math.exp(weight * value)
+class ArcticFunctionAdapter(libir.IntFunction):
+    def __init__(self, wf, scale):
+        super().__init__(wf.vars())
+        self._wf = wf
+        self._scale = scale
 
+    def __call__(self, a):
+        return int(self._wf.weight * self._wf.value(a) * self._scale)
+
+    def __str__(self):
+        return f"<ArcticFunctionAdapter of {self._wf}>"
 
 class ArcticEvaluationAlgebra(EvaluationAlgebra):
-    """!@brief Maximization algebra for optimization"""
+    """!@brief Adapt to maximization algebra for optimization"""
 
-    def cluster_tree(*args, **kwargs):
-        return libir.ArcticClusterTree(*args, **kwargs)
+    def __init__(self, scale):
+        self._scale = scale
 
-    def value(weight, value):
-        return weight * value
+    def function(self, weighted_function):
+        return ArcticFunctionAdapter(weighted_function, self._scale)
 
+    def interpret(self, value):
+        return value/self._scale
 
-class WeightedFunction(libir.Function):
+class WeightedFunction:
     """!@brief function of a constraint network
 
-    WeightedFunction have properties value and weight; value depends
-    on the variables defined at construction and returned by vars().
+    WeightedFunction have the features weight and variables; their value depends
+    on assignment to its variables
+
+    WeightedFunctions are 'translated' to functions of infrared by FunctionAdaptors
     """
 
-    _algebra = PFEvaluationAlgebra
-
     def __init__(self, variables):
-        super().__init__(variables)
+        self._vars = variables
         self._weight = 0
 
     @abstractmethod
@@ -123,14 +141,8 @@ class WeightedFunction(libir.Function):
     def weight(self, weight):
         self._weight = weight
 
-    @staticmethod
-    @property
-    def algebra(algebra):
-        return WeightedFunction._algebra
-
-    def __call__(self, a):
-        return self._algebra.value(self.weight, self.value(a))
-
+    def vars(self):
+        return self._vars
 
 def _generic_def_function_class(classname, init, value, module="__main__",
                                 parentclass=WeightedFunction,
@@ -483,38 +495,36 @@ class Model:
         out.write("\n}\n")
 
 
-class ClusterTree:
-    """!@brief Cluster tree (wrapping the cluster tree class of the C++ engine)
+class ClusterTreeBase:
+    """!@brief Cluster tree base class
 
-    The functionality of this class should rather be used through higher
-    level interface classes like BoltzmannSampler
+    This class provides functionality to construct and populate C++ 
+    cluster trees with constraints and functions.
+
+    It is used as mix-in class for the specialized cluster tree classes,
+    which wrap interface the C++/libinfrared cluster tree classes.
     """
 
-    def __init__(self, model, td, *, EvalAlg=PFEvaluationAlgebra):
-        self._EvalAlg = EvalAlg
-
+    def __init__(self, model, td, EvaluationAlgebra):
         self._model = model
+        self._td = td
+        self._EA = EvaluationAlgebra
 
         self._bagsets = list(map(set, td.get_bags()))
 
-        self._td = td
-        self._ct = self.construct_cluster_tree(model.domains, td)
+        self.construct_cluster_tree(model.domains, td)
 
-    @property
-    def model(self):
-        return self._model
+    def evaluate(self):
+        return self._EA.interpret(self._ct.evaluate())
 
-    @property
-    def td(self):
-        return self._td
+    def is_consistent(self):
+        return self._ct.is_consistent()
 
     # @brief Construct the cluster tree object of the C++ engine
     #
     # @param domains description of the domains
     def construct_cluster_tree(self, domains, td):
         bagconstraints, bagfunctions = self.get_bag_assignments()
-
-        ct = self._EvalAlg.cluster_tree(domains)
 
         # keep record of all non-root nodes
         children = set()
@@ -531,47 +541,19 @@ class ClusterTree:
                     bagvars = sorted(list(self._bagsets[i]))
 
                     if p is None:
-                        cluster = ct.add_root_cluster(bagvars)
+                        cluster = self._ct.add_root_cluster(bagvars)
                     else:
-                        cluster = ct.add_child_cluster(p, bagvars)
+                        cluster = self._ct.add_child_cluster(p, bagvars)
 
                     for x in bagconstraints[i]:
-                        ct.add_constraint(cluster, x)
+                        self._ct.add_constraint(cluster, x)
 
                     for x in bagfunctions[i]:
-                        ct.add_function(cluster, x)
+                        self._ct.add_function(cluster, self._EA.function(x))
 
                     for j in td.adj[i]:
                         children.add(j)
                         stack.append((cluster, j))
-        return ct
-
-    # @brief evaluates the cluster tree
-    # @return partition function
-    #
-    # @note Evaluation is a potentially (depending on the treewidth) costly
-    # operation. The method does not re-evaluate the tree if this was
-    # already done
-    def evaluate(self):
-        return self._ct.evaluate()
-
-    # @brief evaluates the cluster tree (and thereby checks consistency)
-    # @return whether the constraints are consistent
-    #
-    # @note does not re-evaluate the tree if this was already done
-    def is_consistent(self):
-        return self._ct.is_consistent()
-
-    # @brief generate sample
-    # @returns a raw sample
-    #
-    # @note raises exception ConsistencyError if the model is inconsistent.
-    # If the cluster tree was not evaluated (or consistency checked) before,
-    # it will be evaluated once on-demand.
-    def sample(self):
-        if not self.is_consistent():
-            raise ConsistencyError("Inconsistent constraint model")
-        return self._ct.sample()
 
     # @brief Get assignments of functions and constraints to the bags
     #
@@ -630,6 +612,22 @@ class ClusterTree:
                 bagconstraints[bidx].append(cons)
         return bagconstraints
 
+class ArcticClusterTree(ClusterTreeBase):
+    def __init__(self, model, td, scale = 100):
+        self._ct = libir.ArcticClusterTree(model.domains)
+        super().__init__(model, td, ArcticEvaluationAlgebra(scale))
+    
+    def optimize(self):
+        return self._ct.optimize()
+
+
+class PFClusterTree(ClusterTreeBase):
+    def __init__(self, model, td):
+        self._ct = libir.PFClusterTree(model.domains)
+        super().__init__(model, td, PFEvaluationAlgebra())
+    
+    def sample(self):
+        return self._ct.sample()
 
 class Feature:
     """!@brief Feature in multi-dimensional Boltzmann sampling
@@ -750,10 +748,10 @@ class FeatureStatistics:
                          for fid in self.count])
 
 
-class BoltzmannSampler:
-    """! @brief Boltzmann sampler
+class EngineBase(ABC):
+    """!@brief Abstract base class for samplers and optimizers
     """
-
+    
     # @brief Construct from model
     # @param model the constraint model
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
@@ -853,24 +851,82 @@ class BoltzmannSampler:
         self.setup_engine(skip_ct=True)
         return self._td.treewidth()
 
-    # @brief Compute next sample
-    # @return sample
+    def raise_if_inconsistent(self):
+        """!@brief Raise exception if inconsistent
+        """
+        if not self.is_consistent():
+            raise ConsistencyError("Inconsistent constraint model")
+
+    # @brief Generate the populated cluster tree
+    # @param td tree decomposition
+    # @return cluster tree
+    @abstractmethod
+    def gen_cluster_tree(self):
+        pass
+
+
+class ArcticOptimizer(EngineBase):
+    """!@brief Maximizing optimizer (based on arctic algebra)
+    """
+    
+    def __init__(self, model, td_factory=TreeDecompositionFactory(),
+                 lazy=True):
+        """!@brief Construct
+        @see EngineBase
+        """
+        super().__init__(model, td_factory, lazy)
+
+    def optimize(self):
+        """!@brief Optimal assignment
+        @returns one optimal assignment
+        """
+        self.setup_engine()
+        self.raise_if_inconsistent()
+        return self._ct.optimize()
+
+    def gen_cluster_tree(self):
+        """! @brief Suitable cluster tree
+        @returns arctic cluster tree for the model
+        """
+        return ArcticClusterTree(self._model, td=self._td)
+
+
+#!@brief short name for default Optimizer
+Optimizer = ArcticOptimizer
+
+
+class BoltzmannSampler(EngineBase):
+    """! @brief Boltzmann sampler
+    """
+
+    def __init__(self, model, td_factory=TreeDecompositionFactory(),
+                 lazy=True):
+        """!@brief Construct
+        @see EngineBase
+        """
+        super().__init__(model, td_factory, lazy)
+
+    # @brief generate sample
+    # @returns a raw sample
+    #
+    # @note raises exception ConsistencyError if the model is inconsistent.
+    # If the cluster tree was not evaluated (or consistency checked) before,
+    # it will be evaluated once on-demand.
     def sample(self):
         self.setup_engine()
-        return self._ct.sample()
+        self.raise_if_inconsistent()
+        return self._ct._ct.sample()
 
     # @brief Sample generator
     def samples(self):
         while(True):
             yield self.sample()
 
-    # @brief Generate the populated cluster tree
-    # @param td tree decomposition
-    # @return cluster tree
     def gen_cluster_tree(self):
-        # make cluster tree
-        return ClusterTree(self._model, td=self._td,
-                           EvalAlg=PFEvaluationAlgebra)
+        """! @brief Suitable cluster tree
+        @returns PF cluster tree for the model
+        """
+        return PFClusterTree(self._model, td=self._td)
 
 
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
@@ -897,7 +953,6 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
     #
     # checks whether the sample approximately meets the targets;
     # check only the targeted features (which have value, target and tolerance)
-
     def is_good_sample(self, features, values):
         ret = True
         for k, f in features.items():
@@ -972,7 +1027,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         return next(self._targeted_samples)
 
 
-# Assign alias Sampler to MultiDimensionalBoltzmannSampler
+# Define alias Sampler for MultiDimensionalBoltzmannSampler
 Sampler = MultiDimensionalBoltzmannSampler
 
 

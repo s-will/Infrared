@@ -22,6 +22,7 @@
 #include <memory>
 #include <limits>
 #include <iterator>
+#include <cstdlib>
 
 #include "cluster.hpp"
 #include "finite_domain.hpp"
@@ -29,7 +30,7 @@
 namespace ired {
 
     /**
-     * @brief The standard evaluation policy to calculate partition
+     * @brief The evaluation policy to calculate partition
      * functions.
      *
      * An evaluation policy defines an algebra with operations
@@ -46,11 +47,28 @@ namespace ired {
      * zero to 0.0, and one to 1.0
      */
     template<class FunValue>
-    class StdEvaluationPolicy {
+    class PFEvaluationPolicy {
     public:
         using fun_value_t = FunValue;
         using constraint_t = Function<bool>;
         using function_t = Function<fun_value_t>;
+
+        // selector for stochastic backtracking
+        class selector {
+        public:
+            selector(const fun_value_t &value): 
+                value_(value),
+                r_( rand()/(RAND_MAX+1.0) * value) {
+            }
+
+            auto
+            select(const fun_value_t &x) {
+                return x > r_;
+            }
+        private:
+            fun_value_t value_;
+            fun_value_t r_;
+        };
 
         static
         fun_value_t
@@ -77,6 +95,11 @@ namespace ired {
         }
     };
 
+    //! define PFEvaluationPolicy as standard
+    template<class FunValue>
+    class StdEvaluationPolicy: public PFEvaluationPolicy<FunValue> {
+    };
+
     /**
      * @brief Evaluation Strategy for Optimization (max/+); defining the arctic semiring
      *
@@ -94,6 +117,18 @@ namespace ired {
         using fun_value_t = FunValue;
         using constraint_t = Function<bool>;
         using function_t = Function<fun_value_t>;
+
+        // selector for 'classic' backtracking
+        class selector {
+        public:
+            selector(const fun_value_t &value): value_(value) {}
+            auto
+            select(const fun_value_t &x) {
+                return x==value_;
+            }
+        private:
+            fun_value_t value_;
+        };
 
         static
         fun_value_t
