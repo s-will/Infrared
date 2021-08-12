@@ -11,11 +11,11 @@
 #
 
 # @file
-##
+#
 # @brief Some RNA related functions
-##
+#
 # Loose library for some common tasks for RNA specific code
-##
+#
 
 import re
 import collections
@@ -24,55 +24,57 @@ import math
 from .infrared import def_constraint_class, def_function_class
 
 # @brief exception to signal inconsistency, when consistency would be required
-
-
 class ParseError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
 
 
+#####
 # define some constraints and functions for RNA design
-_compltab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
-def_constraint_class('ComplConstraint', lambda i, j: [i, j],
-                     lambda x, y: (x, y) in _compltab,
+
+# constrain complementarity of base pair
+_bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
+def_constraint_class('BPComp', lambda i, j: [i, j],
+                     lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
 
-# for testing: deactivate materialization of the complementarity constraint
-# ComplConstraint.auto_materialize = lambda self: False
-
-def_function_class('GCControl', lambda i: [i],
+# (position-wise) GC content
+def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
                    module=__name__)
 
+# energy of base pair
 def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    lambda x, y, is_terminal: _bpenergy(x, y, is_terminal),
                    module=__name__)
 
+# energy of stacking
 def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    lambda x, y, x1, y1: _stackenergy(x, y, x1, y1),
                    module=__name__)
 
-
+# constrain two nucleotides to be in the same complementarity class
 def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 == y & 1,
                      module=__name__)
 
+# constrain two nucleotides to be in different classes
 def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 != y & 1,
                      module=__name__)
 
 
 # @brief Parse RNA structure including pseudoknots
-##
+#
 # @param structure dot bracket string of RNA structure
 # @param opening specifies the recognized opening bracket symbols
 # @param closing specifies closing bracket symbols (corresponding to opening)
-##
+#
 # @note Characters not in opening or closing are considered unpaired.
-##
+#
 # @return array bps encoding the structure like bps[i]=j for each bp
 # {i,j}
-def parse_RNA_array(structure, *, opening="([{<", closing=")]}>"):
+def parse_array(structure, *, opening="([{<", closing=")]}>"):
     stack = {op: list() for op in opening}
     bps = [-1]*len(structure)
 
@@ -97,13 +99,13 @@ def parse_RNA_array(structure, *, opening="([{<", closing=")]}>"):
 
 
 # @brief Parse RNA structure, returning list of base pairs
-##
+#
 # @param structure dot bracket string of RNA structure
-# @see parse_RNA_array
-##
+# @see parse_array
+#
 # @returns list of base pairs (i,j)
-def parse_RNA(structure, **kwargs):
-    s = parse_RNA_array(structure, **kwargs)
+def parse(structure, **kwargs):
+    s = parse_array(structure, **kwargs)
     bps = list()
     for i, j in enumerate(s):
         if i != -1 and i < j:
@@ -121,10 +123,10 @@ def is_complementary(x, y):
 
 
 # @brief Get invalid base pairs
-##
+#
 # @param seq sequence string
 # @param struc structure as dot bracket string or base pair list
-##
+#
 # @return list of base pairs that violate the complementarity constraints
 def invalid_bps(seq, struc):
     if type(struc) == str:
@@ -149,12 +151,12 @@ def is_valid(seq, struc):
 
 
 # @brief Convert structure to list of edges in basepair model
-##
+#
 # @param structure array representation of RNA structure
 # @param[in,out] edges list of edges
-##
+#
 # Dependencies are appendes to edges
-##
+#
 # @note node indices are 0-based
 def structure_to_basepair_dependencies(structure, edges=[]):
     for (i, j) in enumerate(structure):
@@ -163,10 +165,10 @@ def structure_to_basepair_dependencies(structure, edges=[]):
 
 
 # @brief Convert structure to list of edges in stacking model
-##
+#
 # @param structure array representation of RNA structure
 # @param[in,out] edges list of edges
-##
+#
 # Dependencies are appendes to edges
 # @see structure_to_basepair_dependencies
 def structure_to_stacking_dependencies(structure, edges=[]):
@@ -195,7 +197,7 @@ def GC_content(seq):
 # @brief Make edges unique (considering symmetry)
 # @param xs list of edges
 # @return unique list of edges
-##
+#
 # keeps only one of (x,y) and (y,x), namely (x,y) if x<y
 def unique_edges(xs):
     d = {(min(x, y), max(x, y)): 1 for (x, y) in xs}
@@ -203,11 +205,11 @@ def unique_edges(xs):
 
 
 # @brief Read multiple structures from file in inp format
-##
+#
 # @param inpfh input file handle
-##
+#
 # @return list of the structures as dot bracket strings
-##
+#
 # inp format is a file format to specify instances for multi-target
 # RNA design, e.g. used in the benchmarks of Modena and RNAblueprint
 def read_inp(inpfh):

@@ -8,4 +8,4 @@ from .infrared import seed, Model, Feature, FeatureStatistics, \
 from . import rna
 
 
-__version__ = '0.9a'
+__version__ = '0.9.1a0'

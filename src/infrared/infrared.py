@@ -88,7 +88,7 @@ class PFFunctionAdapter(libir.Function):
 
 class PFEvaluationAlgebra(EvaluationAlgebra):
     """!@brief Adapt to partition function algebra for sampling"""
-    
+
     def function(self, weighted_function):
         return PFFunctionAdapter(weighted_function)
 
@@ -225,12 +225,23 @@ class Model:
     """!@brief A constraint model
     """
 
-    def __init__(self):
+    def __init__(self, number=None, domain=None, name='X'):
+        """!@brief init model
+        @param number if not None, number of variables
+        @param domain domains of variables
+        @param name name of variable series
+
+        If number is not None, calls add_variables with the
+        given parameters after initialization.
+        """
         self._constraints = []
         self._functions = dict()
         self._domains = dict()
 
         self._features = dict()
+
+        if number is not None:
+            self.add_variables(number, domain, name)
 
     def add_variables(self, number, domain, name='X'):
         """!@brief add variable domains
@@ -498,7 +509,7 @@ class Model:
 class ClusterTreeBase:
     """!@brief Cluster tree base class
 
-    This class provides functionality to construct and populate C++ 
+    This class provides functionality to construct and populate C++
     cluster trees with constraints and functions.
 
     It is used as mix-in class for the specialized cluster tree classes,
@@ -616,7 +627,7 @@ class ArcticClusterTree(ClusterTreeBase):
     def __init__(self, model, td, scale = 100):
         self._ct = libir.ArcticClusterTree(model.domains)
         super().__init__(model, td, ArcticEvaluationAlgebra(scale))
-    
+
     def optimize(self):
         return self._ct.optimize()
 
@@ -625,7 +636,7 @@ class PFClusterTree(ClusterTreeBase):
     def __init__(self, model, td):
         self._ct = libir.PFClusterTree(model.domains)
         super().__init__(model, td, PFEvaluationAlgebra())
-    
+
     def sample(self):
         return self._ct.sample()
 
@@ -751,7 +762,7 @@ class FeatureStatistics:
 class EngineBase(ABC):
     """!@brief Abstract base class for samplers and optimizers
     """
-    
+
     # @brief Construct from model
     # @param model the constraint model
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
@@ -868,7 +879,7 @@ class EngineBase(ABC):
 class ArcticOptimizer(EngineBase):
     """!@brief Maximizing optimizer (based on arctic algebra)
     """
-    
+
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
                  lazy=True):
         """!@brief Construct
@@ -1020,9 +1031,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             self.requires_reinitialization()
 
     def targeted_sample(self):
-        try:
-            assert(self._targeted_samples is not None)
-        except AssertionError:
+        if not hasattr(self,'_targeted_samples'):
             self._targeted_samples = self.targeted_samples()
 
         return next(self._targeted_samples)
