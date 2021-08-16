@@ -958,7 +958,6 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         # parameters controlling the mdbs procedure
         self.samples_per_round = 1000
         self.tweak_factor = 0.01
-        self._targeted_samples = None
 
     # @brief whether the sample is of good quality
     # @param features dictionary of features
