@@ -480,7 +480,8 @@ class Model:
     def write_graph(self, out, non_redundant=True):
         """!@brief Write dependency graph
         @param out a filehandle of name of the target file
-        Writes the dependency graph to file in dot format.
+        Writes the dependency graph to file in dot format;
+        hyper-edges are expanded to cliques.
         """
         if type(out) == str:
             out = open(out, 'w')
@@ -493,15 +494,12 @@ class Model:
                 out.write("\tvar{} [label=\"{}\"];\n".format(idx, label))
         out.write("\n\n")
 
-        for dep in self.dependencies(non_redundant):
+        for dep in self._expand_to_cliques(self.dependencies(non_redundant)):
             edgelabel = ''
-            if len(dep) == 2:
-                x, y = dep
-                out.write(
-                    "\tvar{} -- var{}  [label=\"{}\"];\n".format(x, y,
-                                                                 edgelabel))
-            if len(dep) > 2:
-                print("WARNING: Model.write_graph: hyper-edges not written")
+            x, y = dep
+            out.write(
+                "\tvar{} -- var{}  [label=\"{}\"];\n".format(x, y,
+                                                             edgelabel))
 
         out.write("\n}\n")
 
