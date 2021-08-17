@@ -98,7 +98,7 @@ namespace ired {
         Assignment(const FiniteDomainVector &domains)
             :values_(domains.size()), domains_(domains)
         {
-            for ( int i=0; i <= values_.size(); ++i ) {
+            for ( int i=0; i < values_.size(); ++i ) {
                 set_undet(i);
             }
         }

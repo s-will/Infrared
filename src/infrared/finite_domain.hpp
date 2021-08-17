@@ -98,13 +98,14 @@ namespace ired {
              * Sets v to the next larger domain value after v
              * or the lowest domain value if v was undetermined.
              *
-             * @note undefined behavior if v not in the domain
+             * @note undefined behavior if v neither in the domain nor
+             * 'undet', which has to be lb_-1
              * @note if v was the last domain variable, then
              * afterwards, in(v) is false and v exceeds the upper bound.
              */
             void
             inc(int & v) const {
-                assert( lb_<= v && v < ub_ );
+                assert( (lb_-1) <= v && v <= ub_ );
                 v++;
             }
 
