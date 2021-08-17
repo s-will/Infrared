@@ -14,7 +14,7 @@
 /**
  * @file
  *
- * @brief Defines finite domains 
+ * @brief Defines finite domains
  */
 
 namespace ired {
@@ -37,7 +37,7 @@ namespace ired {
                 : lb_(0),
                   ub_(domsize-1) {
             }
-            
+
             /**
              * @brief construct as contiguous domain lb..ub
              * @param bounds lower and upper bound
@@ -72,12 +72,13 @@ namespace ired {
             size() const {
                 return ub_ - lb_ + 1;
             }
-            
+
             /**
              * @brief lower bound
              * @return bound
              */
-            int lb() const {
+            int
+            lb() const {
                 return lb_;
             }
 
@@ -85,7 +86,8 @@ namespace ired {
              * @brief upper bound
              * @return bound
              */
-            int ub() const {
+            int
+            ub() const {
                 return ub_;
             }
 
@@ -108,7 +110,7 @@ namespace ired {
 
             /**
              * @brief undetermined
-             * @return domain-specific undetermined value 
+             * @return domain-specific undetermined value
              */
             int
             undet() const {
@@ -118,11 +120,11 @@ namespace ired {
             /**
              * @brief test domain membership
              * @param value a domain value
-             * @return whether v is in the domain 
+             * @return whether v is in the domain
              */
             bool
             in(int v) const {
-                return lb_ <= v and v <= ub_;    
+                return lb_ <= v and v <= ub_;
             }
 
         private:
@@ -130,7 +132,7 @@ namespace ired {
              int ub_; //!< upper bound
     };
 
-    using FiniteDomains = std::vector<FiniteDomain>;
+    using FiniteDomainVector = std::vector<FiniteDomain>;
 
 }
 #endif

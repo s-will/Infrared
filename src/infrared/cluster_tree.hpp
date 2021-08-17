@@ -101,7 +101,7 @@ namespace ired {
          * its length specifies the number of variables
          */
         explicit
-        ClusterTree(const FiniteDomains &domains)
+        ClusterTree(const FiniteDomainVector &domains)
             : cn_( domains ) {
         };
 
@@ -270,7 +270,7 @@ namespace ired {
         single_empty_root();
 
         auto domains_from_domsizes( std::vector<int> &domsizes ) {
-            auto domains = FiniteDomains();
+            auto domains = FiniteDomainVector();
             for (auto x: domsizes) { 
                 domains.push_back( FiniteDomain( 0, x - 1 ) );
             }

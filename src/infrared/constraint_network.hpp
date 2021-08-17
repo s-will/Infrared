@@ -230,7 +230,7 @@ namespace ired {
          * @brief Construct with domains
          */
         explicit
-        ConstraintNetwork(const FiniteDomains &domains)
+        ConstraintNetwork(const FiniteDomainVector &domains)
             : domains_(domains) {
         };
 
@@ -323,7 +323,7 @@ namespace ired {
         }
 
     private:
-        FiniteDomains domains_;
+        FiniteDomainVector domains_;
 
         std::vector<std::shared_ptr<function_t>> functions_;
         std::vector<std::shared_ptr<constraint_t>> constraints_;

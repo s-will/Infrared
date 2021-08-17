@@ -356,7 +356,7 @@ namespace ired {
         datasize() const {return data_.size();}
 
     private:
-        FiniteDomains domains_;
+        FiniteDomainVector domains_;
         data_t data_;
         fun_value_t zero_;
         std::string name_;
@@ -370,8 +370,8 @@ namespace ired {
         }
 
         auto
-        extract_domains(const FiniteDomains &v) {
-            auto ds = FiniteDomains();
+        extract_domains(const FiniteDomainVector &v) {
+            auto ds = FiniteDomainVector();
             for ( auto x: this->vars() ) {
                 ds.push_back(v[x]);
             }

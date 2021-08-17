@@ -95,7 +95,7 @@ namespace ired {
          * after construction, all variables are undetermined
          */
         explicit
-        Assignment(const FiniteDomains &domains)
+        Assignment(const FiniteDomainVector &domains)
             :values_(domains.size()), domains_(domains)
         {
             for ( int i=0; i <= values_.size(); ++i ) {
@@ -217,7 +217,7 @@ namespace ired {
          * variable
          */
         std::vector<var_value_t> values_;
-        const FiniteDomains &domains_;
+        const FiniteDomainVector &domains_;
     }; // end class Assignment
 
 
@@ -425,7 +425,7 @@ namespace ired {
 
         assignment_t &a_;
         const std::vector<var_idx_t> &vars_;
-        const FiniteDomains &domains_;
+        const FiniteDomainVector &domains_;
         typename board_t<constraint_t>::type constraint_board_;
         typename board_t<function_t>::type function_board_;
         int top_;
