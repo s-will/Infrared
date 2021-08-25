@@ -1,10 +1,6 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
-/* UNFINISHED graph class that could finally replace boost graph for
- * infrared
- */
-
 /*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
  * (C) Sebastian Will, 2018

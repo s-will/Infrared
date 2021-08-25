@@ -43,7 +43,7 @@ conda install infrared
 
 
 For users who don't want to use conda, Infrared can also be installed with standard pip install.
-The compilation requires [boost.graph](https://www.boost.org/), [pybind11](https://github.com/pybind/pybind11) (at least v2.4) and CMake.
+The compilation requires [pybind11](https://github.com/pybind/pybind11) (at least v2.4) and CMake.
 Note that pybind11 installed from standard ubuntu18.04 APT is outdated and the variable `PYBIND11_GLOBAL_SDIST` should be set for version before v2.6.0 as 
 
 ```

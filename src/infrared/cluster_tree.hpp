@@ -426,8 +426,6 @@ namespace ired {
         return root_;
     }
 
-    // evaluate by running a specialized depth first search via
-    // boost::graph; see struct evaluate_finish_edge
     template<class FunValue, class EvaluationPolicy>
     auto
     ClusterTree<FunValue,EvaluationPolicy>
@@ -444,9 +442,6 @@ namespace ired {
         }
         return evaluation_result_;
     }
-
-    // traceback by running a specialized depth first search via
-    // boost::graph; see struct traceback_examine_edge
 
     template<class FunValue, class EvaluationPolicy>
     auto
