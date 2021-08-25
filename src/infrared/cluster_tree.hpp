@@ -17,9 +17,7 @@
  * @brief Defines the cluster tree.
  */
 
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/depth_first_search.hpp>
-
+#include "graph.hpp"
 #include "constraint_network.hpp"
 
 namespace ired {
@@ -70,23 +68,24 @@ namespace ired {
 
         //! @brief information at a vertex (=cluster/bag) of the tree
         struct vertex_info_t {
+            vertex_info_t()
+                : cluster() {}
+            vertex_info_t(const cluster_t &cluster)
+                : cluster(cluster) {}
             cluster_t cluster;
         };
 
         //! @brief information at an edge of the tree
         struct edge_info_t {
-            Function<fun_value_t> *message;
+            edge_info_t(function_t *message=nullptr)
+                : message(message) {}
+            function_t *message;
         };
 
-        //! @brief represent the cluster tree as boost::graph adjacency list
-        using tree_t = boost::adjacency_list< boost::vecS,
-                                              boost::vecS,
-                                              boost::directedS,
-                                              vertex_info_t,
-                                              edge_info_t >;
+        using tree_t = graph::adjacency_list<vertex_info_t, edge_info_t>;
 
         //! @brief type of identifiers of vertices (typically 'long int')
-        using vertex_descriptor = typename boost::graph_traits<tree_t>::vertex_descriptor;
+        using vertex_descriptor_t = typename tree_t::vertex_descriptor_t;
 
         /**
          * @brief construct empty
@@ -103,13 +102,13 @@ namespace ired {
         explicit
         ClusterTree(const FiniteDomainVector &domains)
             : cn_( domains ) {
-        };
+        }
 
         /**
          * @brief construct from vector of upper bounds
          */
-        explicit 
-        ClusterTree(std::vector<int> domsizes) 
+        explicit
+        ClusterTree(std::vector<int> domsizes)
             : cn_( domains_from_domsizes( domsizes ) ) {
         }
 
@@ -121,7 +120,7 @@ namespace ired {
          */
         ClusterTree(int num_vars, const FiniteDomain &domain)
             : cn_(num_vars, domain) {
-        };
+        }
 
         /**
          * @brief Construct with uniform domains
@@ -131,7 +130,7 @@ namespace ired {
          */
         ClusterTree(int num_vars, int domsize)
             : cn_( num_vars, FiniteDomain(0, domsize-1) ) {
-        };
+        }
 
         ~ClusterTree() {}
 
@@ -152,9 +151,7 @@ namespace ired {
          */
         auto
         add_root_cluster(const std::vector<var_idx_t> &vars) {
-            auto node = boost::add_vertex(tree_);
-            tree_[node].cluster = cluster_t(vars);
-            return node;
+            return tree_.add_vertex(cluster_t(vars));
         }
 
         /**
@@ -169,12 +166,10 @@ namespace ired {
          * created by this method (using the returned bag id).
          */
         auto
-        add_child_cluster( vertex_descriptor parent, const std::vector<int> &vars) {
-            auto node = boost::add_vertex(tree_);
-            boost::add_edge(parent, node, tree_);
-
-            tree_[node].cluster = cluster_t(vars);
-            return node;
+        add_child_cluster( vertex_descriptor_t parent, const std::vector<int> &vars) {
+            auto child = tree_.add_vertex(cluster_t(vars));
+            tree_.add_edge(parent, child, edge_info_t());
+            return child;
         }
 
         /**
@@ -186,7 +181,7 @@ namespace ired {
          * Typically used when constructing the cluster tree.
          */
         void
-        add_constraint( vertex_descriptor node, const std::shared_ptr<constraint_t> &x ) {
+        add_constraint( vertex_descriptor_t node, const std::shared_ptr<constraint_t> &x ) {
             tree_[node].cluster.add_constraint( cn_.add_constraint(x) );
         }
 
@@ -199,7 +194,7 @@ namespace ired {
          * Typically used when constructing the cluster tree.
          */
         void
-        add_function( vertex_descriptor node, const std::shared_ptr<function_t> &x ) {
+        add_function( vertex_descriptor_t node, const std::shared_ptr<function_t> &x ) {
             tree_[node].cluster.add_function( cn_.add_function(x) );
         }
 
@@ -262,7 +257,7 @@ namespace ired {
         fun_value_t evaluation_result_;
         bool single_empty_rooted_ = false;
 
-        vertex_descriptor root_;
+        vertex_descriptor_t root_;
 
         // insert pseudo root to connect trees of the forest (unless already done)
         // @returns new root
@@ -271,31 +266,27 @@ namespace ired {
 
         auto domains_from_domsizes( std::vector<int> &domsizes ) {
             auto domains = FiniteDomainVector();
-            for (auto x: domsizes) { 
+            for (auto x: domsizes) {
                 domains.push_back( FiniteDomain( 0, x - 1 ) );
             }
             return domains;
         }
 
+        void
+        dfs_evaluate(vertex_descriptor_t v) {
+            // notes: this terminates if there are no children
+            // as well, we can know, that tree_ is a tree, without any
+            // cycles
 
-        // Define the method used for evaluating the tree. It will be
-        // called by boost::graph's depth first search algorithm at
-        // edges after leaving the corresponding subtree.
-        struct evaluate_finish_edge {
-            using event_filter = boost::on_finish_edge;
+            for(auto &e: tree_.adj_edges(v)) {
+                // recursively evaluate subtree at e.target()
+                dfs_evaluate(e.target());
 
-            evaluate_finish_edge(constraint_network_t &cn, tree_t &tree)
-                : cn_(cn), tree_(tree) {
-            }
+                // then, compute the message for the current edge
+                // from cluster child to cluster parent
 
-            template <class Edge, class Graph>
-            void
-            operator ()(Edge e, Graph &graph) {
-
-                const auto &parent = graph[ source(e, graph) ].cluster;
-                const auto &child =  graph[ target(e, graph) ].cluster;
-
-                // compute the message from cluster child to cluster parent
+                const auto &parent = tree_[ e.source() ].cluster;
+                const auto &child =  tree_[ e.target() ].cluster;
 
                 auto sep  = child.sep_vars(parent);
                 auto diff = child.diff_vars(parent);
@@ -333,53 +324,49 @@ namespace ired {
                 // register message in cn, such that it persists!
                 auto msg = cn_.add_function(std::move(message));
                 // then, register in cluster parent
-                tree_[ source(e, graph) ].cluster.add_function(msg);
+                tree_[ e.source() ].cluster.add_function(msg);
 
                 // ... and as edge property
-                tree_[e].message = msg;
+                e.message = msg;
             }
+        }
 
-        private:
-            constraint_network_t &cn_;
-            tree_t &tree_;
-        };
+        /**
+         * @brief trace back by dfs
+         * @param v trace back from this node in tree_
+         * @param a [inout] the assignment that determines the variables above
+         * v; as well used to return the variables from trace back in the
+         * subtree of v
+         */
+        void
+        dfs_traceback(vertex_descriptor_t v, assignment_t &a) {
 
-        // Define the method used for trace back from the tree. It will
-        // be called by boost::graph's depth first search algorithm at
-        // edges before entering the corresponding subtree.
-        struct traceback_examine_edge {
-            using event_filter = boost::on_examine_edge;
+            for(const auto &e: tree_.adj_edges(v)) {
 
-            traceback_examine_edge(constraint_network_t &cn,assignment_t &a)
-                : cn_(cn), a_(a) {}
-
-            template <class Edge, class Graph>
-            void
-            operator ()(Edge e, Graph &graph) {
-                const auto &parent = graph[ source(e, graph) ].cluster;
-                const auto &child =  graph[ target(e, graph) ].cluster;
+                const auto &parent = tree_[ e.source() ].cluster;
+                const auto &child =  tree_[ e.target() ].cluster;
 
                 auto diff = child.diff_vars(parent);
 
-                const auto &message = graph[e].message;
+                const auto &message = e.message;
 
-                // evaluate message at partial assignment a_;
-                auto message_value = (*message)(a_);
+                // evaluate message at partial assignment a;
+                auto message_value = (*message)(a);
 
                 // initialize the Selector
                 auto selector = typename evaluation_policy_t::selector(message_value);
 
-                assert ( a_.eval_determined(child.constraints(),
-                                            StdEvaluationPolicy<bool>()) );
+                assert(a.eval_determined(child.constraints(),
+                                         StdEvaluationPolicy<bool>()));
 
-                a_.set_undet(diff);
+                a.set_undet(diff);
 
-                auto it = a_.make_iterator(diff, cn_,
-                                           child.constraints(),
-                                           child.functions(),
-                                           a_.eval_determined(child.functions(),
-                                                              evaluation_policy_t())
-                                           );
+                auto it = a.make_iterator(diff, cn_,
+                                          child.constraints(),
+                                          child.functions(),
+                                          a.eval_determined(child.functions(),
+                                                            evaluation_policy_t())
+                                          );
 
                 // enumerate all combinations of values assigned to diff variables;
                 // recompute SUM_a(PROD_f(f(a))), where a runs over these
@@ -390,14 +377,13 @@ namespace ired {
 
                     if (selector.select(x)) {
                         break;
-                    } 
+                    }
                 }
-            }
 
-        private:
-            constraint_network_t &cn_;
-            assignment_t &a_;
-        };
+                // trace back from target
+                dfs_traceback(e.target(), a);
+            }
+        }
 
     }; // end class ClusterTree
 
@@ -411,29 +397,27 @@ namespace ired {
         if (single_empty_rooted_) {return root_;}
 
         // find all root nodes of the tree
-        auto index = boost::get(boost::vertex_index, tree_);
 
-        std::set<int> no_roots;
-        std::vector<vertex_descriptor> old_roots;
+        std::set<vertex_descriptor_t> old_roots;
 
-        for (auto it = edges(tree_).first; it != edges(tree_).second; ++it) {
-            no_roots.insert(index[target(*it,tree_)]);
+        for (int i=0; i < int(tree_.size()); ++i) {
+            old_roots.insert(i);
         }
 
-        for (auto it = vertices(tree_).first; it != vertices(tree_).second; ++it) {
-            if ( no_roots.find(index[*it]) == no_roots.end() ) {
-                old_roots.push_back(*it);
+        for (int i=0; i < int(tree_.size()); ++i) {
+            for (auto &e: tree_.adj_edges(i)) {
+                old_roots.erase( e.target() );
             }
         }
 
-        if ( old_roots.size()==1 && tree_[ old_roots[0] ].cluster.empty() ) {
-            root_ = old_roots[0];
+        if ( old_roots.size()==1 && tree_[ *old_roots.begin() ].cluster.empty() ) {
+            root_ = *old_roots.begin();
         } else {
             // insert new root and point to all old roots
-            root_ = boost::add_vertex(tree_);
+            root_ = tree_.add_vertex();
 
             for (auto old_root : old_roots) {
-                boost::add_edge(root_, old_root , tree_);
+                tree_.add_edge(root_, old_root);
             }
         }
 
@@ -451,9 +435,7 @@ namespace ired {
         auto root = single_empty_root();
 
         if (!evaluated_) {
-            auto cte_visitor = boost::make_dfs_visitor(evaluate_finish_edge(cn_,tree_));
-
-            boost::depth_first_search(tree_, visitor(cte_visitor).root_vertex(root));
+            dfs_evaluate(root);
 
             auto a = assignment_t(cn_.domains());
             evaluation_result_ = a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
@@ -475,11 +457,7 @@ namespace ired {
 
         auto a = assignment_t(cn_.domains());
 
-        auto traceback_visitor = boost::make_dfs_visitor(traceback_examine_edge(cn_,a));
-
-        boost::depth_first_search(tree_,
-                                  visitor(traceback_visitor)
-                                  .root_vertex(single_empty_root()));
+        dfs_traceback(single_empty_root(), a);
 
         return a;
     }
