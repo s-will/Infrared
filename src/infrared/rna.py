@@ -38,6 +38,13 @@ def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
 
+# negation of BPComp
+def_constraint_class('NotBPComp', lambda i, j: [i, j],
+                     lambda x, y: (x, y) not in _bpcomp_tab,
+                     module=__name__)
+
+
+
 # (position-wise) GC content
 def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
@@ -231,10 +238,14 @@ def read_inp(inpfh):
 # further RNA specific definitions
 
 # @brief Convert integer (variable value) to nucleotide
+# @note encoding A=0, C=1, G=2, U/T=3, -/.=4
+def nucleotide_to_value(x):
+    return {'A':0,'C':1,'G':2,'U':3,'T':3,'.':4,'-':4}[x]
+
+# @brief Convert integer (variable value) to nucleotide
 # @note encoding A=0, C=1, G=2, U=3
 def value_to_nucleotide(x):
-    return "ACGU"[x]
-
+    return "ACGU-"[x]
 
 # ! @brief Convert list of integers (variable values) to string
 # ! (sequence) of nucleotides
@@ -247,6 +258,33 @@ def values_to_seq(xs):
 def ass_to_seq(ass):
     return values_to_seq(ass.values())
 
+# ------------------------------------------------
+#
+# support for IUPAC
+
+_iupac_nucleotides = {
+    'A': 'A',
+    'C': 'C',
+    'G': 'G',
+    'T': 'U',
+    'U': 'U',
+    'R': 'AG',
+    'Y': 'CU',
+    'S': 'CG',
+    'W': 'AU',
+    'K': 'GU',
+    'M': 'AC',
+    'B': 'CGU',
+    'D': 'AGU',
+    'H': 'ACU',
+    'V': 'ACG',
+    'N': 'ACGU',
+    '.': '-',
+    '-': '-'
+}
+
+def iupacvalues(symbol):
+    return [ nucleotide_to_value(x) for x in _iupac_nucleotides[symbol] ]
 
 # ------------------------------------------------
 # RNA energy models / parameters
