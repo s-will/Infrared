@@ -220,6 +220,26 @@ def def_constraint_class(classname, init, value, module="__main__"):
     _generic_def_function_class(
         classname, init, value, module, libir.Constraint, "__call__")
 
+# -----
+# constraint: restrict domain to specific values
+def_constraint_class('ValueIn', lambda i, values: [i],
+                     lambda x,values: x in values,
+                     module=__name__)
+# support special functionality of propagation to domain and entailment
+# check when adding this constraint
+def _domain_constraint_on_add(self, model):
+    i = self.vars()[0]
+    values = self._args['values']
+    model.restrict_domains(i,(min(values),max(values)))
+ValueIn.on_add = _domain_constraint_on_add
+def _domain_constraint_entailed(self, model):
+    i = self.vars()[0]
+    values = self._args['values']
+    domain = model.domains[i]
+    is_entailed = all( x in values for x in range(domain.lb(), domain.ub()+1) )
+    return is_entailed
+ValueIn.entailed = _domain_constraint_entailed
+
 
 class Model:
     """!@brief A constraint model
@@ -262,7 +282,7 @@ class Model:
         (name,index); or simply index, then addressing ('X',index)
         @param domain the domain
 
-        @note the domain bounds must be stricter than the original domain
+        @note the domain bounds are intersected with the original domain
         """
         newdom = libir.FiniteDomain(domain)
         if type(vars) != list:
@@ -270,20 +290,32 @@ class Model:
         for v in vars:
             name, i = v if type(v) == tuple else ('X', v)
 
-            assert(self._domains[name][i].lb() <= newdom.lb())
-            assert(self._domains[name][i].ub() >= newdom.ub())
-            self._domains[name][i] = newdom
+            newlb = max(self._domains[name][i].lb(), newdom.lb())
+            newub = min(self._domains[name][i].ub(), newdom.ub())
+
+            self._domains[name][i] = libir.FiniteDomain(newlb,newub)
 
     def add_constraints(self, constraints):
         """!@brief add constraints to the model
         @param constraints an iterable of constraints or a single constraint
+
+        @note supports optimizations via on_add and entailed methods of
+        added constraints; see ValueIn
         """
         if hasattr(constraints, '__iter__'):
             constraints = list(constraints)
         else:
             constraints = [constraints]
 
-        self._constraints.extend(constraints)
+        for constraint in constraints:
+            if hasattr(constraint,"on_add"):
+                constraint.on_add(self)
+
+            if hasattr(constraint,"entailed"):
+                if constraint.entailed(self):
+                    continue
+
+            self._constraints.append(constraint)
 
     def add_functions(self, functions, group='base'):
         """!@brief add functions to the model
@@ -315,6 +347,12 @@ class Model:
         if name not in self._domains:
             return 0
         return len(self._domains[name])
+
+    def has_empty_domains(self):
+        """@brief Check inconsistency due to empty domains
+        @return whether model has empty domains
+        """
+        return any(dom.empty() for dom in self.domains)
 
     @property
     def num_variables(self):
@@ -410,7 +448,7 @@ class Model:
 
     def idx(self, variables):
         """!@brief raw indices of named variables
-        @param variables list of (potentially) names variables; default
+        @param variables single variable or list of variables; variables can be named; default
         name 'X'
         @return list of (internal) variable indices
         """
@@ -425,6 +463,9 @@ class Model:
                     break
                 offset += len(self._domains[k])
             return offset + idx
+
+        if type(variables) != list:
+            variables = [variables]
 
         variables = [convert(var) for var in variables]
         return variables
@@ -503,6 +544,30 @@ class Model:
 
         out.write("\n}\n")
 
+    def connected_components(self):
+        """@brief Connected components of the model's dependency graph
+        @returns a list of sets of the connected components
+        """
+        numnodes, edges = self.num_variables, self.bindependencies()
+        def adjacency_list():
+            al = [[] for _ in range(numnodes)]
+            for d in edges:
+                for x in d:
+                    al[x].extend([y for y in d if x!=y])
+            return [sorted(set(xs)) for xs in al]
+
+        al = adjacency_list()
+        marked = [False] * numnodes
+        def component(x):
+            if marked[x]:
+                return []
+            marked[x] = True
+            c = [x]
+            for y in al[x]:
+                c.extend(component(y))
+            return c
+        return [set(component(x)) for x in range(numnodes)
+                if not marked[x]]
 
 class ClusterTreeBase:
     """!@brief Cluster tree base class
@@ -817,7 +882,13 @@ class EngineBase(ABC):
                 self._model.num_variables, self._model.dependencies())
 
         if not skip_ct:
+            if self._model.has_empty_domains():
+                raise ConsistencyError("Model has empty domains")
+
             self._ct = self.gen_cluster_tree()
+
+            if not self._ct.is_consistent():
+                raise ConsistencyError("Inconsistent constraint model")
 
     def evaluate(self):
         """!@brief evaluates the cluster tree
@@ -830,7 +901,10 @@ class EngineBase(ABC):
         return self._ct.evaluate()
 
     def is_consistent(self):
-        self.setup_engine()
+        try:
+            self.setup_engine()
+        except ConsistencyError:
+            return False
         return self._ct.is_consistent()
 
     # @brief Plot the tree decomposition to pdf file
@@ -860,11 +934,6 @@ class EngineBase(ABC):
         self.setup_engine(skip_ct=True)
         return self._td.treewidth()
 
-    def raise_if_inconsistent(self):
-        """!@brief Raise exception if inconsistent
-        """
-        if not self.is_consistent():
-            raise ConsistencyError("Inconsistent constraint model")
 
     # @brief Generate the populated cluster tree
     # @param td tree decomposition
@@ -890,7 +959,6 @@ class ArcticOptimizer(EngineBase):
         @returns one optimal assignment
         """
         self.setup_engine()
-        self.raise_if_inconsistent()
         return self._ct.optimize()
 
     def gen_cluster_tree(self):
@@ -923,7 +991,6 @@ class BoltzmannSampler(EngineBase):
     # it will be evaluated once on-demand.
     def sample(self):
         self.setup_engine()
-        self.raise_if_inconsistent()
         return self._ct._ct.sample()
 
     # @brief Sample generator

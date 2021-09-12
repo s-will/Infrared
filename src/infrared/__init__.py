@@ -4,7 +4,8 @@ from .infrared import seed, Model, Feature, FeatureStatistics, \
     ArcticClusterTree, PFClusterTree, \
     ArcticOptimizer, Optimizer, \
     BoltzmannSampler, MultiDimensionalBoltzmannSampler, Sampler, \
-    ConsistencyError, def_function_class, def_constraint_class, dotfile_to_pdf, dotfile_to_png
+    ConsistencyError, def_function_class, def_constraint_class, dotfile_to_pdf, dotfile_to_png, \
+    ValueIn
 from . import rna
 
 
