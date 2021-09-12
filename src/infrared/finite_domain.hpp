@@ -48,7 +48,6 @@ namespace ired {
             FiniteDomain(std::pair<int,int> bounds)
                 : lb_(bounds.first),
                   ub_(bounds.second) {
-                assert(lb_ <= ub_);
             }
 
             /**
@@ -61,7 +60,17 @@ namespace ired {
             FiniteDomain(int lb, int ub)
                 : lb_(lb),
                   ub_(ub) {
-                assert(lb_ <= ub_);
+            }
+
+            /**
+             * @brief empty domain
+             * return emtpy?
+             *
+             * @note domains are empty whenever ub < lb
+             */
+            bool
+            empty() const {
+                return ub_ < lb_;
             }
 
             /**
@@ -70,6 +79,9 @@ namespace ired {
              */
             int
             size() const {
+                if(empty())
+                    return 0;
+
                 return ub_ - lb_ + 1;
             }
 
