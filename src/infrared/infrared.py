@@ -26,7 +26,7 @@ from treedecomp import seed as tdseed
 from abc import ABC, abstractmethod
 
 
-def seed(seed):
+def seed(seed = None):
     """!@brief seed random number generator of libinfrared and treedecomp
 
     This seeds the RNG of lib infrared (C++ side) and as well
