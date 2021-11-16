@@ -10,7 +10,7 @@
 # Boltzmann sampling over constraint networks
 #
 
-# @file
+## @file
 #
 # @brief Some RNA related functions
 #
