@@ -10,13 +10,13 @@
 # Boltzmann sampling over constraint networks
 #
 
-## @file
+"""@package infrared.rna
 #
 # @brief Some RNA related functions
 #
 # Loose library for some common tasks for RNA specific code
 #
-
+"""
 import re
 import collections
 import math
@@ -42,7 +42,6 @@ def_constraint_class('BPComp', lambda i, j: [i, j],
 def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) not in _bpcomp_tab,
                      module=__name__)
-
 
 
 # (position-wise) GC content
@@ -71,17 +70,19 @@ def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      module=__name__)
 
 
-# @brief Parse RNA structure including pseudoknots
-#
-# @param structure dot bracket string of RNA structure
-# @param opening specifies the recognized opening bracket symbols
-# @param closing specifies closing bracket symbols (corresponding to opening)
-#
-# @note Characters not in opening or closing are considered unpaired.
-#
-# @return array bps encoding the structure like bps[i]=j for each bp
-# {i,j}
 def parse_array(structure, *, opening="([{<", closing=")]}>"):
+    """Parse RNA structure including pseudoknots
+
+    Args:
+        structure: dot bracket string of RNA structure
+        opening: specifies the recognized opening bracket symbols
+        closing: specifies closing bracket symbols (corresponding to opening)
+    Returns:
+        array bps encoding the structure like bps[i]=j for each bp {i,j}
+
+    Notes:
+        Characters not in opening or closing are considered unpaired.
+    """
     stack = {op: list() for op in opening}
     bps = [-1]*len(structure)
 
@@ -105,13 +106,18 @@ def parse_array(structure, *, opening="([{<", closing=")]}>"):
     return bps
 
 
-# @brief Parse RNA structure, returning list of base pairs
-#
-# @param structure dot bracket string of RNA structure
-# @see parse_array
-#
-# @returns list of base pairs (i,j)
 def parse(structure, **kwargs):
+    """Parse RNA structure, returning list of base pairs
+
+    Args:
+        structure: dot bracket string of RNA structure
+
+    Returns:
+        list of base pairs (i,j)
+
+    See Also:
+        parse_array
+    """
     s = parse_array(structure, **kwargs)
     bps = list()
     for i, j in enumerate(s):
@@ -120,22 +126,28 @@ def parse(structure, **kwargs):
     return bps
 
 
-# @brief Check complementarity of nucleotides
-# @param x nucelotide
-# @param y nucelotide
-# @return whether complementary (A-U,C-G, or G-U)
 def is_complementary(x, y):
+    """Check complementarity of nucleotides
+    Args:
+        x: nucelotide
+        y: nucelotide
+
+    Returns:
+        whether complementary (A-U,C-G, or G-U)
+    """
     compls = set(["AU", "CG", "GU"])
     return x+y in compls or y+x in compls
 
 
-# @brief Get invalid base pairs
-#
-# @param seq sequence string
-# @param struc structure as dot bracket string or base pair list
-#
-# @return list of base pairs that violate the complementarity constraints
 def invalid_bps(seq, struc):
+    """Get invalid base pairs
+    Args:
+        seq: sequence string
+        struc: structure as dot bracket string or base pair list
+
+    Returns:
+        list of base pairs that violate the complementarity constraints
+    """
     if type(struc) == str:
         bps = parse_RNA(struc)
     else:
@@ -148,47 +160,59 @@ def invalid_bps(seq, struc):
     return invalids
 
 
-# @brief Check whether sequence satisfies complementarity constraints due
-# to structure
-# @param seq sequence string
-# @param struc structure as dot bracket string or base pair list
-# @return whether valid
 def is_valid(seq, struc):
+    """Check whether sequence satisfies complementarity constraints due
+    to structure
+
+    Args:
+        seq: sequence string
+        struc: structure as dot bracket string or base pair list
+    Returns:
+        whether valid
+    """
     return invalid_bps(seq, struc) == []
 
 
-# @brief Convert structure to list of edges in basepair model
-#
-# @param structure array representation of RNA structure
-# @param[in,out] edges list of edges
-#
-# Dependencies are appendes to edges
-#
-# @note node indices are 0-based
 def structure_to_basepair_dependencies(structure, edges=[]):
+    """Convert structure to list of edges in basepair model.
+    Dependencies are appendes to edges
+
+    Args:
+        structure: array representation of RNA structure
+        edges:  edges list of edges [in,out]
+
+    Note:
+        node indices are 0-based
+    """
     for (i, j) in enumerate(structure):
         if i < j:
             edges.append((i, j))
 
 
-# @brief Convert structure to list of edges in stacking model
-#
-# @param structure array representation of RNA structure
-# @param[in,out] edges list of edges
-#
-# Dependencies are appendes to edges
-# @see structure_to_basepair_dependencies
 def structure_to_stacking_dependencies(structure, edges=[]):
+    """Convert structure to list of edges in stacking model.
+    Dependencies are appendes to edges
+
+    Args:
+        structure: array representation of RNA structure
+        edges: list of edges [in,out]
+
+    See Also:
+        structure_to_basepair_dependencies
+    """
     for (i, j) in enumerate(structure):
         if i+1 < j-1 and structure[i+1] == j-1:
             edges.extend([(i, j), (i+1, j-1), (i+1, j),
                           (i, j-1), (i, i+1), (j, j-1)])
 
 
-# @brief Compute GC content in a sequence
-# @param seq sequence string
-# @return gc content (as ratio in [0,1])
 def GC_content(seq):
+    """Compute GC content in a sequence
+    Args:
+        seq: sequence string
+    Returns:
+        gc content (as ratio in [0,1])
+    """
     c = collections.Counter(seq)
 
     gc = 0
@@ -201,25 +225,30 @@ def GC_content(seq):
     return gc
 
 
-# @brief Make edges unique (considering symmetry)
-# @param xs list of edges
-# @return unique list of edges
-#
-# keeps only one of (x,y) and (y,x), namely (x,y) if x<y
 def unique_edges(xs):
+    """Make edges unique (considering symmetry).
+    keeps only one of (x,y) and (y,x), namely (x,y) if x<y
+
+    Args:
+        xs: list of edges
+    Returns:
+        unique list of edges
+    """
     d = {(min(x, y), max(x, y)): 1 for (x, y) in xs}
     return list(d.keys())
 
 
-# @brief Read multiple structures from file in inp format
-#
-# @param inpfh input file handle
-#
-# @return list of the structures as dot bracket strings
-#
-# inp format is a file format to specify instances for multi-target
-# RNA design, e.g. used in the benchmarks of Modena and RNAblueprint
 def read_inp(inpfh):
+    """Read multiple structures from file in inp format.
+    inp format is a file format to specify instances for multi-target
+    RNA design, e.g. used in the benchmarks of Modena and RNAblueprint
+
+    Args:
+        inpfh: input file handle
+
+    Returns:
+        list of the structures as dot bracket strings
+    """
     structures = list()
 
     for line in inpfh:
@@ -254,7 +283,7 @@ def values_to_seq(xs):
 
 
 # ! @brief Convert assignment to sequence string
-# ! @param ass assignment
+# !  ass assignment
 def ass_to_seq(ass):
     return values_to_seq(ass.values())
 
@@ -303,7 +332,7 @@ def_params_stacking = {"AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
 
 
 # @brief set the bp energy table for Infrared
-# @param params dictionary of parameters or a table of the parameters
+#  params dictionary of parameters or a table of the parameters
 # as expected by _bpenergy
 def set_bpenergy_table(params=def_params_bp):
     if type(params) == dict:
@@ -315,7 +344,7 @@ def set_bpenergy_table(params=def_params_bp):
 
 
 # @brief set the stacking energy table for Infrared
-# @param params dictionary of parameters or a table of the parameters
+#  params dictionary of parameters or a table of the parameters
 # as expected by _stackenergy
 def set_stacking_energy_table(params=def_params_stacking):
     if type(params) == dict:
@@ -348,10 +377,10 @@ _bpindex_tab = [[-1, -1, -1, 0],
 def _bpenergy(x, y, is_terminal=False):
     """
     @brief Energy of base pair
-    @param x base in internal 0..3 representation
-    @param y base in internal 0..3 representation
-    @param is_terminal flag, True if the base pair is terminating a stem
-    @return energy of the base pair according to current bp energy table
+     x base in internal 0..3 representation
+     y base in internal 0..3 representation
+     is_terminal flag, True if the base pair is terminating a stem
+    Returns: energy of the base pair according to current bp energy table
 
     @see set_bpenergy_table()
     """
@@ -363,11 +392,11 @@ def _bpenergy(x, y, is_terminal=False):
 def _stackenergy(x, y, x1, y1):
     """
     @brief Energy of stack of base pairs
-    @param x base in internal 0..3 representation
-    @param y base in internal 0..3 representation
-    @param x1 base in internal 0..3 representation, inner stacked base pair
-    @param y1 base in internal 0..3 representation, inner stacked base pair
-    @return energy of the base pair stack according to current stacking energy
+     x base in internal 0..3 representation
+     y base in internal 0..3 representation
+     x1 base in internal 0..3 representation, inner stacked base pair
+     y1 base in internal 0..3 representation, inner stacked base pair
+    Returns: energy of the base pair stack according to current stacking energy
     table
 
     @see set_stacking_energy_table()

@@ -9,6 +9,11 @@
 # Boltzmann sampling over constraint networks
 #
 
+"""@package infrared.infrared
+
+testest
+"""
+
 import os
 import random
 import re
@@ -27,7 +32,7 @@ from abc import ABC, abstractmethod
 
 
 def seed(seed = None):
-    """!@brief seed random number generator of libinfrared and treedecomp
+    """seed random number generator of libinfrared and treedecomp
 
     This seeds the RNG of lib infrared (C++ side) and as well
     the random number generator used by randomization in the TreeDecomposition,
@@ -1105,7 +1110,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 Sampler = MultiDimensionalBoltzmannSampler
 
 
-# @brief Convert dot graph file format to png/pdf
+## Convert dot graph file format to png/pdf
 #
 # @param graphfile file of graph in dot format
 #
