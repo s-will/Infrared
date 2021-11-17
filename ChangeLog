@@ -10,6 +10,9 @@
 		* optimizing space requirements
 		* enabling optimization in addition to sampling, where
 		  both can be based on the same constraint model
+		* improving the API documentation
+		* adding tutorials and examples in Jupyter notebooks that
+		  demonstrate the modeling of design problems in the framework
 
 	[Python interface]
 	Introduce new modeling syntax to define constraint network models based on a
