@@ -125,7 +125,7 @@ def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
 
 ## @class SameComplClassConstraint
 #  @brief Constrain two nucleotides to be in the sample complementarity class {(A,G), (C,U)}
-#  @extends Constrainat
+#  @extends Constraint
 #
 #  @code{.py}
 #    SameComplClassConstraint(i,j)
