@@ -1,8 +1,9 @@
+[TOC]
+
 ChangeLog
 =========
 
-Release 1.0b - 2021-11-16
---------------------------
+## Release 1.0b - 2021-11-16
 
 This release facilitates the modeling of sampling and optimization problems 
 from a much broader range of applications by
