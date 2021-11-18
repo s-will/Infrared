@@ -10,13 +10,17 @@
 # Boltzmann sampling over constraint networks
 #
 
-"""@package infrared.rna
+## @addtogroup rna
+#  @brief Some RNA related functions
+# 
+#  @code
+#    import infrared.rna as rna
+#  @endcode
 #
-# @brief Some RNA related functions
+#  @{
 #
 # Loose library for some common tasks for RNA specific code
 #
-"""
 import re
 import collections
 import math
@@ -28,7 +32,6 @@ class ParseError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
 
-
 #####
 # define some constraints and functions for RNA design
 
@@ -38,10 +41,33 @@ def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
 
+## @class BPComp
+#  @brief Constrain complementarity of base pair (i,j)
+#  @extends Constraint
+#
+#  @code{.py}
+#    BPComp(i,j)
+#  @endcode
+#
+#  The constraint is satisfied if values at positions (i,j) form a valid canonical base pair, _i.e._ {(A,U), (C,G), (G,U)}.
+
+
 # negation of BPComp
 def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) not in _bpcomp_tab,
                      module=__name__)
+
+## @class NotBPComp
+#  @brief Constraint for negation of BPComp
+#  @extends Constraint
+#  
+#  @code{.py}
+#     NotBPComp(i,j)
+#  @endcode
+#  
+#  The constraint is satisfied if values at positions (i,j) DO NOT form a valid canonical base pair.
+#  
+#  @see BPComp
 
 
 # (position-wise) GC content
@@ -49,26 +75,74 @@ def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
                    module=__name__)
 
+## @class GCCont
+#  @brief Function for (position-wise)  GC content
+#  @extends Function
+#
+#  @code{.py}
+#    GCCont(i)
+#  @endcode
+#
+#  GCCont is an Infrared Function to count GCCont at position i, 1 if the value is C or G, 0 otherwise.
+
 # energy of base pair
 def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    lambda x, y, is_terminal: _bpenergy(x, y, is_terminal),
                    module=__name__)
+
+## @class BPEnergy
+#  @brief Function for (basepair-wise) BasePair Energy model
+#  @extends Function
+#
+#  BPEnergy is an Infrared Function to capture BasePair Energy model at base pair (i,j).
+#  It further takes a boolean value indicating whether the base pair (i,j) is terminal, _i.e._ (i-1,j+1) is not a base pair
+#
+#  @code{.py}
+#    bps = parse(target)
+#    bpFunctions = [BPEnergy(i,j, (i-1,j+1) not in bps) for (i,j) in bps]
+#  @endcode
 
 # energy of stacking
 def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    lambda x, y, x1, y1: _stackenergy(x, y, x1, y1),
                    module=__name__)
 
+## @class StackEnergy
+#  @brief Function for Stack Energy model
+#  @extends Function
+#
+#  StackEnergy is an Infrared Function to capture Stack Energy model for a base pair stack (i, j, i+1, j-1).
+#
+#  @code{.py}
+#    bps = parse(target)
+#    stackFunctions = [StackEnergy(i,j) for (i,j) in bps if (i+1,j-1) in bps]
+#  @endcode
+
 # constrain two nucleotides to be in the same complementarity class
 def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 == y & 1,
                      module=__name__)
+
+## @class SameComplClassConstraint
+#  @brief Constrain two nucleotides to be in the sample complementarity class {(A,G), (C,U)}
+#  @extends Constrainat
+#
+#  @code{.py}
+#    SameComplClassConstraint(i,j)
+#  @endcode
 
 # constrain two nucleotides to be in different classes
 def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 != y & 1,
                      module=__name__)
 
+## @class DifferentComplClassConstraint
+#  @brief Constrain two nucleotides to be in different complementarity classes
+#  @extends Constrainat
+#
+#  @code{.py}
+#    DifferentComplClassConstraint(i,j)
+#  @endcode
 
 def parse_array(structure, *, opening="([{<", closing=")]}>"):
     """Parse RNA structure including pseudoknots
@@ -266,25 +340,38 @@ def read_inp(inpfh):
 # ------------------------------------------------------------
 # further RNA specific definitions
 
-# @brief Convert integer (variable value) to nucleotide
-# @note encoding A=0, C=1, G=2, U/T=3, -/.=4
 def nucleotide_to_value(x):
+    """Convert integer (variable value) to nucleotide
+
+    Args:
+        x: nucleotide or gap, A, C, G, U, T, -, or .
+    Note:
+        encoding A=0, C=1, G=2, U/T=3, -/.=4
+    """
     return {'A':0,'C':1,'G':2,'U':3,'T':3,'.':4,'-':4}[x]
 
-# @brief Convert integer (variable value) to nucleotide
-# @note encoding A=0, C=1, G=2, U=3
 def value_to_nucleotide(x):
+    """Convert integer (variable value) to nucleotide
+    Args:
+        x: integer
+    Note:
+        encoding A=0, C=1, G=2, U=3, -=4
+    """
     return "ACGU-"[x]
 
-# ! @brief Convert list of integers (variable values) to string
-# ! (sequence) of nucleotides
 def values_to_seq(xs):
+    """Convert list of integers (variable values) to string (sequence) of nucleotides
+    Args:
+        xs: list of integers
+    """
     return "".join(map(value_to_nucleotide, xs))
 
 
-# ! @brief Convert assignment to sequence string
-# !  ass assignment
 def ass_to_seq(ass):
+    """Convert assignment to sequence string
+    Args:
+        ass: assignment
+    """
     return values_to_seq(ass.values())
 
 # ------------------------------------------------
@@ -413,6 +500,7 @@ def _stackenergy(x, y, x1, y1):
 
     return _params_stacking[6 * (bpidx//2) + bpidx1]
 
+# @}
 
 if __name__ == "__main__":
     pass
