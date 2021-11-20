@@ -3,35 +3,44 @@
 
 /**
  * @mainpage
- * InfraRed -- A generic engine for Boltzmann sampling over constraint networks
+ * InfraRed -- A generic framework for Dynamic Programming, Optimization and Boltzmann 
+ * sampling over constraint models
  *
- * (C) Sebastian Will, 2018
+ * (C) Sebastian Will, 2018--2021
  *
  * InfraRed provides a generic framework for tree decomposition-based
- * Boltzmann sampling over constraint networks
+ * Dynamic Programming, including optimization and Boltzmann sampling
+ * based on constraint models 
  *
- * Design goals: engine allows specifying function/constraint
- * annotated tree decomposition in Python (with functions/constraints
- * encoded in either C++ or Python); evaluate partition functions; and
- * sample from Boltzmann distribution
+ * Declarative specification of constraint models which are automatically
+ * transformed to function/constraint annotated tree decompositions in
+ * Python. Specific functions and constraints can be encoded in Python. C++
+ * engine optimizes; evaluates partition functions; and samples from
+ * Boltzmann distributions. Python code extends such functionality to
+ * Multi-dimensional Boltzmann sampling.
  *
- * Keep it simple:
- *   -- variables are indexed from 0..n-1; using index type int
- *   -- variable domains are always 0..k-1 (where domains can have different size); value type is int
+ * Keep it simple, but flexible on the C++ side
  *
- * Keep it flexible:
- *   -- function value type templated
- *   -- function values are combined according to policy (supports evaluation algebras)
- *   -- functions / and constraints are polymorph
+ * - variables are indexed from 0..n-1; using index type int
  *
- * Issue: Since functions and constraints are polymorph, we need to store pointers, references.
- * Policy: we guarantee persistence of the objects passed to the framework. The CN owns
- * functions and constraints. All other classes hold references.
- * The user can decided whether to transfer ownership (unique pointers) or require cloning.
- * Cloning must be implemented for the polymorph function and constraint classes.
+ * - variable domains are consecutive lb...ub; value type is int
  *
- * The ClusterTreeDecomposition holds a constraint network; when
- * manually constructed, it autosyncs with its CN
+ * - function value type templated
+ *
+ * - function values are combined according to policy, which supports evaluation
+ *   algebras
+ *
+ * - support sparse, memory-optimized data structures for intermediary
+ *   results to enable larger problem instances
+ *
+ * Provide a flexible interface and added functionality on the Python side
+ *
+ * - support constraint modeling syntax to declarativly and compositionally
+ *   describe constraint problems
+ *
+ * - support definintion of 'custom' constraints and functions in Python
+ * 
+ * - support efficient evaluation of models for optimization and Boltzmann sampling
  */
 
 /**

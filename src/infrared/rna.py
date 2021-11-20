@@ -10,7 +10,7 @@
 # Boltzmann sampling over constraint networks
 #
 
-## @addtogroup rna
+## @defgroup rna
 #  @brief Some RNA related functions
 # 
 #  @code
@@ -464,10 +464,14 @@ _bpindex_tab = [[-1, -1, -1, 0],
 def _bpenergy(x, y, is_terminal=False):
     """
     @brief Energy of base pair
-     x base in internal 0..3 representation
-     y base in internal 0..3 representation
-     is_terminal flag, True if the base pair is terminating a stem
-    Returns: energy of the base pair according to current bp energy table
+
+    Args:
+     x: base in internal 0..3 representation
+     y: base in internal 0..3 representation
+     is_terminal: flag, True if the base pair is terminating a stem
+
+    Returns:
+        energy of the base pair according to current bp energy table
 
     @see set_bpenergy_table()
     """
@@ -479,12 +483,15 @@ def _bpenergy(x, y, is_terminal=False):
 def _stackenergy(x, y, x1, y1):
     """
     @brief Energy of stack of base pairs
-     x base in internal 0..3 representation
-     y base in internal 0..3 representation
-     x1 base in internal 0..3 representation, inner stacked base pair
-     y1 base in internal 0..3 representation, inner stacked base pair
-    Returns: energy of the base pair stack according to current stacking energy
-    table
+
+    Args:
+     x: base in internal 0..3 representation
+     y: base in internal 0..3 representation
+     x1: base in internal 0..3 representation, inner stacked base pair
+     y1: base in internal 0..3 representation, inner stacked base pair
+
+    Returns:
+        energy of the base pair stack according to current stacking energy table
 
     @see set_stacking_energy_table()
     """
