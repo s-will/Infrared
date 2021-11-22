@@ -1,7 +1,6 @@
-[TOC]
+# ChangeLog
 
-Version history
-===============
+[TOC]
 
 ## Release 1.0b - 2021-11-16
 

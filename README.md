@@ -1,5 +1,7 @@
 # Infrared
 
+[TOC]
+
 Infrared is a generic C++/Python hybrid library for efficient
 (fixed-parameter tractable) Boltzmann sampling.
 
@@ -15,10 +17,19 @@ General Public License for more details
 
 ## Main features of Infrared
 
-Infrared provides a fast and flexible C++ engine that evaluates a
-constraint network consisting of variables, multi-ary functions, and
-multi-ary constraints. Functions and constraints are C++ or Python
-objects, where new functions and constraints are easily defined in Python
+Infrared efficiently solves a broad class of sampling and optimization
+problems; originally targeted to bioinformatics problems, especially
+RNA sequence design. Such problems can be specified in a declarative, compositional
+style as (evaluated) constraint models using the Python high-level
+interface of Infrared.
+
+Encapsulated by the Python interface, the framework provides a fast and
+flexible C++ engine that evaluates constraint networks consisting of
+variables, multi-ary functions, and multi-ary constraints.  This evaluation
+is efficient depending on the complexity, measured as tree-width, of the
+network. 
+
+Application specific functions and constraints are easily defined in Python
 (or in C++). The evaluation is performed efficiently using cluster
 tree elimination following a (hyper-)tree decomposition of the
 dependencies (due to functions and constraints). Interpreting the
@@ -29,6 +40,31 @@ sampling strategy to target specific feature values. Such
 functionality is made conveniently available via general Python
 classes. In particular, the interface was defined to allow the
 straightforward and declarative specification of the constraint model.
+
+### Characteristics in brief
+
+Keep it simple, but flexible on the C++ side
+
+- variables are indexed from 0..n-1; using index type int
+
+- variable domains are consecutive lb...ub; value type is int
+
+- function value type templated
+
+- function values are combined according to policy, which supports evaluation
+  algebras
+
+- support sparse, memory-optimized data structures for intermediary
+  results to enable larger problem instances
+
+Provide a flexible interface and added functionality on the Python side
+
+- support constraint modeling syntax to declarativly and compositionally
+  describe constraint problems
+
+- support definintion of 'custom' constraints and functions in Python
+
+- support efficient evaluation of models for optimization and Boltzmann sampling
 
 ## Installation
 
@@ -54,8 +90,8 @@ python3 -m pip install .
 ## Usage
 
 We provide a tutorial as introduction to the Python high-level interface in
- the jupyter notebook ```Doc/rnadesign-tutorial.ipynb``` and further
- examples in Doc.
+ the jupyter notebook [Doc/rnadesign-tutorial.ipynb](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/rnadesign-tutorial.ipynb) and further
+ examples notebooks in the [Doc subdirectory](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc).
 
 ## API documentation
 
@@ -74,7 +110,7 @@ like [RNARedprint 2](https://gitlab.inria.fr/amibio/RNARedPrint) or
 [RNAPOND](https://gitlab.inria.fr/amibio/RNAPOND).
 
 
-### infrared / libinfrared --- Python modules as high level interface to the infrared core and extensions
+### infrared / libinfrared --- Python high level interface
 
 Using pylib11, we expose classes of the C++ library to
 Python, such that cluster trees can be constructed and populated with
@@ -95,7 +131,7 @@ Boltzmann sampling. The module provides access to the Infrared core and
 exports the additional base classes 
 
 
-### ired --- Infrared core
+### ired --- Infrared C++ core
 
 The core preforms precomputation, i.e. calculation of partition
 functions, and Boltzmann sampling based on a given, populated cluster
