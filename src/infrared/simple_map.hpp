@@ -1,6 +1,22 @@
 #ifndef SIMPLE_MAP_HH
 #define SIMPLE_MAP_HH
 
+/*
+ * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
+ * (C) Sebastian Will, 2018
+ *
+ * This file is part of the InfraRed source code.
+ *
+ * InfraRed provides a generic framework for tree decomposition-based
+ * Boltzmann sampling over constraint networks
+ */
+
+/**
+ * @file
+ *
+ * @brief Defines a simple (write-once) map class as space-saving replacement of hash_map
+ */
+
 #include <vector>
 #include <algorithm>
 #include <cassert>
