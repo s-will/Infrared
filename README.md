@@ -1,6 +1,7 @@
+[TOC]
+
 # Infrared
 
-[TOC]
 
 Infrared is a generic C++/Python hybrid library for efficient
 (fixed-parameter tractable) Boltzmann sampling.

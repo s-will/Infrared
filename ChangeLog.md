@@ -1,8 +1,6 @@
-# ChangeLog
-
 [TOC]
 
-## Release 1.0b - 2021-11-16
+# Release 1.0b - 2021-11-16
 
 This release facilitates the modeling of sampling and optimization problems 
 from a much broader range of applications by
@@ -26,7 +24,7 @@ from a much broader range of applications by
 * adding tutorials and examples in Jupyter notebooks that
   demonstrate the modeling of design problems in the framework
 
-### Python interface
+## Python interface
 
 * Introduce new modeling syntax to define constraint network models based on a
   new class `Model`
@@ -48,7 +46,7 @@ from a much broader range of applications by
 
 * Support named variables in constraint models
 
-### C++ library
+## C++ library
 
 * Support upper and lower bound of variable domains; add class
   `FiniteDomain`
@@ -64,7 +62,7 @@ constraints by using a specialized replacement
 
 * Add evaluation in arctic semiring for constraint optimization
 
-### Documentation
+## Documentation
 
 * Revisit API documentation
 
@@ -76,7 +74,7 @@ constraints by using a specialized replacement
 * Add Jupyter notebook as supplement of a book chapter on Infrared
   with new example code
 
-### Bug fixes
+## Bug fixes
 
 * Fix bug of repeated dependencies in the specification of models
 
@@ -84,16 +82,15 @@ constraints by using a specialized replacement
 functions/constraints
 
 
-Release 0.5.1 - 2021-07-10 
---------------------------
+# Release 0.5.1 - 2021-07-10 
 
-### Python Interface
+## Python Interface
 
 * Export algebra for constraint optimization
 
 * Redefine constraints and functions in Python
 
-### C++ library
+## C++ library
 
 Materialization of functions /and/ constraints
 
@@ -102,32 +99,30 @@ Materialization of functions /and/ constraints
 
 * the existing mechanism for functions was extended to constraints
 
-### Bug Fix
+## Bug Fix
 
 * Update behavior of `BoltzmannSampler.plot_td()`
 
-### Documentation
+## Documentation
 
 * Re-enable API documentation via doxygen
 
 * Update tutorial jupyter notebook
 
-Release 0.5 - 2021-05-04
-------------------------
+# Release 0.5 - 2021-05-04
 
-### C++ library
+## C++ library
 Use `pybind11`
 
-### Installation and dependencies
+## Installation and dependencies
 
 * Change build mechanism to `setup.py` and `cmake`
 
 * Enable installation via pip and conda
 
-Release 0.4 - 2020-11-08
-------------------------
+# Release 0.4 - 2020-11-08
 
-### Python Interface
+## Python Interface
 
 * Refactor and streamline the Python interface
 
@@ -135,24 +130,23 @@ Release 0.4 - 2020-11-08
 
 * Add access to partition function and provide consistency check in
 
-### Documentation
+## Documentation
 
 * Add tutorial of the Python interface (Jupyter notebook)
 
-### C++ library
+## C++ library
 
 * Add tests, fix handling of inconsistent networks
 
 * Revert to using `boost::python` (to resolve a bug in the use of `pybind11`)
 
-### Installation and dependencies
+## Installation and dependencies
 
 * Improve installation via autotools
 
 * Replace dependency on `libhtd` by `networkx`
 
-Release 0.3 - 2018-08-17
-------------------------
+# Release 0.3 - 2018-08-17
 
 * Generalize Python classes for Boltzmann sampler construction and
   provide them in Python module `infrared` for simpler use of the lib
@@ -160,20 +154,17 @@ Release 0.3 - 2018-08-17
 * Implement multi-dimensional Boltzmann sampling and provide this
   functionality via module `infrared`
 
-Release 0.2.1 - 2018-08-08
---------------------------
+# Release 0.2.1 - 2018-08-08
 
 * Add/cleanup Doxygen documentation of Python modules
 
-Release 0.2 - 2018-08-07
-------------------------
+# Release 0.2 - 2018-08-07
 
 * Improve program comments, support doxygen (`make doxygen-doc`)
 
 * Revise code, fix make check
 
-Release 0.1 - 2018-08-07
-------------------------
+# Release 0.1 - 2018-08-07
 
 * Optimize infrared evaluation/sampling engine
 
@@ -185,7 +176,6 @@ Release 0.1 - 2018-08-07
 
 * Implement some tests
 
-Release 0.0.1 - 2018-08-02
---------------------------
+# Release 0.0.1 - 2018-08-02
 
 Initial release
