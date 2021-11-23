@@ -46,7 +46,7 @@ def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
 
-## @class BPComp
+## @class infrared.rna.BPComp
 #  @brief Constrain complementarity of base pair (i,j)
 #  @extends Constraint
 #
@@ -62,7 +62,7 @@ def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) not in _bpcomp_tab,
                      module=__name__)
 
-## @class NotBPComp
+## @class infrared.rna.NotBPComp
 #  @brief Constraint for negation of BPComp
 #  @extends Constraint
 #  
@@ -80,7 +80,7 @@ def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
                    module=__name__)
 
-## @class GCCont
+## @class infrared.rna.GCCont
 #  @brief Function for (position-wise)  GC content
 #  @extends Function
 #
@@ -95,7 +95,7 @@ def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    lambda x, y, is_terminal: _bpenergy(x, y, is_terminal),
                    module=__name__)
 
-## @class BPEnergy
+## @class infrared.rna.BPEnergy
 #  @brief Function for (basepair-wise) BasePair Energy model
 #  @extends Function
 #
@@ -112,7 +112,7 @@ def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    lambda x, y, x1, y1: _stackenergy(x, y, x1, y1),
                    module=__name__)
 
-## @class StackEnergy
+## @class infrared.rna.StackEnergy
 #  @brief Function for Stack Energy model
 #  @extends Function
 #
@@ -128,7 +128,7 @@ def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 == y & 1,
                      module=__name__)
 
-## @class SameComplClassConstraint
+## @class infrared.rna.SameComplClassConstraint
 #  @brief Constrain two nucleotides to be in the sample complementarity class {(A,G), (C,U)}
 #  @extends Constraint
 #
@@ -141,7 +141,7 @@ def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 != y & 1,
                      module=__name__)
 
-## @class DifferentComplClassConstraint
+## @class infrared.rna.DifferentComplClassConstraint
 #  @brief Constrain two nucleotides to be in different complementarity classes
 #  @extends Constrainat
 #
