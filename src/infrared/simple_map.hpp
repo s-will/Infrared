@@ -21,6 +21,8 @@
 #include <algorithm>
 #include <cassert>
 
+namespace ired {
+
 /**
  * @brief Space saving replacement for map
  *
@@ -141,5 +143,7 @@ public:
 	vec.swap(*this);
     }
 };
+
+} // end namespace ired
 
 #endif //SIMPLE_MAP_HH
