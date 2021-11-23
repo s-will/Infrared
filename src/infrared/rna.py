@@ -12,7 +12,7 @@
 
 ## @file
 #  @brief Some RNA related functions
-# 
+#
 #  @code
 #    import infrared.rna as rna
 #  @endcode
@@ -65,13 +65,13 @@ def_constraint_class('NotBPComp', lambda i, j: [i, j],
 ## @class infrared.rna.NotBPComp
 #  @brief Constraint for negation of BPComp
 #  @extends Constraint
-#  
+#
 #  @code{.py}
 #     NotBPComp(i,j)
 #  @endcode
-#  
+#
 #  The constraint is satisfied if values at positions (i,j) DO NOT form a valid canonical base pair.
-#  
+#
 #  @see BPComp
 
 
@@ -410,11 +410,24 @@ def iupacvalues(symbol):
 # ------------------------------------------------
 # RNA energy models / parameters
 
-# Parameters for the base pair model (magic params from the Redprint paper)
+## Base pair energy parameters
+#
+# used by _bpenergy and Function BPEnergy
+# @see set_bpenergy_table
+_params_bp = None
+
+## Stacking energy parameters
+#
+# used by _stackenergy and Function StackEnergy
+# @see set_stacking_energy_table
+_params_stacking=None
+
+
+## Default parameters for the base pair model (magic params from the Redprint paper)
 def_params_bp = {"GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
                  "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566}
 
-# Parameters for the stacking model (magic params from the Redprint paper)
+## Default parameters for the stacking model (magic params from the Redprint paper)
 def_params_stacking = {"AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
                        "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
                        "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
@@ -423,10 +436,13 @@ def_params_stacking = {"AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
                        "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876}
 
 
-# @brief set the bp energy table for Infrared
-#  params dictionary of parameters or a table of the parameters
-# as expected by _bpenergy
 def set_bpenergy_table(params=def_params_bp):
+    """Set the bp energy table for Function BPEnergy
+
+    Args:
+        params: dictionary of parameters or a table of the parameters
+        as expected by _bpenergy
+    """
     if type(params) == dict:
         params = list(map(lambda x: params[x],
                           ["AU_IN", "GC_IN", "GU_IN",
@@ -435,10 +451,13 @@ def set_bpenergy_table(params=def_params_bp):
     _params_bp = params
 
 
-# @brief set the stacking energy table for Infrared
-#  params dictionary of parameters or a table of the parameters
-# as expected by _stackenergy
 def set_stacking_energy_table(params=def_params_stacking):
+    """Set the stacking energy table for Function StackEnergy
+
+    Args:
+        params: dictionary of parameters or a table of the parameters
+        as expected by _stackenergy
+    """
     if type(params) == dict:
         params = list(map(lambda x: params[x],
                           ["AUAU", "AUUA",
@@ -460,6 +479,9 @@ def set_stacking_energy_table(params=def_params_stacking):
 set_bpenergy_table()
 set_stacking_energy_table()
 
+## lookup table for base pair indices
+#
+# used by _bpenergy and _stackenergy
 _bpindex_tab = [[-1, -1, -1, 0],
                 [-1, -1, 2, -1],
                 [-1, 3, -1, 4],
