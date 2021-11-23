@@ -143,7 +143,7 @@ def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
 
 ## @class infrared.rna.DifferentComplClassConstraint
 #  @brief Constrain two nucleotides to be in different complementarity classes
-#  @extends Constrainat
+#  @extends Constraint
 #
 #  @code{.py}
 #    DifferentComplClassConstraint(i,j)
