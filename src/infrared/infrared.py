@@ -9,10 +9,12 @@
 # Boltzmann sampling over constraint networks
 #
 
-"""@package infrared.infrared
+## @file
+#
+#  @brief infrared
 
-testest
-"""
+## @package infrared.infrared
+#  @copydoc infrared.py
 
 import os
 import random
@@ -40,7 +42,8 @@ def seed(seed = None):
 
     This does not seed Python's global RNG
 
-    @param seed integer used as seed
+    Args:
+        seed: integer used as seed
 
     Without argument or seed==None, use pythons built-in random.seed() to
     generate a seed.
@@ -54,7 +57,7 @@ def seed(seed = None):
     tdseed(seed)
 
 
-# @brief exception to signal inconsistency, when consistency would be required
+#  exception to signal inconsistency, when consistency would be required
 class ConsistencyError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
@@ -66,14 +69,15 @@ class ConsistencyError(RuntimeError):
 #
 
 class EvaluationAlgebra(ABC):
-    """!@brief Algebra for evaluating a constraint network
+    """Algebra for evaluating a constraint network
     """
 
     @staticmethod
     @abstractmethod
     def function(weighted_function):
-        """!@brief Translate weighted function to suitable libinfrared function
-        @param weighted_function an object of class WeightedFunction
+        """Translate weighted function to suitable libinfrared function
+            Args:
+                weighted_function: an object of class WeightedFunction
         """
         pass
 
@@ -92,7 +96,7 @@ class PFFunctionAdapter(libir.Function):
         return f"<PFFunctionAdapter of {self._wf}>"
 
 class PFEvaluationAlgebra(EvaluationAlgebra):
-    """!@brief Adapt to partition function algebra for sampling"""
+    """Adapt to partition function algebra for sampling"""
 
     def function(self, weighted_function):
         return PFFunctionAdapter(weighted_function)
@@ -110,7 +114,7 @@ class ArcticFunctionAdapter(libir.IntFunction):
         return f"<ArcticFunctionAdapter of {self._wf}>"
 
 class ArcticEvaluationAlgebra(EvaluationAlgebra):
-    """!@brief Adapt to maximization algebra for optimization"""
+    """Adapt to maximization algebra for optimization"""
 
     def __init__(self, scale):
         self._scale = scale
@@ -122,7 +126,7 @@ class ArcticEvaluationAlgebra(EvaluationAlgebra):
         return value/self._scale
 
 class WeightedFunction:
-    """!@brief function of a constraint network
+    """function of a constraint network
 
     WeightedFunction have the features weight and variables; their value depends
     on assignment to its variables
@@ -152,11 +156,11 @@ class WeightedFunction:
 def _generic_def_function_class(classname, init, value, module="__main__",
                                 parentclass=WeightedFunction,
                                 valuefunname="value"):
-    """!@brief Create a class of infrared weighted functions or constraints
-    @param init function to create dependency list from constructor argument(s)
-    @param value function to compute the weighted functions's value from
+    """ Create a class of infrared weighted functions or constraints
+     init function to create dependency list from constructor argument(s)
+     value function to compute the weighted functions's value from
     assignment values
-    @param env environment, in which the class is created (users could e.g.
+     env environment, in which the class is created (users could e.g.
                                                            pass env=locals())
 
     Defines a new class with name 'classname' (by default in the module's
@@ -166,7 +170,7 @@ def _generic_def_function_class(classname, init, value, module="__main__",
     infrared constraint model. Note that `init` defines the dependencies in
     the order of the (positional) arguments of `value`.
 
-    @note the value function can depend on arguments to the function init,
+    Note: the value function can depend on arguments to the function init,
     which will be automatically stored in the class and passed on.
     """
 
@@ -247,17 +251,18 @@ ValueIn.entailed = _domain_constraint_entailed
 
 
 class Model:
-    """!@brief A constraint model
+    """A constraint model
     """
 
     def __init__(self, number=None, domain=None, name='X'):
-        """!@brief init model
-        @param number if not None, number of variables
-        @param domain domains of variables
-        @param name name of variable series
-
+        """Init model.
         If number is not None, calls add_variables with the
         given parameters after initialization.
+
+        Args:
+            number: if not None, number of variables
+            domain: domains of variables
+            name: name of variable series. Defaults to `X`
         """
         self._constraints = []
         self._functions = dict()
@@ -269,10 +274,12 @@ class Model:
             self.add_variables(number, domain, name)
 
     def add_variables(self, number, domain, name='X'):
-        """!@brief add variable domains
-        @param number number of variables
-        @param domain domain size; defines the domain values as 0..domain-1
-        @param name assign a name to the variable(s)
+        """Add variable domains
+
+        Args:
+            number: number of variables
+            domain: domain size; defines the domain values as 0..domain-1
+            name: assign a name to the variable(s)
         """
 
         if name not in self._domains:
@@ -282,12 +289,15 @@ class Model:
             [libir.FiniteDomain(domain) for _ in range(number)])
 
     def restrict_domains(self, vars, domain):
-        """!@brief restrict the domain of a variable
-        @param vars variable or list of variables, each specified by
-        (name,index); or simply index, then addressing ('X',index)
-        @param domain the domain
+        """Restrict the domain of a variable
 
-        @note the domain bounds are intersected with the original domain
+        Args:
+            vars: variable or list of variables, each specified by
+        (name,index); or simply index, then addressing ('X',index)
+            domain: the domain
+
+        Note:
+            the domain bounds are intersected with the original domain
         """
         newdom = libir.FiniteDomain(domain)
         if type(vars) != list:
@@ -301,10 +311,12 @@ class Model:
             self._domains[name][i] = libir.FiniteDomain(newlb,newub)
 
     def add_constraints(self, constraints):
-        """!@brief add constraints to the model
-        @param constraints an iterable of constraints or a single constraint
+        """Add constraints to the model
+        Args:
+            constraints: an iterable of constraints or a single constraint
 
-        @note supports optimizations via on_add and entailed methods of
+        Note:
+            supports optimizations via on_add and entailed methods of
         added constraints; see ValueIn
         """
         if hasattr(constraints, '__iter__'):
@@ -323,12 +335,13 @@ class Model:
             self._constraints.append(constraint)
 
     def add_functions(self, functions, group='base'):
-        """!@brief add functions to the model
-        @param functions [const] an iterable of constraints or a single
-        constraint
-        @param group indentifier of function group
+        """Add functions to the model
+        Args:
+            functions: [const] an iterable of constraints or a single constraint
+            group: indentifier of function group. Defaults to `base`
 
-        @note deep copies the input functions
+        Note:
+            deep copies the input functions
         """
 
         if group not in self._functions:
@@ -345,39 +358,44 @@ class Model:
         self._functions[group].extend(copy.deepcopy(functions))
 
     def num_named_variables(self, name):
-        """@brief number of variables
-        @param name name of the variables series
-        @return number of variables of the given series
+        """Number of variables
+        Args:
+            name: name of the variables series
+        Returns:
+            number of variables of the given series
         """
         if name not in self._domains:
             return 0
         return len(self._domains[name])
 
     def has_empty_domains(self):
-        """@brief Check inconsistency due to empty domains
-        @return whether model has empty domains
+        """Check inconsistency due to empty domains
+        Returns:
+            whether model has empty domains
         """
         return any(dom.empty() for dom in self.domains)
 
     @property
     def num_variables(self):
-        """@brief number of all variables
-        @return number of all variables
+        """Number of all variables
+        Returns:
+            number of all variables
         """
         return sum(len(self._domains[name]) for name in self._domains)
 
     @property
     def constraints(self):
-        """
-        @brief Constraints of the model
-        @return specification of the model's functions
+        """Constraints of the model
+        Returns:
+            specification of the model's functions
         """
         return self._constraints
 
     @property
     def functions(self):
-        """!@brief All functions of the model
-        @return list of all functions
+        """All functions of the model
+        Returns:
+            list of all functions
         """
         fs = []
         for k in self._functions:
@@ -386,7 +404,9 @@ class Model:
 
     @property
     def domains(self):
-        """!@brief list of all domain descriptions
+        """Domains of the model
+        Returns:
+            list of all domain descriptions
         """
         doms = []
         for k in sorted(self._domains.keys()):
@@ -394,10 +414,11 @@ class Model:
         return doms
 
     def _automatic_feature(self, group):
-        """!@brief Automatic feature for function group
-        @return the feature
-
+        """Automatic feature for function group.
         Feature with value that is derived as sum of the feature functions
+
+        Returns:
+            the feature
         """
         def eval_fun(sample):
             return sum(f.value(sample) for f in self._functions[group])
@@ -405,17 +426,19 @@ class Model:
         return Feature(group, eval_fun, group=group)
 
     def add_feature(self, name, group, eval_fun):
-        """!@brief Add a (custom) feature
-        @param name name of the feature
-        @param group one or several groups of feature controlled functions
-        @param eval_fun function to evaluate the feature at an assignment
+        """Add a (custom) feature
+        Args:
+            name: name of the feature
+            group: one or several groups of feature controlled functions
+            eval_fun: function to evaluate the feature at an assignment
         """
         self._features[name] = Feature(name, eval_fun, group=group)
 
     @property
     def features(self):
-        """!@brief Features of the model
-        @return dictionary of features
+        """Features of the model
+        Returns:
+            dictionary of features
         """
         for name in self._features:
             if self._features[name] is None:
@@ -424,17 +447,17 @@ class Model:
         return self._features
 
     def eval_feature(self, assignment, name):
-        """!@brief evaluate named feature at assignment
-        @param assignment the assignment
-        @param name name of the feature
-        @return value of the feature
+        """Evaluate named feature at assignment
+        Args:
+            assignment: the assignment
+            name: name of the feature
+        Returns:
+            value of the feature
         """
         return self.features[name].eval(assignment)
 
     def set_feature_weight(self, weight, name):
-        """!@brief set the weight of a feature and its function group
-        @param weight the weight
-        @param name the feature name
+        """Set the weight of a feature and its function group.
 
         This method sets the weight for the Feature itself and in
         all the functions (currently!) in its group.
@@ -442,6 +465,10 @@ class Model:
         The method should be called after all functions of its group are
         defined. Otherwise, weights of the feature and its functions get out
         of sync (but can be re-synced by another call to this method.)
+
+        Args:
+            weight: the weight
+            name: the feature name
         """
         self.features[name]._weight = weight
         groups = self.features[name].group
@@ -452,10 +479,12 @@ class Model:
                 f.weight = weight
 
     def idx(self, variables):
-        """!@brief raw indices of named variables
-        @param variables single variable or list of variables; variables can be named; default
+        """Raw indices of named variables
+        Args:
+            variables: single variable or list of variables; variables can be named; default
         name 'X'
-        @return list of (internal) variable indices
+        Returns:
+            list of (internal) variable indices
         """
         def convert(var):
             try:
@@ -476,9 +505,11 @@ class Model:
         return variables
 
     def dependencies(self, non_redundant=True):
-        """!@brief dependencies due to constraints and functions
-        @param non_redundant whether the dependency list is made non-redundant
-        @returns list of lists of indices of variables that depend on each
+        """Dependencies due to constraints and functions
+        Args:
+            non_redundant: whether the dependency list is made non-redundant. Defaults to `True`
+        Returns:
+            list of lists of indices of variables that depend on each
         other either through functions or constraints
         """
         deps = [x.vars() for x in self.functions + self.constraints]
@@ -493,9 +524,11 @@ class Model:
 
     @staticmethod
     def _expand_to_cliques(dependencies):
-        """! @brief Expand non-binary dependencies to cliques of binary deps
-        @param dependencies list of dependencies
-        @return list of binary dependencies
+        """Expand non-binary dependencies to cliques of binary deps
+        Args:
+            dependencies: list of dependencies
+        Returns:
+            list of binary dependencies
         """
         import itertools
         bindeps = list()
@@ -505,14 +538,16 @@ class Model:
 
     @staticmethod
     def _remove_subsumed_dependencies(deps):
-        """!@brief Removes redundant dependencies that are subsumed by others
-        @param deps list of dependencies (where a dependency is a list of
-                                          indices)
-
+        """Removes redundant dependencies that are subsumed by others
         Removes all dependencies that are subsumed by other dependencies
         in deps
 
-        @return pruned list of dependencies
+        Args:
+            deps: list of dependencies (where a dependency is a list of
+                                          indices)
+
+        Returns:
+            pruned list of dependencies
         """
         def sublist(xs, ys):
             return all(x in ys for x in xs)
@@ -524,10 +559,12 @@ class Model:
         return deps
 
     def write_graph(self, out, non_redundant=True):
-        """!@brief Write dependency graph
-        @param out a filehandle of name of the target file
+        """Write dependency graph.
         Writes the dependency graph to file in dot format;
         hyper-edges are expanded to cliques.
+
+        Args:
+            out: a filehandle of name of the target file
         """
         if type(out) == str:
             out = open(out, 'w')
@@ -550,8 +587,9 @@ class Model:
         out.write("\n}\n")
 
     def connected_components(self):
-        """@brief Connected components of the model's dependency graph
-        @returns a list of sets of the connected components
+        """Connected components of the model's dependency graph
+        Returns:
+            a list of sets of the connected components
         """
         numnodes, edges = self.num_variables, self.bindependencies()
         def adjacency_list():
@@ -575,7 +613,7 @@ class Model:
                 if not marked[x]]
 
 class ClusterTreeBase:
-    """!@brief Cluster tree base class
+    """Cluster tree base class
 
     This class provides functionality to construct and populate C++
     cluster trees with constraints and functions.
@@ -597,12 +635,19 @@ class ClusterTreeBase:
         return self._EA.interpret(self._ct.evaluate())
 
     def is_consistent(self):
+        """
+        Returns:
+            whether the cluster tree is consistent
+        """
         return self._ct.is_consistent()
 
-    # @brief Construct the cluster tree object of the C++ engine
-    #
-    # @param domains description of the domains
     def construct_cluster_tree(self, domains, td):
+        """Construct the cluster tree object of the C++ engine
+
+        Args:
+            domains: description of the domains
+            td: tree decomposition
+        """
         bagconstraints, bagfunctions = self.get_bag_assignments()
 
         # keep record of all non-root nodes
@@ -634,57 +679,70 @@ class ClusterTreeBase:
                         children.add(j)
                         stack.append((cluster, j))
 
-    # @brief Get assignments of functions and constraints to the bags
-    #
-    # straightforward non-redundant assignment of constraints and functions,
-    # each to some bag that contains all of their variables
-    #
-    # assumes constraints and functions specified in self._model
     def get_bag_assignments(self):
+        """Get assignments of functions and constraints to the bags
+
+        straightforward non-redundant assignment of constraints and functions,
+        each to some bag that contains all of their variables
+
+        assumes constraints and functions specified in self._model
+        """
         bagconstraints = self.assign_to_bags(self._model.constraints)
         bagfunctions = self.assign_to_bags(self._model.functions)
         return (bagconstraints, bagfunctions)
 
-    # @brief Get the indices of all bags that contain a set of variables
-    # @param bvars the set of variables
-    # @return list of indices of the bags that contain bvars
 
     def find_all_bags(self, bvars):
+        """Get the indices of all bags that contain a set of variables
+        Args:
+            bvars: the set of variables
+        Returns:
+            list of indices of the bags that contain bvars
+        """
         return [i for i, bag in enumerate(self._bagsets)
                 if all(x in bag for x in bvars)]
 
-    # @brief Find a bag that contains a set of variables
-    # @param bvars the set of variables
-    # @return index of first bag that contains bvars (or None if there is none)
     def find_bag(self, bvars):
+        """Find a bag that contains a set of variables
+        Args:
+            bvars: the set of variables
+        Returns:
+            index of first bag that contains bvars (or None if there is none)
+        """
         bags = self.find_all_bags(bvars)
         if len(bags) > 0:
             return bags[0]
         else:
             return None
 
-    # @brief assign constraints or functions to bags
-    # @param constraints list of constraints
-    # @return list where constraints are placed at corresponding bag indices
-    #
-    # Assigns such that each constraint/function is assigned to exactly one bag
-    # that contains its dependencies
-    #
-    # @pre for each constraint/function there is one bag that contains its
-    # dependencies; otherwise the constraint/function is not assigned
     def assign_to_bags(self, constraints):
+        """assign constraints or functions to bags
+
+        Assigns such that each constraint/function is assigned to exactly one bag
+        that contains its dependencies
+        Args:
+            constraints: list of constraints
+        Returns:
+            list where constraints are placed at corresponding bag indices
+
+        @pre for each constraint/function there is one bag that contains its
+            dependencies; otherwise the constraint/function is not assigned
+        """
         bagconstraints = {i: [] for i in range(len(self._bagsets))}
         for cons in constraints:
             bagconstraints[self.find_bag(cons.vars())].append(cons)
         return bagconstraints
 
-    # @brief assign constraints or functions to all possible bags
-    # @param constraints list of constraints
-    # @return list where constraints are placed at corresponding bag indices
-    #
-    # Assigns constraint/function is to each bags that contains its
-    # dependencies.
     def assign_to_all_bags(self, constraints):
+        """ assign constraints or functions to all possible bags
+
+        Assigns constraint/function is to each bags that contains its
+        dependencies.
+        Args:
+            constraints: list of constraints
+        Returns:
+            list where constraints are placed at corresponding bag indices
+        """
         bagconstraints = {i: [] for i in range(len(self._bagsets))}
         for cons in constraints:
             for bidx in self.find_all_bags(cons.vars()):
@@ -708,8 +766,9 @@ class PFClusterTree(ClusterTreeBase):
     def sample(self):
         return self._ct.sample()
 
+
 class Feature:
-    """!@brief Feature in multi-dimensional Boltzmann sampling
+    """Feature in multi-dimensional Boltzmann sampling
 
     A feature defines a (partial) evaluation/score of a sample, which
     can be targeted due to a dedicated weight. It defines a method
@@ -725,7 +784,12 @@ class Feature:
     """
 
     def __init__(self, identifier, eval_function, group=[]):
-        """@brief Construct feature
+        """Construct feature
+
+        Args:
+            ifentifier:
+            eval_funciton:
+            group: defaults to empty list []
         """
         self._identifier = identifier
         self._eval_function = eval_function
@@ -737,7 +801,7 @@ class Feature:
         return self._identifier
 
     def eval(self, sample):
-        """!@brief Evaluate feature for given sample and weight"""
+        """Evaluate feature for given sample and weight"""
         return self._eval_function(sample)
 
     @property
@@ -749,15 +813,19 @@ class Feature:
         return self._weight
 
 
-# @brief Keeping statistics on features
-#
-# This class allows recording values of multiple features for a
-# series of samples; it can be queried for mean and standard
-# deviation (or the entire distribution) of each recorded feature.
 class FeatureStatistics:
-    # @brief constructor
-    # @param keep Keep all recorded features in memory
+    """Keeping statistics on features
+
+    This class allows recording values of multiple features for a
+    series of samples; it can be queried for mean and standard
+    deviation (or the entire distribution) of each recorded feature.
+    """
+
     def __init__(self, keep=False):
+        """constructor
+        Args:
+            keep: Keep all recorded features in memory. Defaults to False
+        """
         self.keep = keep
 
         self.identifier = dict()
@@ -766,12 +834,14 @@ class FeatureStatistics:
         self.sqsums = dict()
         self.features = dict()
 
-    # @brief Record feature values
-    # @param features a dictionary of features
-    # @param values a corresponding dictionary of the feature values
-    # @param sample a sample that can be evaluated by the feature(s)
-    # @return pair of feature id string and value
     def record_features(self, features, values):
+        """Record feature values
+        Args:
+            features: a dictionary of features
+            values: a corresponding dictionary of the feature values
+        Returns:
+            pair of feature id string and value
+        """
         if not type(features) is dict:
             features = {'dummy': features}
             values = {'dummy': values}
@@ -795,30 +865,39 @@ class FeatureStatistics:
             if self.keep:
                 self.features[fid].append(value)
 
-    # @brief check whether any features have been recorded
-    # @return whether empty (since no feature has been recorded)
     def empty(self):
+        """Check whether any features have been recorded
+        Returns:
+            whether empty (since no feature has been recorded)
+        """
         return not self.count
 
-    # @brief means of recorded features
-    # @return dictionary of means  (at feature ids as keys)
     def means(self):
+        """Means of recorded features
+        Returns:
+            dictionary of means  (at feature ids as keys)
+        """
         return {k: self.sums[k]/self.count[k] for k in self.sums}
 
-    # @brief variances of recorded features
-    # @return dictionary of variances (at feature ids as keys)
     def variances(self):
+        """Variances of recorded features
+        Returns:
+            dictionary of variances (at feature ids as keys)
+        """
         means = self.means()
         return {k: self.sqsums[k]/self.count[k] - means[k]**2
                 for k in self.sqsums}
 
-    # @brief standard deviations of recorded features
-    # @return dictionary of standard deviations (at feature ids as keys)
     def stds(self):
+        """Standard deviations of recorded features
+        Returns:
+            dictionary of standard deviations (at feature ids as keys)
+        """
         return {k: val**0.5 for k, val in self.variances().items()}
 
-    # @brief Report features to standard output
     def report(self):
+        """Report features to standard output
+        """
         means = self.means()
         stds = self.stds()
         return ' '.join(["{}={:3.2f} +/-{:3.2f}".format(self.identifier[fid],
@@ -828,20 +907,22 @@ class FeatureStatistics:
 
 
 class EngineBase(ABC):
-    """!@brief Abstract base class for samplers and optimizers
+    """Abstract base class for samplers and optimizers
     """
 
-    # @brief Construct from model
-    # @param model the constraint model
+    #  Construct from model
+    #  model the constraint model
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
                  lazy=True):
-        """!@brief Construct with model and optional td_factory
+        """Construct with model and optional td_factory
 
-        @param model [const] Constraint network model
-        @param td_factory Factory for tree decomposition
-        @param lazy delay construction of the data structures until required
+        Args:
+            model: [const] Constraint network model
+            td_factory: Factory for tree decomposition
+            lazy: delay construction of the data structures until required
 
-        @note the model is deepcopied such that it won't be modified and/or
+        Note:
+            the model is deepcopied such that it won't be modified and/or
         later modifications of the model don't have effect on the sampler
         """
 
@@ -852,7 +933,7 @@ class EngineBase(ABC):
         if not lazy:
             self.setup_engine()
 
-    # @brief flag that engine requires setup
+    #  flag that engine requires setup
     def requires_reinitialization(self):
         self._td = None
         self._ct = None
@@ -870,14 +951,16 @@ class EngineBase(ABC):
     def ct(self):
         return self._ct
 
-    # @brief Sets up the constraint model / cluster tree sampling
-    # engine
-    #
-    # @note do nothing, if the engine was already initialized before
-    #
-    # @param skip_ct skip the potentially expensive construction and
-    # evaluation of the cluster tree
     def setup_engine(self, *, skip_ct=False):
+        """Sets up the constraint model / cluster tree sampling
+            engine
+
+        Note:
+            do nothing, if the engine was already initialized before
+        Args:
+            skip_ct: skip the potentially expensive construction and
+        evaluation of the cluster tree
+        """
         # immediately return if ct exists and is not None
         if self._ct is not None:
             return
@@ -896,9 +979,11 @@ class EngineBase(ABC):
                 raise ConsistencyError("Inconsistent constraint model")
 
     def evaluate(self):
-        """!@brief evaluates the cluster tree
-        @return partition function
-        @note Evaluation is a potentially (depending on the treewidth)
+        """Evaluates the cluster tree
+        Returns:
+            partition function
+        Note:
+            Evaluation is a potentially (depending on the treewidth)
         costly operation.
         The method does not re-evaluate the tree if this was already done
         """
@@ -912,11 +997,12 @@ class EngineBase(ABC):
             return False
         return self._ct.is_consistent()
 
-    # @brief Plot the tree decomposition to pdf file
-    # @param filename write to filename
-    # @param to target format, support conversion to "pdf" or "png".
-    # Anything else writes graphviz dot format
     def plot_td(self, filename, to="pdf"):
+        """Plot the tree decomposition to pdf file
+        filename write to filename
+        to target format, support conversion to "pdf" or "png".
+        Anything else writes graphviz dot format
+        """
         conversions = {
             "pdf": dotfile_to_pdf,
             "png": dotfile_to_png
@@ -933,95 +1019,113 @@ class EngineBase(ABC):
             conversions[to](filename)
             os.remove(filename)
 
-    # @brief Get tree width
-    # @return tree width
     def treewidth(self):
+        """Get tree width
+        Returns:
+            tree width
+        """
         self.setup_engine(skip_ct=True)
         return self._td.treewidth()
 
 
-    # @brief Generate the populated cluster tree
-    # @param td tree decomposition
-    # @return cluster tree
     @abstractmethod
     def gen_cluster_tree(self):
+        """Generate the populated cluster tree
+        td tree decomposition
+        Returns: cluster tree
+        """
         pass
 
 
 class ArcticOptimizer(EngineBase):
-    """!@brief Maximizing optimizer (based on arctic algebra)
+    """Maximizing optimizer (based on arctic algebra)
     """
 
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
                  lazy=True):
-        """!@brief Construct
+        """ Construct
         @see EngineBase
         """
         super().__init__(model, td_factory, lazy)
 
     def optimize(self):
-        """!@brief Optimal assignment
-        @returns one optimal assignment
+        """Optimal assignment
+        Returns:
+            one optimal assignment
         """
         self.setup_engine()
         return self._ct.optimize()
 
     def gen_cluster_tree(self):
-        """! @brief Suitable cluster tree
-        @returns arctic cluster tree for the model
+        """!  Suitable cluster tree
+        Returns:s arctic cluster tree for the model
         """
         return ArcticClusterTree(self._model, td=self._td)
 
 
-#!@brief short name for default Optimizer
+# short name for default Optimizer
 Optimizer = ArcticOptimizer
 
 
 class BoltzmannSampler(EngineBase):
-    """! @brief Boltzmann sampler
+    """Boltzmann sampler
     """
 
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
                  lazy=True):
-        """!@brief Construct
-        @see EngineBase
+        """Construct
+        Args:
+            model: Infrared Model
+            td_factory: Tree decomposition policy. Defaults to TreeDecompositionFactory
+            lazy: Defaults to True
+        See also:
+            EngineBase
         """
         super().__init__(model, td_factory, lazy)
 
-    # @brief generate sample
-    # @returns a raw sample
-    #
-    # @note raises exception ConsistencyError if the model is inconsistent.
-    # If the cluster tree was not evaluated (or consistency checked) before,
-    # it will be evaluated once on-demand.
     def sample(self):
+        """Generate sample
+
+        If the cluster tree was not evaluated (or consistency checked) before,
+        it will be evaluated once on-demand.
+        Returns:
+            a raw sample
+
+        Note:
+            raises exception ConsistencyError if the model is inconsistent.
+        """
         self.setup_engine()
         return self._ct._ct.sample()
 
-    # @brief Sample generator
     def samples(self):
+        """Sample generator
+        """
         while(True):
             yield self.sample()
 
     def gen_cluster_tree(self):
-        """! @brief Suitable cluster tree
-        @returns PF cluster tree for the model
+        """Suitable cluster tree
+        Returns:
+            PFClusterTree for the model
         """
         return PFClusterTree(self._model, td=self._td)
 
 
 class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
-    """!@brief Multi-dimensional Boltzmann sampler
+    """ Multi-dimensional Boltzmann sampler
     """
 
     def __init__(self, model, td_factory=TreeDecompositionFactory(),
                  lazy=True):
-        """!@brief Construct with model and optional td_factory
-        @param model [const] Constraint network model
-        @param td_factory Factory for tree decomposition
-        @param lazy delay construction of the data structures until required
+        """Construct with model and optional td_factory
 
-        @see BoltzmannSampler.__init__()
+        Args:
+            model: [const] Constraint network Model
+            td_factory: Factory for tree decomposition
+            lazy: delay construction of the data structures until required. Defaults to True
+
+        See also:
+            BoltzmannSampler.__init__()
         """
         super().__init__(model, td_factory, lazy)
 
@@ -1029,12 +1133,15 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         self.samples_per_round = 1000
         self.tweak_factor = 0.01
 
-    # @brief whether the sample is of good quality
-    # @param features dictionary of features
-    #
-    # checks whether the sample approximately meets the targets;
-    # check only the targeted features (which have value, target and tolerance)
     def is_good_sample(self, features, values):
+        """whether the sample is of good quality
+
+        checks whether the sample approximately meets the targets;
+        check only the targeted features (which have value, target and tolerance)
+
+        Args:
+            features: dictionary of features
+        """
         ret = True
         for k, f in features.items():
             try:
@@ -1046,25 +1153,28 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         return ret
 
     def set_target(self, target, tolerance, featureid):
-        """!@brief Set target of a feature
-        @param target the target value
-        @param tolerance the tolerance (as absolute difference) to the target
-        @param fetureid id of the feature
+        """Set target of a feature
+
+        Args:
+            target: the target value
+            tolerance: the tolerance (as absolute difference) to the target
+            fetureid: id of the feature
         """
         f = self._model.features[featureid]
         f.target = target
         f.tolerance = tolerance
 
-    # @brief Generator of targeted samples
-    #
-    # Performs multi-dimensional Boltzmann sampling: every
-    # self.samples_per_round many samples, the feature means are
-    # estimated and the weights are recalibrated. Each generated
-    # sample is tested for falling into target +/- tolerance for all
-    # features, in which case it is yielded.
-    #
-    # self.tweak_factor controls the speed of recalibration of weights
     def targeted_samples(self):
+        """Generator of targeted samples
+
+        Performs multi-dimensional Boltzmann sampling: every
+        self.samples_per_round many samples, the feature means are
+        estimated and the weights are recalibrated. Each generated
+        sample is tested for falling into target +/- tolerance for all
+        features, in which case it is yielded.
+
+        self.tweak_factor controls the speed of recalibration of weights
+        """
         features = self._model.features
 
         means = None
@@ -1110,14 +1220,18 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 Sampler = MultiDimensionalBoltzmannSampler
 
 
-## Convert dot graph file format to png/pdf
-#
-# @param graphfile file of graph in dot format
-#
-# The graph is plotted and written to a pdf file by calling
-# graphviz's dot tool on th dot file.
-#
 def dotfile_to_tgt(graphfile, tgt, outfile=None):
+    """Convert dot graph file format to png/pdf
+
+    The graph is plotted and written to a pdf file by calling
+    graphviz's dot tool on th dot file.
+
+    Args:
+        graphfile: file of graph in dot format
+        tgt:
+        outfile:
+    """
+
     if outfile is None:
         outfile = re.sub(r".dot$", "", graphfile)+"."+tgt
     subprocess.check_output(["dot", f"-T{tgt}", "-o", outfile, graphfile])
@@ -1129,3 +1243,4 @@ def dotfile_to_pdf(graphfile, outfile=None):
 
 def dotfile_to_png(graphfile, outfile=None):
     dotfile_to_tgt(graphfile, "png", outfile)
+

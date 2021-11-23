@@ -10,17 +10,22 @@
 # Boltzmann sampling over constraint networks
 #
 
-## @defgroup rna
+## @file
 #  @brief Some RNA related functions
 # 
 #  @code
 #    import infrared.rna as rna
 #  @endcode
 #
-#  @{
 #
 # Loose library for some common tasks for RNA specific code
 #
+
+##
+#  @package infrared.rna
+#  @copydoc rna.py
+
+
 import re
 import collections
 import math
@@ -507,7 +512,6 @@ def _stackenergy(x, y, x1, y1):
 
     return _params_stacking[6 * (bpidx//2) + bpidx1]
 
-# @}
 
 if __name__ == "__main__":
     pass
