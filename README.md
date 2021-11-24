@@ -9,7 +9,7 @@ Infrared is a generic C++/Python hybrid library for efficient
 ## Disclaimer and license
 
 Infrared is free software. It was part of project [RNARedPrint](https://github.com/yannponty/RNARedPrint), then separated as a stand alone project.
-Note that the system is in active development and is likely to still undergo significant
+Note that the system is in active development and is likely to still undergo 
 changes. It is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
@@ -65,7 +65,11 @@ Provide a flexible interface and added functionality on the Python side
 
 - support definintion of 'custom' constraints and functions in Python
 
-- support efficient evaluation of models for optimization and Boltzmann sampling
+- support evaluation of models for optimization and Boltzmann sampling
+
+- implement a multiple-target Boltzmann sampling strategy to target
+  multiple, freely definable features of solutions. Features correspond to and can be 
+  automatically derived from groups of functions of the constraint model
 
 ## Installation
 
