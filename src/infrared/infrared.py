@@ -60,6 +60,12 @@ def seed(seed = None):
 #  exception to signal inconsistency, when consistency would be required
 class ConsistencyError(RuntimeError):
     def __init__(self, arg):
+        """Construct with description
+
+        Args:
+            arg: description of error
+        """
+
         self.args = [arg]
 
 
@@ -85,6 +91,11 @@ class EvaluationAlgebra(ABC):
         return value
 
 class PFFunctionAdapter(libir.Function):
+    """Adapt function for partition function algebra
+
+    @see PFEvaluationAlgebra
+    """
+
     def __init__(self, wf):
         super().__init__(wf.vars())
         self._wf = wf
@@ -96,12 +107,21 @@ class PFFunctionAdapter(libir.Function):
         return f"<PFFunctionAdapter of {self._wf}>"
 
 class PFEvaluationAlgebra(EvaluationAlgebra):
-    """Adapt to partition function algebra for sampling"""
+    """Partition function algebra for sampling
+
+    Controls the translation of WeightedFunction to libir.Function
+    in the case of partition function computation / sampling
+    """
 
     def function(self, weighted_function):
         return PFFunctionAdapter(weighted_function)
 
 class ArcticFunctionAdapter(libir.IntFunction):
+    """Adapt function for maximization algebra
+
+    @see ArcticEvaluationAlgebra
+    """
+
     def __init__(self, wf, scale):
         super().__init__(wf.vars())
         self._wf = wf
@@ -114,7 +134,11 @@ class ArcticFunctionAdapter(libir.IntFunction):
         return f"<ArcticFunctionAdapter of {self._wf}>"
 
 class ArcticEvaluationAlgebra(EvaluationAlgebra):
-    """Adapt to maximization algebra for optimization"""
+    """Maximization algebra for optimization
+
+    Controls the translation of WeightedFunction to libir.Function
+    in the case of optimization
+    """
 
     def __init__(self, scale):
         self._scale = scale
@@ -126,12 +150,12 @@ class ArcticEvaluationAlgebra(EvaluationAlgebra):
         return value/self._scale
 
 class WeightedFunction:
-    """function of a constraint network
+    """Function of a constraint network
 
-    WeightedFunction have the features weight and variables; their value depends
+    Has features weight and variables; their value depends
     on assignment to its variables
 
-    WeightedFunctions are 'translated' to functions of infrared by FunctionAdaptors
+    Is 'translated' to a Function of infrared by FunctionAdaptors
     """
 
     def __init__(self, variables):
@@ -252,10 +276,20 @@ ValueIn.entailed = _domain_constraint_entailed
 
 class Model:
     """A constraint model
+
+    Describes a constraint model.
+
+    Allows to compose a constraint model by adding variables,
+    constraints, and functions and restricting domains.
+
+    Automatically generated features for function groups.
+
+    Provides further information on the model.
     """
 
     def __init__(self, number=None, domain=None, name='X'):
         """Init model.
+
         If number is not None, calls add_variables with the
         given parameters after initialization.
 
@@ -822,7 +856,8 @@ class FeatureStatistics:
     """
 
     def __init__(self, keep=False):
-        """constructor
+        """Construct
+
         Args:
             keep: Keep all recorded features in memory. Defaults to False
         """
@@ -836,6 +871,7 @@ class FeatureStatistics:
 
     def record_features(self, features, values):
         """Record feature values
+
         Args:
             features: a dictionary of features
             values: a corresponding dictionary of the feature values
@@ -867,6 +903,7 @@ class FeatureStatistics:
 
     def empty(self):
         """Check whether any features have been recorded
+
         Returns:
             whether empty (since no feature has been recorded)
         """
@@ -874,6 +911,7 @@ class FeatureStatistics:
 
     def means(self):
         """Means of recorded features
+
         Returns:
             dictionary of means  (at feature ids as keys)
         """
@@ -1223,13 +1261,16 @@ Sampler = MultiDimensionalBoltzmannSampler
 def dotfile_to_tgt(graphfile, tgt, outfile=None):
     """Convert dot graph file format to png/pdf
 
-    The graph is plotted and written to a pdf file by calling
-    graphviz's dot tool on th dot file.
+    The graph is plotted and written to a pdf or png file by calling
+    graphviz's dot tool on the dot file.
 
     Args:
         graphfile: file of graph in dot format
-        tgt:
-        outfile:
+        tgt: target format ('png' or 'pdf')
+        outfile: optional output filename
+
+    Unless specified, the output filename is composed from the input file name
+    and the target format.
     """
 
     if outfile is None:
@@ -1238,9 +1279,19 @@ def dotfile_to_tgt(graphfile, tgt, outfile=None):
 
 
 def dotfile_to_pdf(graphfile, outfile=None):
+    """Convert dot graph file to pdf
+
+    @see dotfile_to_tgt
+    """
+
     dotfile_to_tgt(graphfile, "pdf", outfile)
 
 
 def dotfile_to_png(graphfile, outfile=None):
+    """Convert dot graph file to png
+
+    @see dotfile_to_tgt
+    """
+
     dotfile_to_tgt(graphfile, "png", outfile)
 
