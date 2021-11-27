@@ -103,6 +103,10 @@ We provide a tutorial as introduction to the Python high-level interface in
 The Infrared API is documented using doxygen comments, such that
 html documentation can be generated (in Doc/html) by doxygen.
 
+In addition, we provide tutorials and examples as Jupyter notebooks. One of
+these notebooks accompanies a book chapter describing the development of
+Infared-based applications in RNA sequence design via the Python interface.
+
 A further entry-point to using the library in novel sampling applications
 is provided by the code of RNARedPrint 2.
 

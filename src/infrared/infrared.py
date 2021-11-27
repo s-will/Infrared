@@ -11,7 +11,7 @@
 
 ## @file
 #
-#  @brief infrared
+#  @brief The infrared high-level Python interface
 
 ## @package infrared.infrared
 #  @copydoc infrared.py
@@ -180,24 +180,7 @@ class WeightedFunction:
 def _generic_def_function_class(classname, init, value, module="__main__",
                                 parentclass=WeightedFunction,
                                 valuefunname="value"):
-    """ Create a class of infrared weighted functions or constraints
-     init function to create dependency list from constructor argument(s)
-     value function to compute the weighted functions's value from
-    assignment values
-     env environment, in which the class is created (users could e.g.
-                                                           pass env=locals())
-
-    Defines a new class with name 'classname' (by default in the module's
-                                               namespace)
-
-    Objects of the defined class can be used in the construction of the
-    infrared constraint model. Note that `init` defines the dependencies in
-    the order of the (positional) arguments of `value`.
-
-    Note: the value function can depend on arguments to the function init,
-    which will be automatically stored in the class and passed on.
-    """
-
+    """Create a class of infrared weighted functions or constraints"""
     def _init(self, *args, **kwargs):
         if "__direct_super__" in kwargs:
             del kwargs["__direct_super__"]
@@ -243,21 +226,83 @@ def _generic_def_function_class(classname, init, value, module="__main__",
 
     sys.modules[module].__dict__[classname] = newclass
 
-
 def def_function_class(classname, init, value, module="__main__"):
+    """
+    Define a function class (of type WeightedFunction)
+
+    Args:
+        classname: name of the class to be defined
+        init:      init function of generated class
+        value:     value function of generated class
+        module:    module where class is generated
+
+    Defines a new class with name 'classname' (by default in the module's
+                                               namespace)
+
+    Objects of the defined class can be used in the construction of the
+    infrared constraint model. Note that `init` defines the dependencies in
+    the order of the (positional) arguments of `value`.
+
+    The value function can depend on arguments to the function init,
+    which will be automatically stored in the class and passed on.
+
+    Usage example:
+    ```
+    def_function_class('GCCont', lambda i: [i], lambda x: 1 if x == 1 or x == 2 else 0)
+    ```
+
+    More complex examples can be found in the accompanying Jupyter tutorials.
+    """
     _generic_def_function_class(
         classname, init, value, module, WeightedFunction, "value")
 
 
 def def_constraint_class(classname, init, value, module="__main__"):
+    """
+    Define a Constraint class
+
+    Args:
+        classname: name of the class to be defined
+        init:      init function of generated class
+        value:     value function of generated class
+        module:    module where class is generated
+
+    Defines a new class with name 'classname' (by default in the module's
+                                               namespace)
+
+    Objects of the defined class can be used in the construction of the
+    infrared constraint model. Note that `init` defines the dependencies in
+    the order of the (positional) arguments of `value`.
+
+    The value function can depend on arguments to the function init,
+    which will be automatically stored in the class and passed on.
+
+    Usage example:
+    ```
+    _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
+    def_constraint_class('BPComp', lambda i, j: [i, j],
+        lambda x, y: (x, y) in _bpcomp_tab)
+    ```
+
+    More complex examples can be found in the accompanying Jupyter tutorials.
+    """
     _generic_def_function_class(
         classname, init, value, module, libir.Constraint, "__call__")
 
 # -----
 # constraint: restrict domain to specific values
+class ValueIn(infrared.infrared.Constraint):
+    """
+    Constrain variable to have a value from a specified set
+
+    ```
+    ValueIn(i, [0,2,3])
+    ```
+    """
 def_constraint_class('ValueIn', lambda i, values: [i],
                      lambda x,values: x in values,
                      module=__name__)
+
 # support special functionality of propagation to domain and entailment
 # check when adding this constraint
 def _domain_constraint_on_add(self, model):
@@ -784,6 +829,11 @@ class ClusterTreeBase:
         return bagconstraints
 
 class ArcticClusterTree(ClusterTreeBase):
+    """
+    Cluster tree for maximization (in arctic semiring)
+
+    @see infrared.infrared.ArcticOptimizer
+    """
     def __init__(self, model, td, scale = 100):
         self._ct = libir.ArcticClusterTree(model.domains)
         super().__init__(model, td, ArcticEvaluationAlgebra(scale))
@@ -793,6 +843,9 @@ class ArcticClusterTree(ClusterTreeBase):
 
 
 class PFClusterTree(ClusterTreeBase):
+    """
+    Cluster tree for partition function calculation and sampling
+    """
     def __init__(self, model, td):
         self._ct = libir.PFClusterTree(model.domains)
         super().__init__(model, td, PFEvaluationAlgebra())
@@ -1101,7 +1154,7 @@ class ArcticOptimizer(EngineBase):
         return ArcticClusterTree(self._model, td=self._td)
 
 
-# short name for default Optimizer
+## Alias for default optimizer ArcticOptimizer
 Optimizer = ArcticOptimizer
 
 
@@ -1254,7 +1307,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         return next(self._targeted_samples)
 
 
-# Define alias Sampler for MultiDimensionalBoltzmannSampler
+## Alias for MultiDimensionalBoltzmannSampler
 Sampler = MultiDimensionalBoltzmannSampler
 
 

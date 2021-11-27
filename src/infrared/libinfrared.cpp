@@ -1,8 +1,16 @@
 /**
- * @file
- * @brief The libinfrared module exposing infrared to Python
+ * @file libinfrared.cpp
+ * @brief The libinfrared module exposing C++ infrared functionality to Python
  *
- * This file specifies the python interface.
+ * This file specifies the Python interface to the low level C++ library.
+ * It is compiled into the Python module infrared.libinfrared. In Inrared's
+ * high-level Python interface, most of the functionality is encapsulated
+ * by Python classes and functions.
+ */
+
+/**
+ * @package infrared.libinfrared
+ * @copydoc libinfrared.cpp
  */
 
 /*
@@ -34,6 +42,8 @@ using namespace ired;
  *
  * @note this is needed to support overriding of virtual functions
  * in Function/Constraint objects from Python
+ *
+ * @private
  */
 template<class FunValue=double>
 struct PyFunction
@@ -78,15 +88,57 @@ using PFClusterTree = ClusterTree<>;
 using ArcticClusterTree = ClusterTree< int, ArcticEvaluationPolicy<int> >;
 
 /**
- * @brief seed the random number generator (for sampling, as well as
- * tree decomposition via libhtd)
+ * @brief seed the C++-side random number generator
  */
 void
 seed(int x) {
     srand(x);
 }
 
-//! @brief The libinfrared module exposing infrared to Python
+
+/**
+ * @class infrared.libinfrared.FiniteDomain
+ *
+ * @brief Finite domain of a variable
+ *
+ * Defines lower and upper bound of a contiguous domain for a finite domain
+ * variable.
+ *
+ * Interfaces the C++ class ired::FiniteDomain. Exposes construction by
+ * size as well as lower and upper bound; and methods lb, ub, empty, size,
+ * undet, in. Supports (deep) copying.
+ */
+
+/**
+ * @class infrared.libinfrared.Function
+ *
+ * Interfaces the C++ class ired::Function <double>. Exposes constructor as
+ * __init__, operator() as __value__, and vars
+ */
+
+/**
+ * @class infrared.libinfrared.IntFunction
+ *
+ * Interfaces the C++ class ired::Function <int>. Exposes constructor as
+ * __init__, operator() as __value__, and vars
+ */
+
+/**
+ * @class infrared.libinfrared.Constraint
+ *
+ * Interfaces the C++ class ired::Function <bool>
+ * Exposes constructor as __init__, operator() as __value__, and vars
+ */
+
+/**
+ * @class infrared.libinfrared.Assignment
+ *
+ * Interfaces the C++ class ired::Assignment. Exposes method values
+ */
+
+/** The libinfrared module exposing infrared to Python
+ * @private
+ */
 PYBIND11_MODULE(libinfrared,ir)
 {
     ir.doc() = "Infrared module or Boltzmann sampling";

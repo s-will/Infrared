@@ -10,15 +10,12 @@
 # Boltzmann sampling over constraint networks
 #
 
-## @file
-#  @brief Some RNA related functions
+## @file rna.py
+#  @brief Functionality for RNA-related Infrared applications
 #
 #  @code
 #    import infrared.rna as rna
 #  @endcode
-#
-#
-# Loose library for some common tasks for RNA specific code
 #
 
 ##
@@ -30,6 +27,7 @@ import re
 import collections
 import math
 
+import infrared
 from .infrared import def_constraint_class, def_function_class
 
 # @brief exception to signal inconsistency, when consistency would be required
@@ -37,117 +35,121 @@ class ParseError(RuntimeError):
     def __init__(self, arg):
         self.args = [arg]
 
-#####
+# #####
 # define some constraints and functions for RNA design
+#
+# Note that these classes are solely defined by calling the functions
+# def_constraint_class and def_function_class.
+#
+# Here, we define the classes with comments only for the purpose of getting
+# clean doxygen documentation. These classes will be overwritten by the
+# def_*_class functions.
+#
 
-# constrain complementarity of base pair
+class BPComp(infrared.Constraint):
+    """
+    Constrain complementarity of the base pair (i,j)
+
+    ```
+    BPComp(i,j)
+    ```
+
+    The constraint is satisfied if values at positions (i,j) form a valid canonical base pair, _i.e._ {(A,U), (C,G), (G,U)}.
+    """
 _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
 def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
 
-## @class infrared.rna.BPComp
-#  @brief Constrain complementarity of base pair (i,j)
-#  @extends Constraint
-#
-#  @code{.py}
-#    BPComp(i,j)
-#  @endcode
-#
-#  The constraint is satisfied if values at positions (i,j) form a valid canonical base pair, _i.e._ {(A,U), (C,G), (G,U)}.
+class NotBPComp(infrared.Constraint):
+    """Constraint for negation of BPComp
 
+    ```
+    NotBPComp(i,j)
+    ```
 
-# negation of BPComp
+    The constraint is satisfied if values at positions (i,j) DO NOT form a valid canonical base pair.
+
+    @see BPComp
+    """
 def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) not in _bpcomp_tab,
                      module=__name__)
 
-## @class infrared.rna.NotBPComp
-#  @brief Constraint for negation of BPComp
-#  @extends Constraint
-#
-#  @code{.py}
-#     NotBPComp(i,j)
-#  @endcode
-#
-#  The constraint is satisfied if values at positions (i,j) DO NOT form a valid canonical base pair.
-#
-#  @see BPComp
 
+class GCCont(infrared.infrared.WeightedFunction):
+    """
+    Function for (position-wise)  GC content
 
-# (position-wise) GC content
+    ```
+    GCCont(i)
+    ```
+
+    GCCont is an Infrared Function to count GCCont at position i, 1 if the value is C or G, 0 otherwise.
+    """
 def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
                    module=__name__)
 
-## @class infrared.rna.GCCont
-#  @brief Function for (position-wise)  GC content
-#  @extends Function
-#
-#  @code{.py}
-#    GCCont(i)
-#  @endcode
-#
-#  GCCont is an Infrared Function to count GCCont at position i, 1 if the value is C or G, 0 otherwise.
+class BPEnergy(infrared.infrared.WeightedFunction):
+    """
+    Function for (basepair-wise) BasePair Energy model
 
-# energy of base pair
+    BPEnergy is an Infrared Function to capture BasePair Energy model at base pair (i,j).
+    It further takes a boolean value indicating whether the base pair (i,j) is terminal, _i.e._ (i-1,j+1) is not a base pair
+
+    ```
+    bps = parse(target)
+    bpFunctions = [BPEnergy(i,j, (i-1,j+1) not in bps) for (i,j) in bps]
+    ```
+    """
 def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    lambda x, y, is_terminal: _bpenergy(x, y, is_terminal),
                    module=__name__)
 
-## @class infrared.rna.BPEnergy
-#  @brief Function for (basepair-wise) BasePair Energy model
-#  @extends Function
-#
-#  BPEnergy is an Infrared Function to capture BasePair Energy model at base pair (i,j).
-#  It further takes a boolean value indicating whether the base pair (i,j) is terminal, _i.e._ (i-1,j+1) is not a base pair
-#
-#  @code{.py}
-#    bps = parse(target)
-#    bpFunctions = [BPEnergy(i,j, (i-1,j+1) not in bps) for (i,j) in bps]
-#  @endcode
+class StackEnergy(infrared.infrared.WeightedFunction):
+    """
+    Function for Stack Energy model
 
-# energy of stacking
+    StackEnergy is an Infrared Function to capture Stack Energy model for a base pair stack (i, j, i+1, j-1).
+
+    ```
+    bps = parse(target)
+    stackFunctions = [StackEnergy(i,j) for (i,j) in bps if (i+1,j-1) in bps]
+    ```
+    """
 def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    lambda x, y, x1, y1: _stackenergy(x, y, x1, y1),
                    module=__name__)
 
-## @class infrared.rna.StackEnergy
-#  @brief Function for Stack Energy model
-#  @extends Function
-#
-#  StackEnergy is an Infrared Function to capture Stack Energy model for a base pair stack (i, j, i+1, j-1).
-#
-#  @code{.py}
-#    bps = parse(target)
-#    stackFunctions = [StackEnergy(i,j) for (i,j) in bps if (i+1,j-1) in bps]
-#  @endcode
+class SameComplClassConstraint(infrared.Constraint):
+    """
+    Constrain nucleotides to be in the same complementarity class
 
-# constrain two nucleotides to be in the same complementarity class
+    ```
+    SameComplClassConstraint(i,j)
+    ```
+
+    The constraint is satisfied if values at positions (i,j) are from the same complenentarity class, i.e. either both in {A,G} or both in {C,U}.
+    """
 def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 == y & 1,
                      module=__name__)
 
-## @class infrared.rna.SameComplClassConstraint
-#  @brief Constrain two nucleotides to be in the sample complementarity class {(A,G), (C,U)}
-#  @extends Constraint
-#
-#  @code{.py}
-#    SameComplClassConstraint(i,j)
-#  @endcode
+class DifferentComplClassConstraint(infrared.Constraint):
+    """
+    Constrain nucleotides to be in different complementarity classes
 
-# constrain two nucleotides to be in different classes
+    ```
+    DifferentComplClassConstraint(i,j)
+    ```
+
+    Negation of SameComplClassConstraint.
+    The constraint is satisfied if values at positions (i,j) are NOT from the same complenentarity class.
+    """
 def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 != y & 1,
                      module=__name__)
-
-## @class infrared.rna.DifferentComplClassConstraint
-#  @brief Constrain two nucleotides to be in different complementarity classes
-#  @extends Constraint
-#
-#  @code{.py}
-#    DifferentComplClassConstraint(i,j)
-#  @endcode
 
 def parse_array(structure, *, opening="([{<", closing=")]}>"):
     """Parse RNA structure including pseudoknots

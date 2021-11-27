@@ -1,2 +1,2 @@
 #!/bin/bash
-doxypypy -a -c $1
+doxypypy -a $1
