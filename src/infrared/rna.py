@@ -53,7 +53,6 @@ class BPComp(infrared.Constraint):
     ```
     BPComp(i,j)
     ```
-
     The constraint is satisfied if values at positions (i,j) form a valid canonical base pair, _i.e._ {(A,U), (C,G), (G,U)}.
     """
 _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
@@ -67,7 +66,6 @@ class NotBPComp(infrared.Constraint):
     ```
     NotBPComp(i,j)
     ```
-
     The constraint is satisfied if values at positions (i,j) DO NOT form a valid canonical base pair.
 
     @see BPComp
@@ -84,7 +82,6 @@ class GCCont(infrared.infrared.WeightedFunction):
     ```
     GCCont(i)
     ```
-
     GCCont is an Infrared Function to count GCCont at position i, 1 if the value is C or G, 0 otherwise.
     """
 def_function_class('GCCont', lambda i: [i],
@@ -129,7 +126,6 @@ class SameComplClassConstraint(infrared.Constraint):
     ```
     SameComplClassConstraint(i,j)
     ```
-
     The constraint is satisfied if values at positions (i,j) are from the same complenentarity class, i.e. either both in {A,G} or both in {C,U}.
     """
 def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
@@ -143,7 +139,6 @@ class DifferentComplClassConstraint(infrared.Constraint):
     ```
     DifferentComplClassConstraint(i,j)
     ```
-
     Negation of SameComplClassConstraint.
     The constraint is satisfied if values at positions (i,j) are NOT from the same complenentarity class.
     """
