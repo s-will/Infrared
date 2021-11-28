@@ -34,19 +34,19 @@ from abc import ABC, abstractmethod
 
 
 def seed(seed = None):
-    """seed random number generator of libinfrared and treedecomp
+    """Seed random number generator of libinfrared and treedecomp
 
     This seeds the RNG of lib infrared (C++ side) and as well
     the random number generator used by randomization in the TreeDecomposition,
-    both with the same number
-
-    This does not seed Python's global RNG
+    both with the same number.
+    It does NOT seed Python's global RNG.
 
     Args:
         seed: integer used as seed
 
-    Without argument or seed==None, use pythons built-in random.seed() to
-    generate a seed.
+    Note:
+        Without argument or seed==None, use Pythons built-in random.seed() to
+        generate a seed.
     """
 
     if seed is None:
@@ -230,14 +230,7 @@ def def_function_class(classname, init, value, module="__main__"):
     """
     Define a function class (of type WeightedFunction)
 
-    Args:
-        classname: name of the class to be defined
-        init:      init function of generated class
-        value:     value function of generated class
-        module:    module where class is generated
-
-    Defines a new class with name 'classname' (by default in the module's
-                                               namespace)
+    Defines a new class with name classname (by default, in the main namespace)
 
     Objects of the defined class can be used in the construction of the
     infrared constraint model. Note that `init` defines the dependencies in
@@ -246,12 +239,20 @@ def def_function_class(classname, init, value, module="__main__"):
     The value function can depend on arguments to the function init,
     which will be automatically stored in the class and passed on.
 
-    Usage example:
-    ```
-    def_function_class('GCCont', lambda i: [i], lambda x: 1 if x == 1 or x == 2 else 0)
-    ```
+    Args:
+        classname: name of the class to be defined
+        init:      init function of generated class
+        value:     value function of generated class
+        module:    module where class is generated
+
+    Example:
+
+    @code{.py}
+    def_function_class('GCCont', lambda i: [i], lambda x: 2 if x == 1 or x == 2 else 0)
+    @endcode
 
     More complex examples can be found in the accompanying Jupyter tutorials.
+
     """
     _generic_def_function_class(
         classname, init, value, module, WeightedFunction, "value")
@@ -261,14 +262,7 @@ def def_constraint_class(classname, init, value, module="__main__"):
     """
     Define a Constraint class
 
-    Args:
-        classname: name of the class to be defined
-        init:      init function of generated class
-        value:     value function of generated class
-        module:    module where class is generated
-
-    Defines a new class with name 'classname' (by default in the module's
-                                               namespace)
+    Defines a new class with name `classname` (by default, in the main namespace)
 
     Objects of the defined class can be used in the construction of the
     infrared constraint model. Note that `init` defines the dependencies in
@@ -277,12 +271,18 @@ def def_constraint_class(classname, init, value, module="__main__"):
     The value function can depend on arguments to the function init,
     which will be automatically stored in the class and passed on.
 
-    Usage example:
-    ```
+    Args:
+        classname: name of the class to be defined
+        init:      init function of generated class
+        value:     value function of generated class
+        module:    module where class is generated
+
+    Example:
+    @code{.py}
     _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
     def_constraint_class('BPComp', lambda i, j: [i, j],
         lambda x, y: (x, y) in _bpcomp_tab)
-    ```
+    @endcode
 
     More complex examples can be found in the accompanying Jupyter tutorials.
     """
@@ -1322,8 +1322,9 @@ def dotfile_to_tgt(graphfile, tgt, outfile=None):
         tgt: target format ('png' or 'pdf')
         outfile: optional output filename
 
-    Unless specified, the output filename is composed from the input file name
-    and the target format.
+    Note:
+        Unless specified, the output filename is composed from the input file name
+        and the target format.
     """
 
     if outfile is None:
