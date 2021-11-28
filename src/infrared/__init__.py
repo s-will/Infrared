@@ -9,6 +9,7 @@
 #
 
 ## @file __init__.py
+# Package infrared
 
 """ @package infrared
 Package infrared
