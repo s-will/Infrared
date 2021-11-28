@@ -17,6 +17,7 @@
  * @brief graph data structure(s)
  */
 
+namespace ired {
 namespace graph {
     /** @brief Graph in adjacency list representation
      */
@@ -143,4 +144,5 @@ namespace graph {
     //     }
     // };
 } //end namespace graph
+} //end namespace ired
 #endif // GRAPH_HPP
