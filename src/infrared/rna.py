@@ -422,15 +422,15 @@ _params_stacking=None
 
 ## Default parameters for the base pair model (magic params from the Redprint paper)
 def_params_bp = {"GC_IN": -2.10208, "AU_IN": -0.52309, "GU_IN": -0.88474,
-                 "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566}
+    "GC_TERM": -0.09070, "AU_TERM": 1.26630, "GU_TERM": 0.78566}
 
 ## Default parameters for the stacking model (magic params from the Redprint paper)
 def_params_stacking = {"AUAU": -0.18826, "AUCG": -1.13291, "AUGC": -1.09787,
-                       "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
-                       "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
-                       "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
-                       "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
-                       "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876}
+    "AUGU": -0.38606, "AUUA": -0.26510, "AUUG": -0.62086,
+    "CGAU": -1.11752, "CGCG": -2.23740, "CGGC": -1.89434,
+    "CGGU": -1.22942, "CGUA": -1.10548, "CGUG": -1.44085,
+    "GUAU": -0.55066, "GUCG": -1.26209, "GUGC": -1.58478,
+    "GUGU": -0.72185, "GUUA": -0.49625, "GUUG": -0.68876}
 
 
 def set_bpenergy_table(params=def_params_bp):

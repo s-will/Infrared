@@ -25,7 +25,7 @@ import math
 import subprocess
 import copy
 
-from . import libinfrared as libir
+from . import libinfrared
 
 from treedecomp import TreeDecompositionFactory
 from treedecomp import seed as tdseed
@@ -53,7 +53,7 @@ def seed(seed = None):
         random.seed()
         seed = random.randint(0, 2**31)
 
-    libir.seed(seed)
+    libinfrared.seed(seed)
     tdseed(seed)
 
 
@@ -90,7 +90,7 @@ class EvaluationAlgebra(ABC):
     def interpret(self, value):
         return value
 
-class PFFunctionAdapter(libir.Function):
+class PFFunctionAdapter(libinfrared.Function):
     """Adapt function for partition function algebra
 
     @see PFEvaluationAlgebra
@@ -109,14 +109,14 @@ class PFFunctionAdapter(libir.Function):
 class PFEvaluationAlgebra(EvaluationAlgebra):
     """Partition function algebra for sampling
 
-    Controls the translation of WeightedFunction to libir.Function
+    Controls the translation of WeightedFunction to libinfrared.Function
     in the case of partition function computation / sampling
     """
 
     def function(self, weighted_function):
         return PFFunctionAdapter(weighted_function)
 
-class ArcticFunctionAdapter(libir.IntFunction):
+class ArcticFunctionAdapter(libinfrared.IntFunction):
     """Adapt function for maximization algebra
 
     @see ArcticEvaluationAlgebra
@@ -136,7 +136,7 @@ class ArcticFunctionAdapter(libir.IntFunction):
 class ArcticEvaluationAlgebra(EvaluationAlgebra):
     """Maximization algebra for optimization
 
-    Controls the translation of WeightedFunction to libir.Function
+    Controls the translation of WeightedFunction to libinfrared.Function
     in the case of optimization
     """
 
@@ -287,11 +287,11 @@ def def_constraint_class(classname, init, value, module="__main__"):
     More complex examples can be found in the accompanying Jupyter tutorials.
     """
     _generic_def_function_class(
-        classname, init, value, module, libir.Constraint, "__call__")
+        classname, init, value, module, libinfrared.Constraint, "__call__")
 
 # -----
 # constraint: restrict domain to specific values
-class ValueIn(infrared.infrared.Constraint):
+class ValueIn(libinfrared.Constraint):
     """
     Constrain variable to have a value from a specified set
 
@@ -365,7 +365,7 @@ class Model:
             self._domains[name] = []
 
         self._domains[name].extend(
-            [libir.FiniteDomain(domain) for _ in range(number)])
+            [libinfrared.FiniteDomain(domain) for _ in range(number)])
 
     def restrict_domains(self, vars, domain):
         """Restrict the domain of a variable
@@ -378,7 +378,7 @@ class Model:
         Note:
             the domain bounds are intersected with the original domain
         """
-        newdom = libir.FiniteDomain(domain)
+        newdom = libinfrared.FiniteDomain(domain)
         if type(vars) != list:
             vars = [vars]
         for v in vars:
@@ -387,7 +387,7 @@ class Model:
             newlb = max(self._domains[name][i].lb(), newdom.lb())
             newub = min(self._domains[name][i].ub(), newdom.ub())
 
-            self._domains[name][i] = libir.FiniteDomain(newlb,newub)
+            self._domains[name][i] = libinfrared.FiniteDomain(newlb,newub)
 
     def add_constraints(self, constraints):
         """Add constraints to the model
@@ -835,7 +835,7 @@ class ArcticClusterTree(ClusterTreeBase):
     @see infrared.infrared.ArcticOptimizer
     """
     def __init__(self, model, td, scale = 100):
-        self._ct = libir.ArcticClusterTree(model.domains)
+        self._ct = libinfrared.ArcticClusterTree(model.domains)
         super().__init__(model, td, ArcticEvaluationAlgebra(scale))
 
     def optimize(self):
@@ -847,7 +847,7 @@ class PFClusterTree(ClusterTreeBase):
     Cluster tree for partition function calculation and sampling
     """
     def __init__(self, model, td):
-        self._ct = libir.PFClusterTree(model.domains)
+        self._ct = libinfrared.PFClusterTree(model.domains)
         super().__init__(model, td, PFEvaluationAlgebra())
 
     def sample(self):
