@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# # Tutorial: RNA Design with Infrared
+# # Tutorial: RNA Design
 
 # ## Simple sampling of RNA sequences
 
