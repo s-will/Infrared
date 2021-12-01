@@ -13,16 +13,13 @@
 #     name: python3
 # ---
 
-# # Tutorial: RNA Design
+# # RNA Design Tutorial
 
 # ## Simple sampling of RNA sequences
-
 # We start by importing the infrared module (and assign a shortname).
 
 import infrared as ir
 
-# ### Sampling from a very simple model
-#
 # Let's specify our first constraint network model. It is 
 # _very_ simple: we define 20 variables, each with 4 possible values, which encode a sequence of nucleotides. Our first model has no dependencies.
 
@@ -344,8 +341,6 @@ sampler = ir.Sampler(model)
 sampler.set_target( -5, 1, 'Energy' )
 sampler.set_target( 10, 2, 'gc' )
 
-# -- and sample away
-
 samples = list()
 for i in range(20):
     sample = sampler.targeted_sample()
@@ -364,7 +359,6 @@ opt_draw_logo(samples)
 # Below, we generate constraints from a IUPAC string and add them to the Infrared model for targeting Turner energy and GC content.
 
 # +
-## add iupac sequence constraints and sample again
 sequence = "RSSSUWWSSNNSNNNNMNYR"
 
 for i,x in enumerate(sequence):
@@ -374,8 +368,6 @@ sampler = ir.Sampler(model)
 
 sampler.set_target( -5, 1, 'Energy' )
 sampler.set_target( 10, 2, 'gc' )
-
-# -- and sample away
 
 samples = list()
 for i in range(20):
