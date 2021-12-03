@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.13.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -14,6 +14,15 @@
 # ---
 
 # # Bookchapter Tutorial
+#
+# This notebook contains code for the examples from the bookchapter "Developing complex RNA design applications in the Infrared framework"
+# by Hua-Ting Yao, Yann Ponty, and Sebastian Will.
+#
+# The main purpose of this notebook is to allow readers of the chapter to easily run examples and possibly experiment with the code. Code is therefore given in the same order as in the bookchapter and under corresponding section titles.
+#
+# Compared to the code given in the chapter, we extended some code to make it even more illustrative, e.g. by plotting results. Finally, we provide code to generate figures of the bookchapter in the Appendix.
+#
+#
 # ## 1 Introduction
 
 # +
@@ -596,12 +605,16 @@ rstd_optimize(steps = 500, temp = 0.03)
 
 # +
 import concurrent.futures
+
+steps = 500
+jobs = 12
+
 def my_rstd_optimize(i):
     seed(None)
-    return rstd_optimize(500,0.03)
+    return rstd_optimize(steps,0.03)
 
 with concurrent.futures.ProcessPoolExecutor() as executor:
-    res = executor.map(my_rstd_optimize, range(12))
+    res = executor.map(my_rstd_optimize, range(jobs))
 res = list(res)
 # -
 
