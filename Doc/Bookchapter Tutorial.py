@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.2
+#       jupytext_version: 1.13.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -78,7 +78,7 @@ def assignments_to_seqs(xs):
 opt_draw_logo(samples)
 # -
 
-# #### Multiple targets
+# ### Multiple targets
 
 #           01234567890123456789012345678901234
 targets = ["((((((((((...))))((((....))))))))))",
