@@ -2,9 +2,9 @@
 
 # Infrared
 
-
 Infrared is a generic C++/Python hybrid library for efficient
 (fixed-parameter tractable) Boltzmann sampling.
+
 
 ## Disclaimer and license
 
@@ -73,8 +73,9 @@ Provide a flexible interface and added functionality on the Python side
 
 ## Installation
 
-There are two ways to install Infrared. The first option is using conda.
-Infrared is depolyed on conda-forge channel.
+### Conda installation
+
+Infrared is installed most easily using conda. Infrared is depolyed on conda-forge channel.
 Users can skip the first line command if it's already done.
 
 ```
@@ -82,35 +83,37 @@ conda config --add channels conda-forge
 conda install infrared
 ```
 
+### Pip installation from source 
 
-For users who don't want to use conda, Infrared can also be installed with standard pip install.
-The compilation requires [pybind11](https://github.com/pybind/pybind11) (at least v2.4) and CMake.
-Note that pybind11 installed from standard ubuntu18.04 APT is outdated and the variable `PYBIND11_GLOBAL_SDIST` should be set for version before v2.6.0 as 
+For users who don't want to use conda, Infrared can also be installed with standard pip install from
+it's source, which we make
+freely available in [Infrared's Gitlab repository](https://gitlab.inria.fr/amibio/Infrared).
+Compiling and installing requires a C++ / Python
+build environment including cmake, and installation of further dependencies, e.g. [pybind11](https://github.com/pybind/pybind11)
+and [Treedecomp](https://gitlab.inria.fr/amibio/treedecomp).
 
+After installing dependencies, one compiles and installs Infrared from its base directory by
 ```
-PYBIND11_GLOBAL_SDIST=1 python3 -m pip install https://github.com/pybind/pybind11/archive/master.zip
 python3 -m pip install .
 ```
 
-## Usage
+Treedecomp can be installed analogously; Infrared requires at least version 1.1.0.
 
-We provide a tutorial as introduction to the Python high-level interface in
- the jupyter notebook [Doc/rnadesign-tutorial.ipynb](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/rnadesign-tutorial.ipynb) and further
- examples notebooks in the [Doc subdirectory](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc).
+Note that older Linux distributions, e.g. Ubuntu 18.04, install only outdated versions of pybind11 via their package managers; we require at least version 2.4. One can install pybind11 as well via pip by 
+```
+PYBIND11_GLOBAL_SDIST=1 python3 -m pip install https://github.com/pybind/pybind11/archive/master.zip
+```
 
-## API documentation
 
-The Infrared API is documented using doxygen comments, such that
-html documentation can be generated (in Doc/html) by doxygen.
+## Documentation
 
-In addition, we provide tutorials and examples as Jupyter notebooks. One of
-these notebooks accompanies a book chapter describing the development of
-Infared-based applications in RNA sequence design via the Python interface.
+We provide [Infrared's documentation](https://www.lix.polytechnique.fr/~will/Software/Infrared/Doc/) online. The documentation comprises general information, API reference and examples for the use of Infrared's high-level Python interface.
+
+Jupyter notebooks with code examples are part of the online documentation and can be as well downloaded from subdirectory [Doc](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc) on Inrared's Gitlab repository.
 
 A further entry-point to using the library in novel sampling applications
-is provided by the code of RNARedPrint 2.
-
-More information on the library architecture is provided below.
+is provided by the code of [RNARedPrint 2](https://gitlab.inria.fr/amibio/RNARedPrint)
+and [RNAPOND](https://gitlab.inria.fr/amibio/RNAPOND).
 
 ## Infrared architecture and background
 
