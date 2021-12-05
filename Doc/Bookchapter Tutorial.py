@@ -601,7 +601,7 @@ def rstd_optimize(steps, temp):
 
 rstd_optimize(steps = 500, temp = 0.03)
 
-# ##### Run optimzation in parallel
+# #### Run optimzation in parallel
 
 # +
 import concurrent.futures
