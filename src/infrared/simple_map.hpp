@@ -40,7 +40,7 @@ class SimpleMap: std::vector<std::pair<key_t, val_t> > {
     typedef typename key_val_vec_t::const_iterator const_iterator;
 
     static
-    class comp {
+    class Comp {
     public:
 	bool
 	operator () (const key_val_t &x,
