@@ -137,7 +137,7 @@ namespace ired {
              */
             bool
             in(int v) const {
-                return lb_ <= v and v <= ub_;
+                return lb_ <= v && v <= ub_;
             }
 
         private:
