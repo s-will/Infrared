@@ -24,20 +24,6 @@
 namespace ired {
 
 /**
- * @brief Specialized comparator class for use in SimpleMap
- */
-template<class key_t, class val_t>
-class SimpleMap_Comp {
-public:
-    typedef std::pair<key_t, val_t> key_val_t;
-
-    bool
-    operator () (const key_val_t &x, const key_t &y) const {
-        return x.first < y;
-    }
-};
-
-/**
  * @brief Space saving replacement for map
  *
  * Maintains lists of values in idx sorted lists, allowing
@@ -53,12 +39,12 @@ class SimpleMap: std::vector<std::pair<key_t, val_t> > {
     typedef typename key_val_vec_t::iterator iterator;
     typedef typename key_val_vec_t::const_iterator const_iterator;
 
-    static SimpleMap_Comp<key_t, val_t> comp;
-
     iterator
     binsearch (iterator first, iterator last, const key_t& key)
     {
-	first = std::lower_bound(first,last,key,comp);
+	first = std::lower_bound(first, last, key,
+                                 [](const key_val_t &x, const key_t &y) {
+                                     return x.first < y;});
 	if (first==last || key < first->first) {
 	    return last;
 	}
@@ -68,7 +54,9 @@ class SimpleMap: std::vector<std::pair<key_t, val_t> > {
     const_iterator
     binsearch (const_iterator first, const_iterator last, const key_t& key) const
     {
-	first = std::lower_bound(first,last,key,comp);
+	first = std::lower_bound(first,last,key,
+                                 [](const key_val_t &x, const key_t &y) {
+                                     return x.first < y;});
 	if (first==last || key < first->first) {
 	    return last;
 	}
