@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,20 +25,19 @@
 #
 # ## 1 Introduction
 
-# +
-from infrared import *
-from infrared.rna import *
+#[Intro]
+import infrared as ir
+import infrared.rna as rna
 
 import matplotlib.pyplot as plt
-# -
 
 target = "((((((((((...))))((((....))))))))))"
-model = Model(len(target), 4)
-model.add_constraints(BPComp(i,j) for (i,j) in parse(target))
-sampler = Sampler(model)
+model = ir.Model(len(target), 4)
+model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(10)]
 
-sequences = [ass_to_seq(x) for x in samples]
+sequences = [rna.ass_to_seq(x) for x in samples]
 sequences
 
 
@@ -50,7 +49,7 @@ sequences
 def draw_logo(samples,name=None):
     import logomaker as lm
     
-    sequences = [ass_to_seq(x) for x in samples]
+    sequences = [rna.ass_to_seq(x) for x in samples]
     
     matrix = lm.alignment_to_matrix(sequences = sequences)
     logo = lm.Logo(matrix)
@@ -68,28 +67,29 @@ def opt_draw_logo(samples,name=None,num=10):
     except ModuleNotFoundError as e:
         print(e)
     for x in samples[:num]:
-        print(ass_to_seq(x))
+        print(rna.ass_to_seq(x))
     if len(samples)>num:
         print("...")
 
 def assignments_to_seqs(xs):
-    return [ass_to_seq(x) for x in xs]
+    return [rna.ass_to_seq(x) for x in xs]
 
 opt_draw_logo(samples)
 # -
 
 # ### Multiple targets
 
+#[Multiple_targets]
 #           01234567890123456789012345678901234
 targets = ["((((((((((...))))((((....))))))))))",
            "((((((.((((((((....))))..))))))))))",
            ".((((((...)))))).(((((((....)))))))"]
 
 for target in targets:
-    model.add_constraints(BPComp(i,j) for (i,j) in parse(target))
+    model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
 
 # +
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 designs = [sampler.sample() for _ in range(10)]
 
 samples = [x for x in designs]
@@ -100,15 +100,16 @@ opt_draw_logo(samples)
 
 # ### 3.1 Elementary use of Infrared - A simple design model
 
+#[3.1]
 n = 35
 
-model = Model(n,4)
+model = ir.Model(n,4)
 
 target = "((((((((((...))))((((....))))))))))"
-model.add_constraints(BPComp(i,j) for (i,j) in parse(target))
+model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
 
 # +
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(10)]
 
 opt_draw_logo(samples)
@@ -116,13 +117,14 @@ opt_draw_logo(samples)
 
 # ### 3.2 Sequence constraints in IUPAC code
 
+#[3.1]
 iupac_sequence = "SNNNNNNNNNRYYNNNNNNNNGNRANNNNNNNNNS"
 
 for i, x in enumerate(iupac_sequence):
-    model.add_constraints(ValueIn(i, iupacvalues(x)))
+    model.add_constraints(ir.ValueIn(i, rna.iupacvalues(x)))
 
 # +
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(20)]
 
 opt_draw_logo(samples)
@@ -130,14 +132,15 @@ opt_draw_logo(samples)
 
 # ### 3.3 Control of GC content
 
+#[3.3]
 # add functions for GC control
-model.add_functions([GCCont(i) for i in range(n)], 'gc')
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
 # +
 # set a weight and sample
 model.set_feature_weight(0.15, 'gc')
 
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(1000)]
 opt_draw_logo(samples)
 # -
@@ -147,7 +150,7 @@ WRITEFIGS = False
 for name,weight in [('minus', -1), ('zero', 0), ('plus', 1)]:
     
     model.set_feature_weight(weight, 'gc')
-    sampler = Sampler(model)
+    sampler = ir.Sampler(model)
     samples = [sampler.sample() for _ in range(1000)]
 
     opt_draw_logo(samples, f"gc_content_{name}-logo.svg")
@@ -161,7 +164,7 @@ for name,weight in [('minus', -1), ('zero', 0), ('plus', 1)]:
 # Set a target of 75% GC content and then draw targeted samples
 
 # +
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 
 sampler.set_target( 0.75 * n, 0.01 * n, 'gc' )
 
@@ -176,19 +179,20 @@ print(f"GC content in samples: {gc_content:0.2f}%")
 
 # ### 3.4 Controlling energy - Multiple features
 
+#[3.4]
 # recall current model
-model = Model(n,4) 
-bps = parse(target)
-model.add_constraints(BPComp(i,j) for (i,j) in bps)
-model.add_functions([GCCont(i) for i in range(n)], 'gc')
+model = ir.Model(n,4) 
+bps = rna.parse(target)
+model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
 # add (base pair) energy control
-model.add_functions([BPEnergy(i, j, (i-1, j+1) not in bps)
+model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                      for (i,j) in bps], 'energy')
 
 # target specific GC and low energy 
 model.set_feature_weight(-2, 'energy')
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.01*n, 'gc')
 samples = [sampler.targeted_sample() for _ in range(10)]
 
@@ -197,13 +201,14 @@ opt_draw_logo(samples)
 # add stacking energy control 
 # - this could be used in place of defining base pair energy
 #   in the code above
-model.add_functions([StackEnergy(i, j)
+model.add_functions([rna.StackEnergy(i, j)
     for (i,j) in bps if (i+1,j-1) in bps], 'energy')
 
 # ### 3.5 Targeting Turner energy - Customized features
 #
 # *Note:* From this point on, we require RNA energy evaluation based on the Vienna RNA library. Under Mac and Linux, the functionality is accessed via module RNA of the library. Since, this is typically unavailable on Windows, we provide a work around.
 
+#[3.5]
 try:
     from RNA import energy_of_struct
 except:
@@ -225,21 +230,21 @@ except:
         return res
 
 # Restate current model
-model = Model(n,4) 
-bps = parse(target)
-model.add_constraints(BPComp(i,j) for (i,j) in bps)
-model.add_functions([GCCont(i) for i in range(n)], 'gc')
-model.add_functions([BPEnergy(i, j, (i-1, j+1) not in bps)
+model = ir.Model(n,4) 
+bps = rna.parse(target)
+model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
+model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                      for (i,j) in bps], 'energy')
 
 # add the Turner energy feature
 model.add_feature('Energy', 'energy',
     lambda sample, target=target:
-        energy_of_struct(ass_to_seq(sample), target))
+        energy_of_struct(rna.ass_to_seq(sample), target))
 
 # +
 # specify targets and draw targeted samples
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.05*n, 'gc')
 sampler.set_target(-10, 0.5, 'Energy')
 samples = [sampler.targeted_sample() for _ in range(10)]
@@ -253,14 +258,15 @@ sequences = assignments_to_seqs(samples)
 # ### 3.6 Multiple target targets
 
 # +
+#[3.6]
 # construct model
-model = Model(n,4) 
-model.add_functions([GCCont(i) for i in range(n)], 'gc')
+model = ir.Model(n,4) 
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
 for k, target in enumerate(targets):
-    bps = parse(target)
-    model.add_constraints(BPComp(i,j) for (i,j) in bps)
-    model.add_functions([BPEnergy(i, j, (i-1, j+1) not in bps)
+    bps = rna.parse(target)
+    model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+    model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                          for (i,j) in bps], f'energy{k}')
 # -
 
@@ -272,7 +278,7 @@ for k,_ in enumerate(targets):
     model.set_feature_weight(-2, f'energy{k}')
 
 # create sampler and set target
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.05*n, 'gc')
 samples = [sampler.targeted_sample() for _ in range(5)]
 
@@ -296,9 +302,9 @@ sequences
 for k, target in enumerate(targets):
     model.add_feature(f'Energy{k}', f'energy{k}',
         lambda sample, target=target:
-            energy_of_struct(ass_to_seq(sample), target))
+            energy_of_struct(rna.ass_to_seq(sample), target))
 
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.01*n, 'gc')
 
 sampler.set_target( -15, 1, 'Energy0')
@@ -317,6 +323,7 @@ sequences = assignments_to_seqs(samples)
 # ### Plot dependencies and tree decomposition
 
 from IPython.display import Image
+import re
 
 # +
 # Plot dependency graph
@@ -324,8 +331,8 @@ from IPython.display import Image
 filename = 'dependency_graph.dot'
 model.write_graph(filename, True)
 
-dotfile_to_png(filename)
-dotfile_to_pdf(filename)
+ir.dotfile_to_png(filename)
+ir.dotfile_to_pdf(filename)
 
 filename = re.sub(r"dot$","png",filename)
 
@@ -333,7 +340,7 @@ Image(filename=filename,width=600)
 # -
 
 # Plot tree decomposition
-sampler = Sampler(model)
+sampler = ir.Sampler(model)
 print(f"Tree width: {sampler.treewidth()}")
 filename="treedecomp"
 sampler.plot_td(filename,'png')
@@ -343,6 +350,7 @@ Image(filename=filename+".png",width=300)
 
 # ### 3.7 Negative design by sampling
 
+#[3.7]
 target = targets[0]
 n = len(target)
 
@@ -353,21 +361,21 @@ def is_mfe_design(sequence, target):
 
 
 def single_target_design_model(target):
-    n, bps = len(target), parse(target)
-    model = Model(n, 4)
-    model.add_constraints(BPComp(i, j) for (i, j) in bps)
-    model.add_functions([GCCont(i) for i in range(n)], 'gc')
-    model.add_functions([BPEnergy(i, j, (i-1, j+1) not in bps)
+    n, bps = len(target), rna.parse(target)
+    model = ir.Model(n, 4)
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in bps)
+    model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
+    model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
         for (i,j) in bps], 'energy')
     model.set_feature_weight(-1.5, 'energy')
     return model
 
 
 # solve by direct sampling
-sampler = Sampler(single_target_design_model(target))
+sampler = ir.Sampler(single_target_design_model(target))
 sampler.set_target(0.7 * n, 0.1 * n, 'gc')
 for i in range(50):
-    seq = ass_to_seq(sampler.targeted_sample())
+    seq = rna.ass_to_seq(sampler.targeted_sample())
     if is_mfe_design(seq,target):
         print(f"{i} {seq}")
 
@@ -378,11 +386,11 @@ def target_frequency(sequence, target):
     return fc.pr_structure(target)
 
 
-sampler = Sampler(single_target_design_model(target))
+sampler = ir.Sampler(single_target_design_model(target))
 sampler.set_target(0.7 * n, 0.1 * n, 'gc')
 best = 0
 for i in range(100):
-    seq = ass_to_seq(sampler.targeted_sample())
+    seq = rna.ass_to_seq(sampler.targeted_sample())
     freq = target_frequency(seq,target)
     if freq > best:
         best = freq
@@ -393,6 +401,7 @@ for i in range(100):
 # RNAPOND-like negative design (generating constraints for disruptive base pairs).
 
 # +
+#[3.8]
 from collections import Counter
 
 ## A hard instance, eterna37
@@ -402,26 +411,26 @@ from collections import Counter
 target = "..(((..((((.....)))).((...(((.....)))...))...))).."
 
 n = len(target)
-bps = parse(target)
+bps = rna.parse(target)
 
 
 # -
 
 def cg_design_iteration():
     model = single_target_design_model(target)
-    model.add_constraints(NotBPComp(i, j) for (i, j) in dbps)
-    sampler = Sampler(model, lazy=True)
+    model.add_constraints(rna.NotBPComp(i, j) for (i, j) in dbps)
+    sampler = ir.Sampler(model, lazy=True)
     if sampler.treewidth() > 10 or not sampler.is_consistent():
         return "Not found"
     ctr = Counter()
     found, sol = False, None
     for i in range(100):
-        seq = ass_to_seq(sampler.targeted_sample())
+        seq = rna.ass_to_seq(sampler.targeted_sample())
         fc = RNA.fold_compound(seq)
         mfe, mfe_e = fc.mfe()
         if fc.eval_structure(target) == mfe_e:
             sol = seq
-        ctr.update(parse(mfe))
+        ctr.update(rna.parse(mfe))
     ndbps = [x[0] for x in ctr.most_common() if x[0] not in bps]
     dbps.extend(ndbps[:2])
     return sol
@@ -435,20 +444,21 @@ print(i,seq)
 
 # ### 3.9 Negative design by stochastic optimization with partial resampling
 
+#[3.9]
 ## define multi-target design model for resampling of subsets 
 def multi_design_model(subset=None, solution=None):
     n = len(targets[0])
-    model = Model(n, 4)
+    model = ir.Model(n, 4)
     if subset is None: subset = set(range(n))
     for i in set(range(n))-subset:
         value = solution.values()[i]
         model.restrict_domains(i,(value,value))
-    model.add_functions([GCCont(i) for i in subset], 'gc')
+    model.add_functions([rna.GCCont(i) for i in subset], 'gc')
     for target in targets:
-        s = parse(target)
+        s = rna.parse(target)
         ss = [(i,j) for (i,j) in s if i in subset or j in subset]
-        model.add_constraints(BPComp(i, j) for (i, j) in ss)
-        model.add_functions([BPEnergy(i, j, (i-1, j+1) not in s)
+        model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
+        model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in s)
             for (i,j) in ss], 'energy')
     model.set_feature_weight(-0.8, 'energy')
     model.set_feature_weight(-0.3, 'gc')
@@ -466,8 +476,8 @@ def multi_defect(sequence, targets, xi=1):
     return diff_ee + xi * diff_targets
 
 
-from random import random, choices
-from math import exp
+import random
+import math
 
 
 # Return the sequence achieving the best defect within optimization
@@ -475,24 +485,25 @@ def multi_design_optimize(steps, temp):
     cc, cur, curval, bestval = None, None, math.inf, math.inf
     for i in range(steps):
         model = multi_design_model(cc, cur)
-        new = Sampler(model).sample()
-        newval = multi_defect(ass_to_seq(new),targets,1)
+        new = ir.Sampler(model).sample()
+        newval = multi_defect(rna.ass_to_seq(new),targets,1)
         if (newval <= curval
-            or random() <= exp(-(newval-curval)/temp)):
+            or random.random() <= math.exp(-(newval-curval)/temp)):
             cur, curval = new, newval
             if curval < bestval:
                 best, bestval = cur, curval
         if i==0:
             ccs = model.connected_components()
             weights = [1/len(cc) for cc in ccs]
-        cc = choices(ccs,weights)[0]
-    return (ass_to_seq(best), bestval)
+        cc = random.choices(ccs,weights)[0]
+    return (rna.ass_to_seq(best), bestval)
 
 
 multi_design_optimize(1000,0.015)
 
 # ### 3.10 A real world example: design of a Tandem-Riboswitch
 
+#[3.10]
 seqTheo0 = "AAGUGAUACCAGCAUCGUCUUGAUGCCCUUGGCAGCACUUCAGAAAUCUC"\
            "UGAAGUGCUGUUUUUUUU"
 seqTet0  = "GGCCUAAAACAUACCAGAGAAAUCUGGAGAGGUGAAGAAUACGACCACCU"\
@@ -557,21 +568,21 @@ def rstd_objective(sequence):
 def rstd_model(subset=None, solution=None):
     rstd_targets = [aptamers, terminators]
     n = len(rstd_targets[0])
-    model = Model(n, 4)
+    model = ir.Model(n, 4)
     if subset is None: subset = set(range(n))
     for i in set(range(n))-subset:
         value = solution.values()[i]
         model.restrict_domains(i,(value,value))
         
     for i, x in enumerate(sequence):
-        model.add_constraints(ValueIn(i, iupacvalues(x)))
+        model.add_constraints(ir.ValueIn(i, rna.iupacvalues(x)))
         
-    model.add_functions([GCCont(i) for i in subset], 'gc')
+    model.add_functions([rna.GCCont(i) for i in subset], 'gc')
     for k,target in enumerate(rstd_targets):
-        s = parse(target)
+        s = rna.parse(target)
         ss = [(i,j) for (i,j) in s if i in subset or j in subset]
-        model.add_constraints(BPComp(i, j) for (i, j) in ss)
-        model.add_functions([BPEnergy(i, j, (i-1, j+1) not in s)
+        model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
+        model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in s)
             for (i,j) in ss], f'energy{k}')
     model.set_feature_weight(-0.6, 'energy0')
     model.set_feature_weight(-1, 'energy1')
@@ -582,19 +593,19 @@ def rstd_optimize(steps, temp):
     cc, cur, curval, bestval = None, None, math.inf, math.inf
     for i in range(steps):
         model = rstd_model(cc, cur)
-        new = Sampler(model).sample()
-        newval = rstd_objective(ass_to_seq(new))
+        new = ir.Sampler(model).sample()
+        newval = rstd_objective(rna.ass_to_seq(new))
         if (newval <= curval
-            or random() <= exp(-(newval-curval)/temp)):
+            or random.random() <= math.exp(-(newval-curval)/temp)):
             cur, curval = new, newval
             if curval < bestval:
                 best, bestval = cur, curval
-                #print(ass_to_seq(best),bestval)
+                #print(rna.ass_to_seq(best),bestval)
         if i==0:
             ccs = model.connected_components()
             weights = [1/len(cc) for cc in ccs]
-        cc = choices(ccs,weights)[0]
-    return (ass_to_seq(best), bestval)
+        cc = random.choices(ccs,weights)[0]
+    return (rna.ass_to_seq(best), bestval)
 
 
 # -
@@ -610,7 +621,7 @@ steps = 500
 jobs = 12
 
 def my_rstd_optimize(i):
-    seed(None)
+    random.seed(None)
     return rstd_optimize(steps,0.03)
 
 with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -629,13 +640,14 @@ for seq, val in res:
 # ### Generate RNAPOND figures
 
 # +
+#[APPENDIX]
 from collections import Counter
 
 ## a slightly harder instance
 target = "..(((..((((.....)))).((...(((.....)))...))...))).."
 
 n = len(target)
-bps = parse(target)
+bps = rna.parse(target)
 steps = 100
 
 # +
@@ -676,19 +688,19 @@ def draw_heatmap(ax, counter, bps, dbps, new_dbps, vmax, steps=steps, cbar=True)
 # +
 def cg_design_iteration():
     model = single_target_design_model(target)
-    model.add_constraints(NotBPComp(i, j) for (i, j) in dbps)
-    sampler = Sampler(model, lazy=True)
+    model.add_constraints(rna.NotBPComp(i, j) for (i, j) in dbps)
+    sampler = ir.Sampler(model, lazy=True)
     if sampler.treewidth() > 10 or not sampler.is_consistent():
         return "Not found"
     ctr = Counter()
     found, sol = False, None
     for i in range(steps):
-        seq = ass_to_seq(sampler.targeted_sample())
+        seq = rna.ass_to_seq(sampler.targeted_sample())
         fc = RNA.fold_compound(seq)
         mfe, mfe_e = fc.mfe()
         if fc.eval_structure(target) == mfe_e:
             found, sol = True, seq
-        ctr.update(parse(mfe))
+        ctr.update(rna.parse(mfe))
     ndbps = [x[0] for x in ctr.most_common() if x[0] not in bps]
     dbps.extend(ndbps[:2])
     if found:
@@ -698,7 +710,7 @@ def cg_design_iteration():
     return found, sol
 
 # One can use seed() provided by infrared to reproduce the result
-seed(1000)
+random.seed(1000)
 found, records, dbps, seq = False, [], [], None
 while not found: found, seq = cg_design_iteration()
 print(seq)
@@ -733,23 +745,23 @@ def multi_design_optimize_allsteps(steps, temp):
     cc, cur, curval, bestval = None, None, math.inf, math.inf
     for i in range(steps):
         model = multi_design_model(cc, cur)
-        new = Sampler(model).sample()
-        newval = multi_defect(ass_to_seq(new),targets,1)
+        new = ir.Sampler(model).sample()
+        newval = multi_defect(rna.ass_to_seq(new),targets,1)
         if (newval <= curval
-            or random() <= exp(-(newval-curval)/temp)):
+            or random.random() <= math.exp(-(newval-curval)/temp)):
             cur, curval = new, newval
             if curval < bestval:
                 best, bestval = cur, curval
         if i==0:
             ccs = model.connected_components()
             weights = [1/len(cc) for cc in ccs]
-        cc = choices(ccs,weights)[0]
+        cc = random.choices(ccs,weights)[0]
         
-        res.append((ass_to_seq(best),bestval))
+        res.append((rna.ass_to_seq(best),bestval))
     return res
 
 def my_multi_design_optimize_allsteps(i):
-    seed(None)
+    random.seed(None)
     return multi_design_optimize_allsteps(5120,0.015)
 with concurrent.futures.ProcessPoolExecutor() as executor:
     res = executor.map(my_multi_design_optimize_allsteps, range(48))
