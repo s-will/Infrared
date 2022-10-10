@@ -416,7 +416,7 @@ class Model:
     def add_functions(self, functions, group='base'):
         """Add functions to the model
         Args:
-            functions: [const] an iterable of constraints or a single constraint
+            functions: [const] an iterable of functions or a single function
             group: indentifier of function group. Defaults to `base`
 
         Note:
