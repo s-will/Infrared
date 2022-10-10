@@ -80,7 +80,6 @@ opt_draw_logo(samples)
 # ### Multiple targets
 
 #[Multiple_targets]
-#           01234567890123456789012345678901234
 targets = ["((((((((((...))))((((....))))))))))",
            "((((((.((((((((....))))..))))))))))",
            ".((((((...)))))).(((((((....)))))))"]
@@ -108,23 +107,25 @@ model = ir.Model(n,4)
 target = "((((((((((...))))((((....))))))))))"
 model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
 
-# +
 sampler = ir.Sampler(model)
+
 samples = [sampler.sample() for _ in range(10)]
 
+sequences = [rna.ass_to_seq(sample) for sample in samples]
+
 opt_draw_logo(samples)
-# -
 
 # ### 3.2 Sequence constraints in IUPAC code
 
-#[3.1]
+#[3.2]
 iupac_sequence = "SNNNNNNNNNRYYNNNNNNNNGNRANNNNNNNNNS"
 
 for i, x in enumerate(iupac_sequence):
     model.add_constraints(ir.ValueIn(i, rna.iupacvalues(x)))
 
-# +
 sampler = ir.Sampler(model)
+
+# +
 samples = [sampler.sample() for _ in range(20)]
 
 opt_draw_logo(samples)
@@ -132,18 +133,18 @@ opt_draw_logo(samples)
 
 # ### 3.3 Control of GC content
 
+# add functions for GC control:
+
 #[3.3]
-# add functions for GC control
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
-# +
 # set a weight and sample
-model.set_feature_weight(0.15, 'gc')
 
+model.set_feature_weight(1, 'gc')
 sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(1000)]
+
 opt_draw_logo(samples)
-# -
 
 ## Code to produce the figures in the paper
 WRITEFIGS = False
@@ -163,12 +164,12 @@ for name,weight in [('minus', -1), ('zero', 0), ('plus', 1)]:
 
 # Set a target of 75% GC content and then draw targeted samples
 
-# +
+#[3.3.3]
 sampler = ir.Sampler(model)
-
 sampler.set_target( 0.75 * n, 0.01 * n, 'gc' )
-
 samples = [sampler.targeted_sample() for _ in range(1000)]
+
+# +
 opt_draw_logo(samples)
 sequences = assignments_to_seqs(samples)
 
@@ -180,17 +181,18 @@ print(f"GC content in samples: {gc_content:0.2f}%")
 # ### 3.4 Controlling energy - Multiple features
 
 #[3.4]
-# recall current model
-model = ir.Model(n,4) 
+model = ir.Model(n,4)
 bps = rna.parse(target)
 model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
 # add (base pair) energy control
+
 model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                      for (i,j) in bps], 'energy')
 
-# target specific GC and low energy 
+# target specific GC and low energy
+
 model.set_feature_weight(-2, 'energy')
 sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.01*n, 'gc')
@@ -198,9 +200,9 @@ samples = [sampler.targeted_sample() for _ in range(10)]
 
 opt_draw_logo(samples)
 
-# add stacking energy control 
-# - this could be used in place of defining base pair energy
-#   in the code above
+# add stacking energy control - this could be used in place of defining base pair energyin the code above
+
+#[stackenergy]
 model.add_functions([rna.StackEnergy(i, j)
     for (i,j) in bps if (i+1,j-1) in bps], 'energy')
 
@@ -238,17 +240,19 @@ model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                      for (i,j) in bps], 'energy')
 
 # add the Turner energy feature
+
 model.add_feature('Energy', 'energy',
     lambda sample, target=target:
         energy_of_struct(rna.ass_to_seq(sample), target))
 
-# +
 # specify targets and draw targeted samples
+
 sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.05*n, 'gc')
 sampler.set_target(-10, 0.5, 'Energy')
 samples = [sampler.targeted_sample() for _ in range(10)]
 
+# +
 opt_draw_logo(samples)
 sequences = assignments_to_seqs(samples)
 
@@ -257,18 +261,14 @@ sequences = assignments_to_seqs(samples)
 
 # ### 3.6 Multiple target targets
 
-# +
 #[3.6]
-# construct model
 model = ir.Model(n,4) 
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
-
 for k, target in enumerate(targets):
     bps = rna.parse(target)
     model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
                          for (i,j) in bps], f'energy{k}')
-# -
 
 # #### Target specific GC content and high affinity to all targets
 
@@ -297,22 +297,22 @@ sequences
 
 # #### Target specific GC content and specific Turner energies for all targets
 
-# +
 # add Turner energy features for all target targets
+
+#[add-multi-energy-features]
 for k, target in enumerate(targets):
     model.add_feature(f'Energy{k}', f'energy{k}',
         lambda sample, target=target:
             energy_of_struct(rna.ass_to_seq(sample), target))
-
 sampler = ir.Sampler(model)
 sampler.set_target(0.75*n, 0.01*n, 'gc')
-
 sampler.set_target( -15, 1, 'Energy0')
 sampler.set_target( -20, 1, 'Energy1')
 sampler.set_target( -20, 1, 'Energy2')
 
 samples = [sampler.targeted_sample() for _ in range(5)]
 
+# +
 opt_draw_logo(samples)
 sequences = assignments_to_seqs(samples)
 
@@ -351,6 +351,8 @@ Image(filename=filename+".png",width=300)
 # ### 3.7 Negative design by sampling
 
 #[3.7]
+import RNA
+
 target = targets[0]
 n = len(target)
 
@@ -372,6 +374,7 @@ def single_target_design_model(target):
 
 
 # solve by direct sampling
+
 sampler = ir.Sampler(single_target_design_model(target))
 sampler.set_target(0.7 * n, 0.1 * n, 'gc')
 for i in range(50):
@@ -434,18 +437,17 @@ def cg_design_iteration():
     ndbps = [x[0] for x in ctr.most_common() if x[0] not in bps]
     dbps.extend(ndbps[:2])
     return sol
-i=0
 dbps, seq = [], None
 while seq is None:
-    i += 1
     seq = cg_design_iteration()
-print(i,seq)
+print(seq)
 
 
 # ### 3.9 Negative design by stochastic optimization with partial resampling
 
+# define multi-target design model for resampling of subsets 
+
 #[3.9]
-## define multi-target design model for resampling of subsets 
 def multi_design_model(subset=None, solution=None):
     n = len(targets[0])
     model = ir.Model(n, 4)
@@ -481,6 +483,8 @@ import math
 
 
 # Return the sequence achieving the best defect within optimization
+
+#[multi-design-optimize]
 def multi_design_optimize(steps, temp):
     cc, cur, curval, bestval = None, None, math.inf, math.inf
     for i in range(steps):
@@ -524,17 +528,14 @@ termTet  = "........................................(((((((((("\
            "(((((......)))))))))))))))........"
 aptTet   = "((((((.......(((((....)))))...((((...........)))))"\
            ")))))............................."
+# -
 
 spacerLen = 30
-
-# +
 aptamers    = aptTheo  + "."*spacerLen + aptTet
 terminators = termTheo + "."*spacerLen + termTet
 sequence    = seqTheo  + "N"*spacerLen + seqTet
 
 n = len(aptTheo) + spacerLen + len(aptTet)
-# -
-
 variants = dict(
     empty = '.'*n,
     aptTheo = aptTheo + '.'*(n-len(aptTheo)),
@@ -564,7 +565,8 @@ def rstd_objective(sequence):
     return term_stability + apt_target + spacer_unfolding
 
 
-# +
+# -
+
 def rstd_model(subset=None, solution=None):
     rstd_targets = [aptamers, terminators]
     n = len(rstd_targets[0])
@@ -589,6 +591,7 @@ def rstd_model(subset=None, solution=None):
     model.set_feature_weight(-0.3, 'gc')
     return model
 
+
 def rstd_optimize(steps, temp):
     cc, cur, curval, bestval = None, None, math.inf, math.inf
     for i in range(steps):
@@ -608,8 +611,7 @@ def rstd_optimize(steps, temp):
     return (rna.ass_to_seq(best), bestval)
 
 
-# -
-
+#[rstd-optimize-call]
 rstd_optimize(steps = 500, temp = 0.03)
 
 # #### Run optimzation in parallel
