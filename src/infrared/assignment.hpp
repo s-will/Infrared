@@ -279,23 +279,33 @@ namespace ired {
             : a_(a),
               vars_(vars),
               domains_(cn.domains()),
-              top_( 0 ),
-              stage1_size_( -1 ) // init without staging
+              initial_value_(initial_value),
+              top_(0),
+              stage1_size_(-1) // init without staging
         {
+            a_.set_undet( vars_ );
+
+            constraint_board_ = create_board<constraint_t>(constraints);
+            function_board_ = create_board<function_t>(functions);
+
+            this->reset();
+        }
+
+        /**
+         * @brief Reset iterator
+         */
+        void reset() {
             a_.set_undet( vars_ );
 
             // set up value stack
             value_stack_.resize(vars_.size()+1);
 
-            value_stack_[0] = initial_value;
+            value_stack_[0] = initial_value_;
 
             if ( value_stack_[0]==ep::zero() ) {
                 top_=-1;
                 return;
             }
-
-            constraint_board_ = create_board<constraint_t>(constraints);
-            function_board_ = create_board<function_t>(functions);
 
             if ( vars_.size() > 0 ) {
                 this -> operator ++();
@@ -426,6 +436,7 @@ namespace ired {
         assignment_t &a_;
         const std::vector<var_idx_t> &vars_;
         const FiniteDomainVector &domains_;
+        const fun_value_t initial_value_;
         typename board_t<constraint_t>::type constraint_board_;
         typename board_t<function_t>::type function_board_;
         int top_;

@@ -853,6 +853,9 @@ class PFClusterTree(ClusterTreeBase):
     def sample(self):
         return self._ct.sample()
 
+    def resample(self, variables, assignment):
+        return self._ct.resample(variables, assignment)
+
 
 class Feature:
     """Feature in multi-dimensional Boltzmann sampling
@@ -1187,6 +1190,20 @@ class BoltzmannSampler(EngineBase):
         """
         self.setup_engine()
         return self._ct._ct.sample()
+
+    def resample(self, variables, assignment):
+        """Generate sample
+
+        If the cluster tree was not evaluated (or consistency checked) before,
+        it will be evaluated once on-demand.
+        Returns:
+            a raw sample
+
+        Note:
+            raises exception ConsistencyError if the model is inconsistent.
+        """
+        self.setup_engine()
+        return self._ct.resample(variables, assignment)
 
     def samples(self):
         """Sample generator

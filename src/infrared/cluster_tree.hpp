@@ -17,6 +17,9 @@
  * @brief Defines the cluster tree.
  */
 
+#include <set>
+#include <optional>
+
 #include "graph.hpp"
 #include "constraint_network.hpp"
 
@@ -249,6 +252,20 @@ namespace ired {
          */
         auto traceback();
 
+        /**
+         * @brief Generate a restricted traceback
+         *
+         * @param variables list of variables to which trace is restricted
+         * @param assignment assignment of the other variables
+         *
+         * @return assignment obtained by restricted traceback
+         *
+         * @see traceback
+         *
+         */
+        auto restricted_traceback(const std::set<var_idx_t> &variables,
+            const assignment_t &assignment);
+
     private:
         constraint_network_t cn_;
         tree_t tree_;
@@ -258,6 +275,8 @@ namespace ired {
         bool single_empty_rooted_ = false;
 
         vertex_descriptor_t root_;
+
+        std::optional<std::set<var_idx_t>> trace_variables;
 
         // insert pseudo root to connect trees of the forest (unless already done)
         // @returns new root
@@ -347,39 +366,61 @@ namespace ired {
                 const auto &child =  tree_[ e.target() ].cluster;
 
                 auto diff = child.diff_vars(parent);
+                bool diff_changed = false;
 
-                const auto &message = e.message;
-
-                // evaluate message at partial assignment a;
-                auto message_value = (*message)(a);
-
-                // initialize the Selector
-                auto selector = typename evaluation_policy_t::selector(message_value);
-
-                assert(a.eval_determined(child.constraints(),
-                                         StdEvaluationPolicy<bool>()));
-
-                a.set_undet(diff);
-
-                auto it = a.make_iterator(diff, cn_,
-                                          child.constraints(),
-                                          child.functions(),
-                                          a.eval_determined(child.functions(),
-                                                            evaluation_policy_t())
-                                          );
-
-                // enumerate all combinations of values assigned to diff variables;
-                // recompute SUM_a(PROD_f(f(a))), where a runs over these
-                // combinations
-                auto x = evaluation_policy_t::zero();
-                for( ; ! it.finished(); ++it ) {
-                    x = evaluation_policy_t::plus( x, it.value() );
-
-                    if (selector.select(x)) {
-                        break;
-                    }
+                if (trace_variables) { // if the trace is restricted,
+                                       // then remove other vars from diff
+                    auto new_end = remove_if(diff.begin(), diff.end(),
+                            [&](var_idx_t i) {
+                                return trace_variables->find(i) == trace_variables->end();
+                            });
+                    diff_changed = new_end != diff.end();
+                    diff.erase(new_end, diff.end());
                 }
 
+                if (! diff.empty()) {
+
+                    a.set_undet(diff);
+
+                    assert(a.eval_determined(child.constraints(),
+                                             StdEvaluationPolicy<bool>()));
+
+                    auto it = a.make_iterator(diff, cn_,
+                                              child.constraints(),
+                                              child.functions(),
+                                              a.eval_determined(child.functions(),
+                                                                evaluation_policy_t())
+                                              );
+
+                    // -----
+                    // determine value for selector
+                    auto value = evaluation_policy_t::zero();
+                    if (diff_changed) {
+                        // recompute value for selector
+                        for( ; ! it.finished(); ++it ) {
+                            value = evaluation_policy_t::plus( value, it.value() );
+                        }
+                        it.reset();
+                    } else {
+                        // get value by evaluating message:
+                        // evaluate message at partial assignment a;
+                        value = (*e.message)(a);
+                    }
+                    // initialize the Selector
+                    auto selector = typename evaluation_policy_t::selector(value);
+
+                    // enumerate all combinations of values assigned to diff variables;
+                    // recompute SUM_a(PROD_f(f(a))), where a runs over these
+                    // combinations
+                    auto x = evaluation_policy_t::zero();
+                    for( ; ! it.finished(); ++it ) {
+                        x = evaluation_policy_t::plus( x, it.value() );
+
+                        if (selector.select(x)) {
+                            break;
+                        }
+                    }
+                }
                 // trace back from target
                 dfs_traceback(e.target(), a);
             }
@@ -453,6 +494,26 @@ namespace ired {
         auto a = assignment_t(cn_.domains());
 
         dfs_traceback(single_empty_root(), a);
+
+        return a;
+    }
+
+    template<class FunValue, class EvaluationPolicy>
+    auto
+    ClusterTree<FunValue,EvaluationPolicy>
+    ::restricted_traceback(const std::set<var_idx_t> &variables,
+        const assignment_t &assignment) {
+
+        assert(evaluated_);
+
+        //trace_variables = std::set<var_idx_t>(variables.begin(),variables.end());
+        trace_variables = variables;
+
+        auto a = assignment_t(assignment);
+
+        dfs_traceback(single_empty_root(), a);
+
+        trace_variables.reset();
 
         return a;
     }

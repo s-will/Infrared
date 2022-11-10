@@ -207,6 +207,7 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("add_function", &PFClusterTree::add_function)
         .def("evaluate", &PFClusterTree::evaluate)
         .def("is_consistent", &PFClusterTree::is_consistent)
+        .def("resample", &PFClusterTree::restricted_traceback)
         .def("sample", &PFClusterTree::traceback)
         ;
 
