@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 
 target = "((((((((((...))))((((....))))))))))"
 model = ir.Model(len(target), 4)
-model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+#model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
 sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(10)]
 
@@ -442,31 +442,17 @@ while seq is None:
     seq = cg_design_iteration()
 print(seq)
 
-
 # ### 3.9 Negative design by stochastic optimization with partial resampling
 
-# define multi-target design model for resampling of subsets 
+# Define multi-target design model for resampling of subsets 
 
-#[3.9]
-def multi_design_model(subset=None, solution=None):
-    n = len(targets[0])
-    model = ir.Model(n, 4)
-    if subset is None: subset = set(range(n))
-    for i in set(range(n))-subset:
-        value = solution.values()[i]
-        model.restrict_domains(i,(value,value))
-    model.add_functions([rna.GCCont(i) for i in subset], 'gc')
-    for target in targets:
-        s = rna.parse(target)
-        ss = [(i,j) for (i,j) in s if i in subset or j in subset]
-        model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
-        model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in s)
-            for (i,j) in ss], 'energy')
-    model.set_feature_weight(-0.8, 'energy')
-    model.set_feature_weight(-0.3, 'gc')
-    return model
+import RNA
+targets = ["((((((((((...))))((((....))))))))))",
+           "((((((.((((((((....))))..))))))))))",
+           ".((((((...)))))).(((((((....)))))))"]
 
 
+#[multi-defect]
 def multi_defect(sequence, targets, xi=1):
     k = len(targets)
     fc = RNA.fold_compound(sequence)
@@ -482,28 +468,53 @@ import random
 import math
 
 
-# Return the sequence achieving the best defect within optimization
+# Optimize an ojective function by a Monte-Carlo optimization strategy with model resampling
+
+#[mc-optimize]
+def mc_optimize(model, objective, steps, temp, start=None):
+    sampler = ir.Sampler(model)
+    cur = sampler.sample() if start is None else start
+    curval = objective(cur)
+    best, bestval = cur, curval
+    
+    ccs = model.connected_components()
+    weights = [1/len(cc) for cc in ccs]
+    
+    for i in range(steps):
+        cc = random.choices(ccs,weights)[0]
+        new = sampler.resample(cc, cur)
+        newval = objective(new)
+        if (newval >= curval
+            or random.random() <= math.exp((newval-curval)/temp)):
+            cur, curval = new, newval
+            if curval > bestval:
+                best, bestval = cur, curval
+
+    return (best, bestval)
+
 
 #[multi-design-optimize]
-def multi_design_optimize(steps, temp):
-    cc, cur, curval, bestval = None, None, math.inf, math.inf
-    for i in range(steps):
-        model = multi_design_model(cc, cur)
-        new = ir.Sampler(model).sample()
-        newval = multi_defect(rna.ass_to_seq(new),targets,1)
-        if (newval <= curval
-            or random.random() <= math.exp(-(newval-curval)/temp)):
-            cur, curval = new, newval
-            if curval < bestval:
-                best, bestval = cur, curval
-        if i==0:
-            ccs = model.connected_components()
-            weights = [1/len(cc) for cc in ccs]
-        cc = random.choices(ccs,weights)[0]
-    return (rna.ass_to_seq(best), bestval)
+n = len(targets[0])
+model = ir.Model(n, 4)
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
+for target in targets:
+    ss = rna.parse(target)
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
+    model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
+        for (i,j) in ss], 'energy')
+model.set_feature_weight(-0.8, 'energy')
+model.set_feature_weight(-0.3, 'gc')
 
+# +
+for target in targets: print(target)
 
-multi_design_optimize(1000,0.015)
+for i in range(5):
+    best, best_val = mc_optimize(model,
+        lambda x: - multi_defect(rna.ass_to_seq(x),targets,1),
+        1000, 0.01)
+
+    print(rna.ass_to_seq(best), - best_val)
+# -
 
 # ### 3.10 A real world example: design of a Tandem-Riboswitch
 
@@ -565,54 +576,30 @@ def rstd_objective(sequence):
     return term_stability + apt_target + spacer_unfolding
 
 
+# +
+rstd_targets = [aptamers, terminators]
+n = len(rstd_targets[0])
+model = ir.Model(n, 4)
+
+for i, x in enumerate(sequence):
+    model.add_constraints(ir.ValueIn(i, rna.iupacvalues(x)))
+
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
+
+for k,target in enumerate(rstd_targets):
+    ss = rna.parse(target)
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
+    model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
+        for (i,j) in ss], f'energy{k}')
+model.set_feature_weight(-0.6, 'energy0')
+model.set_feature_weight(-1, 'energy1')
+model.set_feature_weight(-0.3, 'gc')
 # -
 
-def rstd_model(subset=None, solution=None):
-    rstd_targets = [aptamers, terminators]
-    n = len(rstd_targets[0])
-    model = ir.Model(n, 4)
-    if subset is None: subset = set(range(n))
-    for i in set(range(n))-subset:
-        value = solution.values()[i]
-        model.restrict_domains(i,(value,value))
-        
-    for i, x in enumerate(sequence):
-        model.add_constraints(ir.ValueIn(i, rna.iupacvalues(x)))
-        
-    model.add_functions([rna.GCCont(i) for i in subset], 'gc')
-    for k,target in enumerate(rstd_targets):
-        s = rna.parse(target)
-        ss = [(i,j) for (i,j) in s if i in subset or j in subset]
-        model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
-        model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in s)
-            for (i,j) in ss], f'energy{k}')
-    model.set_feature_weight(-0.6, 'energy0')
-    model.set_feature_weight(-1, 'energy1')
-    model.set_feature_weight(-0.3, 'gc')
-    return model
-
-
-def rstd_optimize(steps, temp):
-    cc, cur, curval, bestval = None, None, math.inf, math.inf
-    for i in range(steps):
-        model = rstd_model(cc, cur)
-        new = ir.Sampler(model).sample()
-        newval = rstd_objective(rna.ass_to_seq(new))
-        if (newval <= curval
-            or random.random() <= math.exp(-(newval-curval)/temp)):
-            cur, curval = new, newval
-            if curval < bestval:
-                best, bestval = cur, curval
-                #print(rna.ass_to_seq(best),bestval)
-        if i==0:
-            ccs = model.connected_components()
-            weights = [1/len(cc) for cc in ccs]
-        cc = random.choices(ccs,weights)[0]
-    return (rna.ass_to_seq(best), bestval)
-
-
 #[rstd-optimize-call]
-rstd_optimize(steps = 500, temp = 0.03)
+objective = lambda x: -rstd_objective(rna.ass_to_seq(x))
+best, best_val = mc_optimize(model, objective, steps = 500, temp = 0.03)
+print(rna.ass_to_seq(best), -best_val)
 
 # #### Run optimzation in parallel
 
@@ -624,7 +611,9 @@ jobs = 12
 
 def my_rstd_optimize(i):
     random.seed(None)
-    return rstd_optimize(steps,0.03)
+    objective = lambda x: -rstd_objective(rna.ass_to_seq(x))
+    best,best_val = mc_optimize(model, objective, steps = steps, temp = 0.03)
+    return rna.ass_to_seq(best), -best_val
 
 with concurrent.futures.ProcessPoolExecutor() as executor:
     res = executor.map(my_rstd_optimize, range(jobs))
@@ -742,36 +731,58 @@ plt.show()
 # +
 import concurrent.futures
 
-def multi_design_optimize_allsteps(steps, temp):
+#[resampling-montecarlo-minimize]
+def mc_optimize_allsteps(model, objective, steps, temp, start=None):
     res = list()
-    cc, cur, curval, bestval = None, None, math.inf, math.inf
+
+    sampler = ir.Sampler(model)
+    cur = sampler.sample() if start is None else start
+    curval = objective(cur)
+    best, bestval = cur, curval
+    res.append((rna.ass_to_seq(best),bestval))
+    
+    ccs = model.connected_components()
+    weights = [1/len(cc) for cc in ccs]
+    
     for i in range(steps):
-        model = multi_design_model(cc, cur)
-        new = ir.Sampler(model).sample()
-        newval = multi_defect(rna.ass_to_seq(new),targets,1)
-        if (newval <= curval
-            or random.random() <= math.exp(-(newval-curval)/temp)):
-            cur, curval = new, newval
-            if curval < bestval:
-                best, bestval = cur, curval
-        if i==0:
-            ccs = model.connected_components()
-            weights = [1/len(cc) for cc in ccs]
         cc = random.choices(ccs,weights)[0]
-        
+        new = sampler.resample(cc, cur)
+        newval = objective(new)
+        if (newval >= curval
+            or random.random() <= math.exp((newval-curval)/temp)):
+            cur, curval = new, newval
+            if curval > bestval:
+                best, bestval = cur, curval
         res.append((rna.ass_to_seq(best),bestval))
+
     return res
 
-def my_multi_design_optimize_allsteps(i):
+#[multi-design-optimize]
+n = len(targets[0])
+model = ir.Model(n, 4)
+model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
+for target in targets:
+    ss = rna.parse(target)
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
+    model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
+        for (i,j) in ss], 'energy')
+model.set_feature_weight(-0.8, 'energy')
+model.set_feature_weight(-0.3, 'gc')
+
+objective = lambda x: - multi_defect(rna.ass_to_seq(x),targets,1)
+
+def my_mc_optimize_allsteps(i):
     random.seed(None)
-    return multi_design_optimize_allsteps(5120,0.015)
+    res = mc_optimize_allsteps(model,objective,6400,0.01)
+    return [(b,-v) for b,v in res]
+
 with concurrent.futures.ProcessPoolExecutor() as executor:
-    res = executor.map(my_multi_design_optimize_allsteps, range(48))
+    res = executor.map(my_mc_optimize_allsteps, range(48))
 res = list(res)
 # -
 
-the_steps = [1]+[20*(2**i) for i in range(9)]
-res2 = [[r[steps-1][1] for r in res] for steps in the_steps]
+the_steps = [0]+[25*(2**i) for i in range(8+1)]
+res2 = [[r[steps][1] for r in res] for steps in the_steps]
 #print(res2)
 fig, ax = plt.subplots()
 box = ax.boxplot(res2,
