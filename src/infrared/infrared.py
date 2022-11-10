@@ -1327,6 +1327,51 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 ## Alias for MultiDimensionalBoltzmannSampler
 Sampler = MultiDimensionalBoltzmannSampler
 
+def mc_optimize(model, objective, steps, temp, start=None):
+    """Optimize by Monte-Carlo optimization with partial resampling
+
+    Maximizes an objective function over assignments of a Infrared model
+    using a Monte-Carlo stochastic optimization strategy with
+    component-wise resampling and Metropolis criterion.
+
+    In each iteration, the algorithm resamples connected components of the
+    dependency graph such. This strategy is generally applicable and allows
+    to keep constraints satisfied. Note that this strategy can even benefit from
+    Boltzmann sampling that allows controling the resampling distribution
+    based on functions.
+    Naturally, a high degree of dependencies makes problems hard for this strategy;
+    in the extreme, the strategy degenerates to optimization by iterated sampling.
+
+    Args:
+        model: Infrared model describing assignments
+        objective: objective function on assignments
+        steps: iterations
+        temp: temperature for the Metropolis criterion
+        start: optional start assignment
+
+    Returns:
+        Pair of best assignment and its objective value
+    """
+    sampler = Sampler(model)
+    cur = sampler.sample() if start is None else start
+    curval = objective(cur)
+    best, bestval = cur, curval
+
+    ccs = model.connected_components()
+    weights = [1/len(cc) for cc in ccs]
+
+    for i in range(steps):
+        cc = random.choices(ccs,weights)[0]
+        new = sampler.resample(cc, cur)
+        newval = objective(new)
+        if (newval >= curval
+            or random.random() <= math.exp((newval-curval)/temp)):
+            cur, curval = new, newval
+            if curval > bestval:
+                best, bestval = cur, curval
+
+    return (best, bestval)
+
 
 def dotfile_to_tgt(graphfile, tgt, outfile=None):
     """Convert dot graph file format to png/pdf

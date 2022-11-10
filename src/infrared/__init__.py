@@ -88,6 +88,9 @@ dotfile_to_pdf = infrared.dotfile_to_pdf
 ## @copydoc infrared.infrared.dotfile_to_png
 dotfile_to_png = infrared.dotfile_to_png
 
+## @copydoc infrared.infrared.mc_optimize
+mc_optimize = infrared.mc_optimize
+
 ## @copydoc infrared.infrared.ValueIn
 ValueIn = infrared.ValueIn
 
