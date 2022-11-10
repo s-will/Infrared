@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 
 target = "((((((((((...))))((((....))))))))))"
 model = ir.Model(len(target), 4)
-#model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
 sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(10)]
 
@@ -446,6 +446,7 @@ print(seq)
 
 # Define multi-target design model for resampling of subsets 
 
+#[3.9]
 import RNA
 targets = ["((((((((((...))))((((....))))))))))",
            "((((((.((((((((....))))..))))))))))",
@@ -493,7 +494,7 @@ def mc_optimize(model, objective, steps, temp, start=None):
     return (best, bestval)
 
 
-#[multi-design-optimize]
+#[mc-multi-design-model]
 n = len(targets[0])
 model = ir.Model(n, 4)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
@@ -506,14 +507,11 @@ model.set_feature_weight(-0.8, 'energy')
 model.set_feature_weight(-0.3, 'gc')
 
 # +
-for target in targets: print(target)
+best, best_val = mc_optimize(model,
+    lambda x: - multi_defect(rna.ass_to_seq(x),targets,1),
+    1000, 0.01)
 
-for i in range(5):
-    best, best_val = mc_optimize(model,
-        lambda x: - multi_defect(rna.ass_to_seq(x),targets,1),
-        1000, 0.01)
-
-    print(rna.ass_to_seq(best), - best_val)
+print(rna.ass_to_seq(best), - best_val)
 # -
 
 # ### 3.10 A real world example: design of a Tandem-Riboswitch
@@ -598,7 +596,8 @@ model.set_feature_weight(-0.3, 'gc')
 
 #[rstd-optimize-call]
 objective = lambda x: -rstd_objective(rna.ass_to_seq(x))
-best, best_val = mc_optimize(model, objective, steps = 500, temp = 0.03)
+best, best_val = ir.mc_optimize(model, objective,
+                                steps = 500, temp = 0.03)
 print(rna.ass_to_seq(best), -best_val)
 
 # #### Run optimzation in parallel
@@ -731,7 +730,6 @@ plt.show()
 # +
 import concurrent.futures
 
-#[resampling-montecarlo-minimize]
 def mc_optimize_allsteps(model, objective, steps, temp, start=None):
     res = list()
 
@@ -757,7 +755,6 @@ def mc_optimize_allsteps(model, objective, steps, temp, start=None):
 
     return res
 
-#[multi-design-optimize]
 n = len(targets[0])
 model = ir.Model(n, 4)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
