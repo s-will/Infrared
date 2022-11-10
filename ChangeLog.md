@@ -1,12 +1,36 @@
 [TOC]
 
+# Release 1.1 - 2022-11-15
+
+This release improves support for stochastic optimization
+based on resampling (among some minor improvements and adapations)
+
+## C++ library
+
+* Introduce support for resampling by restricted traceback. The
+  functionality is directly supported by the Infrared engine without
+  need for recomputation of the partition function.
+
+## Python interface
+
+* Resampling functionality is provided by methods resample() of ir.Sampler and
+  ir.PFClusterTree
+
+* Add ir.mc_optimize for optimization
+
+
+## Documentation
+
+* Update the bookchapter tutorial - use new resampling mechanism
+
+
 # Release 1.0 - 2022-11-15
 
-This release facilitates the modeling of sampling and optimization problems 
+This release facilitates the modeling of sampling and optimization problems
 from a much broader range of applications by
 
 * introducing a new modeling syntax which facilitates the definition
-  of constraint models and supporting the definition of 
+  of constraint models and supporting the definition of
   new constraints and functions with simple Syntax in Python
 
 * enabling modeling in a truly declarative and compositional style
@@ -88,7 +112,7 @@ constraints by using a specialized replacement
 functions/constraints
 
 
-# Release 0.5.1 - 2021-07-10 
+# Release 0.5.1 - 2021-07-10
 
 ## Python Interface
 

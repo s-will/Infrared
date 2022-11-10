@@ -94,4 +94,4 @@ mc_optimize = infrared.mc_optimize
 ## @copydoc infrared.infrared.ValueIn
 ValueIn = infrared.ValueIn
 
-__version__ = '1.0'
+__version__ = '1.1'
