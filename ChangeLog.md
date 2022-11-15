@@ -1,6 +1,6 @@
 [TOC]
 
-# Release 1.0b - 2021-11-16
+# Release 1.0 - 2022-11-15
 
 This release facilitates the modeling of sampling and optimization problems 
 from a much broader range of applications by
@@ -73,6 +73,12 @@ constraints by using a specialized replacement
 
 * Add Jupyter notebook as supplement of a book chapter on Infrared
   with new example code
+
+* Add tags to sync with book chapter
+
+## Build system
+
+* Update setup.py
 
 ## Bug fixes
 

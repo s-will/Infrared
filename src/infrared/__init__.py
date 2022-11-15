@@ -91,4 +91,4 @@ dotfile_to_png = infrared.dotfile_to_png
 ## @copydoc infrared.infrared.ValueIn
 ValueIn = infrared.ValueIn
 
-__version__ = '1.0b'
+__version__ = '1.0'
