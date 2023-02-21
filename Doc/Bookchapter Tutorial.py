@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 
 target = "((((((((((...))))((((....))))))))))"
 model = ir.Model(len(target), 4)
-model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+model.add_constraints(rna.BPComp(i, j) for (i, j) in rna.parse(target))
 sampler = ir.Sampler(model)
 samples = [sampler.sample() for _ in range(10)]
 
@@ -85,7 +85,7 @@ targets = ["((((((((((...))))((((....))))))))))",
            ".((((((...)))))).(((((((....)))))))"]
 
 for target in targets:
-    model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in rna.parse(target))
 
 # +
 sampler = ir.Sampler(model)
@@ -105,7 +105,7 @@ n = 35
 model = ir.Model(n,4)
 
 target = "((((((((((...))))((((....))))))))))"
-model.add_constraints(rna.BPComp(i,j) for (i,j) in rna.parse(target))
+model.add_constraints(rna.BPComp(i, j) for (i, j) in rna.parse(target))
 
 sampler = ir.Sampler(model)
 
@@ -183,13 +183,13 @@ print(f"GC content in samples: {gc_content:0.2f}%")
 #[3.4]
 model = ir.Model(n,4)
 bps = rna.parse(target)
-model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+model.add_constraints(rna.BPComp(i, j) for (i, j) in bps)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 
 # add (base pair) energy control
 
 model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
-                     for (i,j) in bps], 'energy')
+                     for (i, j) in bps], 'energy')
 
 # target specific GC and low energy
 
@@ -204,7 +204,7 @@ opt_draw_logo(samples)
 
 #[stackenergy]
 model.add_functions([rna.StackEnergy(i, j)
-    for (i,j) in bps if (i+1,j-1) in bps], 'energy')
+    for (i, j) in bps if (i+1, j-1) in bps], 'energy')
 
 # ### 3.5 Targeting Turner energy - Customized features
 #
@@ -234,10 +234,10 @@ except:
 # Restate current model
 model = ir.Model(n,4) 
 bps = rna.parse(target)
-model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+model.add_constraints(rna.BPComp(i, j) for (i, j) in bps)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
-                     for (i,j) in bps], 'energy')
+                     for (i, j) in bps], 'energy')
 
 # add the Turner energy feature
 
@@ -256,7 +256,7 @@ samples = [sampler.targeted_sample() for _ in range(10)]
 opt_draw_logo(samples)
 sequences = assignments_to_seqs(samples)
 
-[(seq,energy_of_struct(seq,target)) for seq in sequences]
+[(seq,energy_of_struct(seq, target)) for seq in sequences]
 # -
 
 # ### 3.6 Multiple target targets
@@ -266,9 +266,9 @@ model = ir.Model(n,4)
 model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
 for k, target in enumerate(targets):
     bps = rna.parse(target)
-    model.add_constraints(rna.BPComp(i,j) for (i,j) in bps)
+    model.add_constraints(rna.BPComp(i, j) for (i, j) in bps)
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
-                         for (i,j) in bps], f'energy{k}')
+                         for (i, j) in bps], f'energy{k}')
 
 # #### Target specific GC content and high affinity to all targets
 
@@ -288,7 +288,7 @@ sequences = assignments_to_seqs(samples)
 # annotate sequences with energies (annotate with Turner energies only if RNA module is available)
 try:
     import RNA
-    sequences = ["".join([seq]+[f" {energy_of_struct(seq,target):5.1f}" for target in targets]) for seq in sequences]
+    sequences = ["".join([seq]+[f" {energy_of_struct(seq, target):5.1f}" for target in targets]) for seq in sequences]
 except ModuleNotFoundError:
     pass
 
@@ -317,7 +317,7 @@ opt_draw_logo(samples)
 sequences = assignments_to_seqs(samples)
 
 # annotate sequences with energies
-["".join([seq]+[f" {energy_of_struct(seq,target):5.1f}" for target in targets]) for seq in sequences]
+["".join([seq]+[f" {energy_of_struct(seq, target):5.1f}" for target in targets]) for seq in sequences]
 # -
 
 # ### Plot dependencies and tree decomposition
@@ -368,7 +368,7 @@ def single_target_design_model(target):
     model.add_constraints(rna.BPComp(i, j) for (i, j) in bps)
     model.add_functions([rna.GCCont(i) for i in range(n)], 'gc')
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in bps)
-        for (i,j) in bps], 'energy')
+        for (i, j) in bps], 'energy')
     model.set_feature_weight(-1.5, 'energy')
     return model
 
@@ -379,7 +379,7 @@ sampler = ir.Sampler(single_target_design_model(target))
 sampler.set_target(0.7 * n, 0.1 * n, 'gc')
 for i in range(50):
     seq = rna.ass_to_seq(sampler.targeted_sample())
-    if is_mfe_design(seq,target):
+    if is_mfe_design(seq, target):
         print(f"{i} {seq}")
 
 
@@ -394,7 +394,7 @@ sampler.set_target(0.7 * n, 0.1 * n, 'gc')
 best = 0
 for i in range(100):
     seq = rna.ass_to_seq(sampler.targeted_sample())
-    freq = target_frequency(seq,target)
+    freq = target_frequency(seq, target)
     if freq > best:
         best = freq
         print(f"{i} {seq} {freq:.6f}")
@@ -502,7 +502,7 @@ for target in targets:
     ss = rna.parse(target)
     model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
-        for (i,j) in ss], 'energy')
+        for (i, j) in ss], 'energy')
 model.set_feature_weight(-0.8, 'energy')
 model.set_feature_weight(-0.3, 'gc')
 
@@ -588,7 +588,7 @@ for k,target in enumerate(rstd_targets):
     ss = rna.parse(target)
     model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
-        for (i,j) in ss], f'energy{k}')
+        for (i, j) in ss], f'energy{k}')
 model.set_feature_weight(-0.6, 'energy0')
 model.set_feature_weight(-1, 'energy1')
 model.set_feature_weight(-0.3, 'gc')
@@ -762,7 +762,7 @@ for target in targets:
     ss = rna.parse(target)
     model.add_constraints(rna.BPComp(i, j) for (i, j) in ss)
     model.add_functions([rna.BPEnergy(i, j, (i-1, j+1) not in ss)
-        for (i,j) in ss], 'energy')
+        for (i, j) in ss], 'energy')
 model.set_feature_weight(-0.8, 'energy')
 model.set_feature_weight(-0.3, 'gc')
 

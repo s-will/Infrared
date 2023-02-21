@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.14.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -30,7 +30,7 @@ model = ir.Model(20,4)
 sampler = ir.Sampler(model)
 
 
-# Once initilized with a model, the sampler can prepare the sampling from this model. In particular, it computes a tree decomposition of the constraint network. In general, it is interesting to inspect the tree decomposition of a model's constraint network, since it guides the computation. 
+# Once initialized with a model, the sampler can prepare the sampling from this model. In particular, it computes a tree decomposition of the constraint network. In general, it is interesting to inspect the tree decomposition of a model's constraint network, since it guides the computation. 
 #
 # We define a function to display information on the tree decomposition.
 
