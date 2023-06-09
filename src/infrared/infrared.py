@@ -650,18 +650,18 @@ class Model:
 
         out.write("graph G {\n\n")
 
+        i=0
         for name in sorted(self._domains.keys()):
             for idx, domain in enumerate(self._domains[name]):
                 label = name+str(idx)
-                out.write("\tvar{} [label=\"{}\"];\n".format(idx, label))
+                out.write(f"\tvar{i} [label=\"{label}\"];\n")
+                i += 1
         out.write("\n\n")
 
         for dep in self._expand_to_cliques(self.dependencies(non_redundant)):
             edgelabel = ''
             x, y = dep
-            out.write(
-                "\tvar{} -- var{}  [label=\"{}\"];\n".format(x, y,
-                                                             edgelabel))
+            out.write(f"\tvar{x} -- var{y}  [label=\"{edgelabel}\"];\n")
 
         out.write("\n}\n")
 
