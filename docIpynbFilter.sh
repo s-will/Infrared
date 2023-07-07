@@ -1,10 +1,12 @@
 #!/bin/bash
 
+
 target="${1/Doc\//}"
-dir="$(dirname $1)"
-base="$(basename $1)"
+dir="$(dirname "$target")"
+base="$(basename "$target")"
 
 target="Doc/html/$dir_$base"
+
 
 cp "$1" "$target"
 
