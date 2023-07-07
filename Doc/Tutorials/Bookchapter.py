@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -94,6 +94,10 @@ designs = [sampler.sample() for _ in range(10)]
 samples = [x for x in designs]
 opt_draw_logo(samples)
 # -
+
+#[Multiple_targets-bpenergy]
+for target in targets:
+    model.add_functions([rna.BPEnergy(i, j, False) for (i, j) in rna.parse(target)], 'energy')
 
 # ## 3 Methods
 
@@ -204,7 +208,7 @@ opt_draw_logo(samples)
 
 #[stackenergy]
 model.add_functions([rna.StackEnergy(i, j)
-    for (i, j) in bps if (i+1, j-1) in bps], 'energy')
+    for (i,j) in bps if (i+1,j-1) in bps], 'energy')
 
 # ### 3.5 Targeting Turner energy - Customized features
 #

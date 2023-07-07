@@ -3,15 +3,16 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title=""/>
-    <tab type="usergroup" visible="yes" title="Tutorial">
-      <tab type="user" url="@ref md_Doc_Bookchapter_Tutorial" title="Bookchapter"/>
-      <tab type="user" url="@ref md_Doc_RNA_Design_Tutorial" title="RNA Design"/>
+    <tab type="usergroup" visible="yes" title="Tutorials">
+      <tab type="user" url="@ref md_Doc_Tutorials_Bookchapter" title="Bookchapter"/>
+      <tab type="user" url="@ref md_Doc_Tutorials_RNA_Design" title="RNA Design"/>
     </tab>
-    <tab type="usergroup" visible="yes" title="Gallery">
-      <tab type="user" url="@ref md_Doc_Network-parsimony" title="Network Parsimony"/>
-      <tab type="user" url="@ref md_Doc_alignment-example" title="Alignment"/>
-      <tab type="user" url="@ref md_Doc_multitarget-rnadesign-example" title="Multi Targets Design"/>
-      <tab type="user" url="@ref md_Doc_automata" title="Automata"/>
+    <tab type="usergroup" visible="yes" title="Examples">
+      <tab type="user" url="@ref md_Doc_Examples_GraphColoring" title="Graph Coloring"/>
+      <tab type="user" url="@ref md_Doc_Examples_NetworkParsimony" title="Network Parsimony"/>
+      <tab type="user" url="@ref md_Doc_Examples_Alignment" title="Alignment"/>
+      <tab type="user" url="@ref md_Doc_Examples_MultitargetRNADesign" title="Multitarget RNA Design"/>
+      <tab type="user" url="@ref md_Doc_Examples_Automata" title="Automata"/>
     </tab>
     <tab type="user" url="@ref md_ChangeLog" title="Change Log" intro=""/>
     <tab type="modules" visible="yes" title="" intro=""/>
