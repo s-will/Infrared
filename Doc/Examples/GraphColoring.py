@@ -68,5 +68,3 @@ Image(filename=filename,width=300)
 filename="treedecomp"
 solver.plot_td(filename,'png')
 Image(filename=filename+".png",width=400)
-
-

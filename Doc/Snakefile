@@ -1,0 +1,46 @@
+MYNOTEBOOKS = [
+    "Examples/Alignment",
+    "Examples/Automata",
+    "Examples/GraphColoring",
+    "Examples/MultitargetRNADesign",
+    "Examples/NetworkParsimony",
+    "Tutorials/Bookchapter",
+    "Tutorials/RNA Design"
+  ]
+
+TARGETS = expand("{nb}.{ext}", nb=MYNOTEBOOKS, ext=["ipynb", "md"])
+
+rule all:
+    input:
+        TARGETS
+
+rule convert_py_to_ipynb:
+    input:
+        "{notebook}.py"
+    output:
+        "{notebook}.ipynb"
+    shell:
+        "jupytext --to notebook --execute '{input}'"
+
+
+rule convert_ipynb_to_markdown:
+    input:
+        "{notebook}.ipynb"
+    output:
+        "{notebook}.md"
+    shell:
+        "jupyter nbconvert --to markdown '{input}'"
+
+rule clean:
+    run:
+        import os
+        import shutil
+        for f in TARGETS:
+            if os.path.exists(f):
+                os.remove(f)
+           
+        for f in MYNOTEBOOKS:
+            dir = f"{f}_files"
+            if os.path.exists(dir):
+                shutil.rmtree(dir)
+
