@@ -5,18 +5,12 @@
 Infrared is a generic C++/Python hybrid library for efficient
 (fixed-parameter tractable) Boltzmann sampling.
 
+## Resources
+**Gitlab repository**: <https://gitlab.inria.fr/amibio/Infrared>
 
-## Disclaimer and license
+**Online documentation**: <https://www.lix.polytechnique.fr/~will/Software/Infrared>
 
-Infrared is free software. It was part of project [RNARedPrint](https://github.com/yannponty/RNARedPrint), then separated as a stand alone project.
-Note that the system is in active development and is likely to still undergo 
-changes. It is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details
-[<http://www.gnu.org/licenses/>].
-
-## Main features of Infrared
+## Main features
 
 Infrared efficiently solves a broad class of sampling and optimization
 problems; originally targeted to bioinformatics problems, especially
@@ -42,7 +36,7 @@ functionality is made conveniently available via general Python
 classes. In particular, the interface was defined to allow the
 straightforward and declarative specification of the constraint model.
 
-### Characteristics in brief
+**Characteristics in brief**
 
 Keep it simple, but flexible on the C++ side
 
@@ -122,12 +116,11 @@ like [RNARedprint 2](https://gitlab.inria.fr/amibio/RNARedPrint) or
 [RNAPOND](https://gitlab.inria.fr/amibio/RNAPOND).
 
 
-### infrared / libinfrared --- Python high level interface
+### Python high level interface
 
-Using pylib11, we expose classes of the C++ library to
-Python, such that cluster trees can be constructed and populated with
-exposed C++ constraints/functions and/or derived Python
-constraints/functions. 
+We expose classes of the C++ library to
+Python, such that problems can be implemented (i.e. modeled) and solved by writing
+Python code. 
 Python programs  using the infrared library,
 typically import module infrared, create an instance of Model and
 populate it with variables (specifying their finite domains), constraints
@@ -142,12 +135,15 @@ specific feature values. The latter performed by multi-dimensional
 Boltzmann sampling. The module provides access to the Infrared core and
 exports the additional base classes 
 
+Internally, as well on the Python side, cluster trees are constructed and
+populated with constraints and functions. 
 
-### ired --- Infrared C++ core
+### Infrared C++ core
 
-The core preforms precomputation, i.e. calculation of partition
-functions, and Boltzmann sampling based on a given, populated cluster
-tree. A /cluster tree/ of a constraint network (of variables,
+The C++ component solves feature networks, i.e. optimizes or samples, based
+on cluster trees.
+
+A /cluster tree/ of a feature network (of variables,
 functions and constraints) corresponds to a (hyper-)tree decomposition
 of the dependency graph (induced by the functions/constraints on the
 variables). It consists of bags (aka clusters) of variables,
@@ -165,6 +161,10 @@ tree (or forest), such that the following properties hold
    function and its variables. Constraints are only assigned to bags
    that contain all of their variables.
 
+The core preforms precomputation, i.e. calculation of partition
+functions, and Boltzmann sampling based on a given, populated cluster
+tree.
+
 By design, the Infrared core is strictly low-level and
 domain-agnostic, it only knows finite domain variables, constraints,
 and functions; as well as to evaluate partition functions and sample
@@ -172,3 +172,15 @@ based on cluster trees for constraint networks. This will allow using
 the same core for evaluation (even not necessarily of partition
 functions, e.g. instead optimizing energy/fitness) and sampling in
 very different domains just by writing domain-specific Python code.
+
+
+## Disclaimer and license
+
+Infrared is free software. It was part of project [RNARedPrint](https://github.com/yannponty/RNARedPrint), then separated as a stand alone project.
+Note that the system is in active development and is likely to still undergo 
+changes. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details
+[<http://www.gnu.org/licenses/>].
+
