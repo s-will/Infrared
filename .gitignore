@@ -32,3 +32,27 @@ cmake_install.cmake
 libinfrared.cpython-39-x86_64-linux-gnu.so
 varna-api/
 
+Doc/Examples/Alignment.ipynb
+Doc/Examples/Automata.ipynb
+Doc/Examples/GraphColoring.ipynb
+Doc/Examples/MultitargetRNADesign.ipynb
+Doc/Examples/NetworkParsimony.ipynb
+Doc/Examples/Alignment.md
+Doc/Examples/Automata.md
+Doc/Examples/GraphColoring.md
+Doc/Examples/MultitargetRNADesign.md
+Doc/Examples/NetworkParsimony.md
+
+Doc/Examples/Alignment_files
+Doc/Examples/Automata_files
+Doc/Examples/GraphColoring_files
+Doc/Examples/MultitargetRNADesign_files
+Doc/Examples/NetworkParsimony_files
+
+Doc/Tutorials/Bookchapter.ipynb
+Doc/Tutorials/Bookchapter.md
+Doc/Tutorials/Bookchapter_files
+
+Doc/Tutorials/RNA Design.ipynb
+Doc/Tutorials/RNA Design.md
+Doc/Tutorials/RNA Design_files
