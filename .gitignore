@@ -32,6 +32,8 @@ cmake_install.cmake
 libinfrared.cpython-39-x86_64-linux-gnu.so
 varna-api/
 
+Doc/.snakemake
+
 Doc/Examples/Alignment.ipynb
 Doc/Examples/Automata.ipynb
 Doc/Examples/GraphColoring.ipynb

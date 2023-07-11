@@ -8,6 +8,41 @@ MYNOTEBOOKS = [
     "Tutorials/RNA Design"
   ]
 
+GENERATED_FILES=[
+	"Examples/dependency_graph.dot",
+	"Examples/dependency_graph.pdf",
+	"Examples/dependency_graph.png",
+	"Examples/f3_-5_hist.svg",
+	"Examples/f3_-5_logo.svg",
+	"Examples/f3_0_hist.svg",
+	"Examples/f3_0_logo.svg",
+	"Examples/hardwired-network",
+	"Examples/hardwired-network.pdf",
+	"Examples/input-network",
+	"Examples/input-network.pdf",
+	"Examples/parental-network",
+	"Examples/parental-network.pdf",
+	"Examples/softwired-network",
+	"Examples/softwired-network.pdf",
+	"Examples/tmp_out.png",
+	"Examples/treedecomp.pdf",
+	"Examples/treedecomp.png",
+	"Tutorials/count_matrix.pdf",
+	"Tutorials/dependency_graph.dot",
+	"Tutorials/dependency_graph.pdf",
+	"Tutorials/dependency_graph.png",
+	"Tutorials/gc_content_minus-logo.svg",
+	"Tutorials/gc_content_plus-logo.svg",
+	"Tutorials/gc_content_zero-logo.svg",
+	"Tutorials/optimization.svg",
+	"Tutorials/test.svg",
+	"Tutorials/tmp_out.png",
+	"Tutorials/treedecomp.dot",
+	"Tutorials/treedecomp.pdf",
+	"Tutorials/treedecomp.png"
+]
+
+
 TARGETS = expand("{nb}.{ext}", nb=MYNOTEBOOKS, ext=["ipynb", "md"])
 
 rule all:
@@ -35,7 +70,7 @@ rule clean:
     run:
         import os
         import shutil
-        for f in TARGETS:
+        for f in TARGETS+GENERATED_FILES:
             if os.path.exists(f):
                 os.remove(f)
            
@@ -43,4 +78,3 @@ rule clean:
             dir = f"{f}_files"
             if os.path.exists(dir):
                 shutil.rmtree(dir)
-
