@@ -32,7 +32,7 @@ numnodes = 9 # nodes 1..9
 edges = [(1,5),(2,3),(2,5),(2,7),(3,6),(5,6),(5,7),(5,8),(5,9),(6,8),(6,9),(7,8)]
 
 # recall that we extend the standard graph coloring problem by counting different colors in cycles
-cycles = [(2,3,5,6),(2,5,7,8),(5,6,7,8),(5,6,8,9)]
+cycles = [(2,3,5,6),(2,5,7,8),(5,6,7,8)]
 # -
 
 # Setup the model and construct a solver. Report the treewidth.
@@ -99,8 +99,6 @@ Image(filename=filename+".png",width=400)
 
 # ## Assignent interpretation
 # ### Conversion of assignments to coloring dictionaries
-#
-# Note that the engine returns solutions as (variable to value) assignments. Since the interpretation of such assignments is typically problem-specific, it is left to the user. To display it, we translate the assignment into a printable dictionary (and remove the dummy variable).
 
 def assignment_to_coloring(a):
         colors=["red","cyan","yellow","orange","magenta","green","blue","grey"]
@@ -109,31 +107,52 @@ def assignment_to_coloring(a):
         return coloring
 
 
-# ## Generate colorings
-
-# ### Retreive a best coloring
+# ### Syntactic sugar for more convenient use of assignments
 
 # +
-solver = ir.Optimizer(model)
-best_assignment = solver.optimize()
-best_coloring = assignment_to_coloring(best_assignment)
+class ColoringAssignment(dict):
+    def __init__(self, a):
+        self.update(assignment_to_coloring(a))
+        self._assignment = a
 
-print('Optimal coloring:', best_coloring)
-print('Colors in cycles:', model.eval_feature(best_assignment,'card'))
+    def values(self):
+        return self._assignment.values()
+    
+class ColoringOptimizer(ir.Optimizer):
+    def __init__(self, model):
+        super().__init__(model)
+    
+    def optimize(self):
+        return ColoringAssignment(super().optimize())
+
+class ColoringSampler(ir.Sampler):
+    def __init__(self, model):
+        super().__init__(model)
+    
+    def sample(self):
+        return ColoringAssignment(super().sample())
+
+
 # -
 
-# ### Sample a coloring
-#
-# Use the weight to control 'optimality'
+# ## Retreive colorings|
 
 # +
-model.set_feature_weight(0,'card') # weight 0: uniform
-solver = ir.Sampler(model)
-assignment = solver.sample()
-coloring = assignment_to_coloring(assignment)
+model.set_feature_weight(-1,'card') # set negative weight to minimize card
+solver = ColoringOptimizer(model)
+best_coloring = solver.optimize()
+
+#print('Optimal coloring (internal rep):', coloring.values())
+print('Optimal coloring:', best_coloring)
+print('Colors in cycles:', model.eval_feature(best_coloring,'card'))
+
+# +
+model.set_feature_weight(-1,'card') # set weight for number of colors in cycles
+solver = ColoringSampler(model)
+coloring = solver.sample()
 
 print('Sampled coloring:', coloring)
-print('Colors in cycles:', model.eval_feature(assignment,'card'))
+print('Colors in cycles:', model.eval_feature(coloring,'card'))
 
 
 # -
@@ -153,7 +172,8 @@ def plot_coloring(coloring):
     return G
 
 
-print(cycles)
 plot_coloring(best_coloring)
 
 plot_coloring(coloring)
+
+
