@@ -97,7 +97,7 @@ solver.plot_td(filename,'png')
 Image(filename=filename+".png",width=400)
 
 
-# ## Assignent interpretation
+# ## Assignment interpretation
 # ### Conversion of assignments to coloring dictionaries
 
 def assignment_to_coloring(a):

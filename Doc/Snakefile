@@ -43,11 +43,15 @@ GENERATED_FILES=[
 ]
 
 
-TARGETS = expand("{nb}.{ext}", nb=MYNOTEBOOKS, ext=["ipynb", "md"])
+TARGETS = expand("{nb}.{ext}", nb=MYNOTEBOOKS, ext=["md"])
 
 rule all:
     input:
         TARGETS
+    output:
+        "html/index.html"
+    shell:
+        "cd ..; doxygen src/doxygen.cfg"
 
 rule convert_py_to_ipynb:
     input:
@@ -67,6 +71,14 @@ rule convert_ipynb_to_markdown:
         "jupyter nbconvert --to markdown '{input}'"
 
 rule clean:
+    run:
+        import os
+        import shutil
+        for f in GENERATED_FILES:
+            if os.path.exists(f):
+                os.remove(f)
+
+rule realclean:
     run:
         import os
         import shutil

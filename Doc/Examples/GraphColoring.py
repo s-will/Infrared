@@ -97,7 +97,7 @@ solver.plot_td(filename,'png')
 Image(filename=filename+".png",width=400)
 
 
-# ## Assignent interpretation
+# ## Assignment interpretation
 # ### Conversion of assignments to coloring dictionaries
 #
 # Note that the engine returns solutions as (variable to value) assignments. Since the interpretation of such assignments is typically problem-specific, it is left to the user. To display it, we translate the assignment into a printable dictionary (and remove the dummy variable).
