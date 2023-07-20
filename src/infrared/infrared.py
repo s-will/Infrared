@@ -177,21 +177,76 @@ class WeightedFunction:
     def vars(self):
         return self._vars
 
+class ConstraintFunctionDefinitionError(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 def _generic_def_function_class(classname, init, value, module="__main__",
                                 parentclass=WeightedFunction,
                                 valuefunname="value"):
     """Create a class of infrared weighted functions or constraints"""
+
     def _init(self, *args, **kwargs):
+
+        def check_errors():#(self,variables,siginit,sigvalue,parentclass):
+            
+            arity = len(variables)
+    
+            confun_typename = "function" if parentclass == WeightedFunction else "constraint"
+            
+            # the names of the first k value parameters must no occur in
+            # siginit
+    
+            etext = ""
+    
+            for i, pname in enumerate(sigvalue.parameters.keys()):
+                if i<arity:
+                    if pname in siginit.parameters:
+                        etext += f"\nArgument name mismatch in the specification of {confun_typename} class `{self.__class__.__name__}`. "
+                        etext += f"Argument name `{pname}` of function `value` must not occur in the signature of function `init`, "
+                        etext += f"since it occurs within the first {arity} parameters of `value`. "
+                    break
+                if i>arity:
+                    if pname not in siginit.parameters:
+                        etext += f"\nArgument name mismatch in the specification of {confun_typename} class `{self.__class__.__name__}`. "
+                        etext += f"Argument name `{pname}` of function `value` must occur in signature of function `init`, "
+                        etext += f"since it occurs after the first {arity} parameters of `value`. "
+                    break
+
+            if etext is None and len(sigvalue.parameters.keys()) < arity:
+               
+                etext += f"Error in the specification of {confun_typename} class `{self.__class__.__name__}`. "
+                etext += f"The function `value` must accept at least {arity} arguments." 
+    
+    
+            if etext != "":
+                etext += f"\nSee documentation of def_{confun_typename}_class."
+    
+            return etext
+    
+    
         if "__direct_super__" in kwargs:
             del kwargs["__direct_super__"]
             super(self.__class__, self).__init__(*args, **kwargs)
             return
 
+        # call init to compute the dependency list
         variables = init(*args, **kwargs)
         super(self.__class__, self).__init__(variables)
 
+        # determine the signatures of the functions init and value
         siginit = inspect.signature(init)
         sigvalue = inspect.signature(value)
+
+        # Catch specification errors
+        etext = check_errors()#(self,variables,siginit,sigvalue,parentclass)
+        if etext!="":
+            e = ConstraintFunctionDefinitionError(etext)
+            raise e
+
+        # store a dictionary of all arguments to `init` that occur
+        # in the signature of `value`; this will be passed, when calling
+        # the function `value`.
         for i, kw in zip(range(len(args)), siginit.parameters):
             kwargs[kw] = args[i]
         self._args = {k: kwargs[k] for k in kwargs if k in sigvalue.parameters}
@@ -230,20 +285,40 @@ def def_function_class(classname, init, value, module="__main__"):
     """
     Define a function class (of type WeightedFunction)
 
-    Defines a new class with name classname (by default, in the main namespace)
-
-    Objects of the defined class can be used in the construction of the
-    infrared constraint model. Note that `init` defines the dependencies in
-    the order of the (positional) arguments of `value`.
-
-    The value function can depend on arguments to the function init,
-    which will be automatically stored in the class and passed on.
+    Defines a new class with name `classname` (by default, in the main namespace)
+    This defines a type of functions that can be added to models. 
 
     Args:
         classname: name of the class to be defined
         init:      init function of generated class
         value:     value function of generated class
         module:    module where class is generated
+
+    The definitions of constraint and function classes work in the same way, only
+    differing in the return type of the value function. In the case of constraints,
+    it indicates satisfaction of the constraint by a boolean 
+    (at concrete values of specified variables); in the case of functions,
+    it returns a numerical value.
+
+    The function `init` returns the dependency list, i.e. the list of 
+    indices of the variables on which the function depends. 
+    
+    The init function defines arguments that are
+    passed when constructing the constraint. Typically, these include
+    variable indices. Additional information required in the construction and/or
+    evaluation of the function can be passed via arbitrary other
+    parameters to init.
+
+    The value function computes the value of the constraint for determined
+    values of the variables in the dependency list.
+    These values are passed (in the order of the dependency list) as 
+    arguments of the init function; the names of these arguments must not occur
+    in the signature of init.
+
+    The value function can then define further arguments
+    with names that occur in the signature of the init function. These arguments
+    are then stored at construction and due to this mechanism made 
+    available in the value function.
 
     Example:
 
@@ -263,19 +338,39 @@ def def_constraint_class(classname, init, value, module="__main__"):
     Define a Constraint class
 
     Defines a new class with name `classname` (by default, in the main namespace)
-
-    Objects of the defined class can be used in the construction of the
-    infrared constraint model. Note that `init` defines the dependencies in
-    the order of the (positional) arguments of `value`.
-
-    The value function can depend on arguments to the function init,
-    which will be automatically stored in the class and passed on.
+    This defines a type of constraints that can be added to models. 
 
     Args:
         classname: name of the class to be defined
         init:      init function of generated class
         value:     value function of generated class
         module:    module where class is generated
+
+    The definitions of constraint and function classes work in the same way, only
+    differing in the return type of the value function. In the case of constraints,
+    it indicates satisfaction of the constraint by a boolean 
+    (at concrete values of specified variables); in the case of functions,
+    it returns a numerical value.
+
+    The function `init` returns the dependency list, i.e. the list of 
+    indices of the variables on which the constraint depends. 
+    
+    The init function defines arguments that are
+    passed when constructing the constraint. Typically, these include
+    variable indices. Additional information required in the construction and/or
+    evaluation of the constraint can be passed via arbitrary other
+    parameters to init.
+
+    The value function computes the value of the constraint for determined
+    values of the variables in the dependency list.
+    These values are passed (in the order of the dependency list) as 
+    arguments of the init function; the names of these arguments must not occur
+    in the signature of init.
+
+    The value function can then define further arguments
+    with names that occur in the signature of the init function. These arguments
+    are then stored at construction and due to this mechanism made 
+    available in the value function.
 
     Example:
     @code{.py}
