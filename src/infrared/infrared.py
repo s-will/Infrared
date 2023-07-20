@@ -320,14 +320,23 @@ def def_function_class(classname, init, value, module="__main__"):
     are then stored at construction and due to this mechanism made 
     available in the value function.
 
-    Example:
+    Examples:
 
     @code{.py}
-    def_function_class('GCCont', lambda i: [i], lambda x: 2 if x == 1 or x == 2 else 0)
+    def_function_class('GCCont', lambda i: [i], lambda x: 1 if x == 1 or x == 2 else 0)
     @endcode
 
-    More complex examples can be found in the accompanying Jupyter tutorials.
+    @code{.py}
+    def_function_class('CountDimer',
+        # define dependency on consecutive variables,
+        # specify to count pairs in xs, e.g. xs=[(1,2),(2,1)]
+        init  = lambda i, xs: [i, i+1],
 
+        # evaluate at assigned values X_i->x, X_i+1->y for specified xs
+        value = lambda x, y, xs: (x,y) in xs)
+    @endcode
+
+    More complex examples are provided in the accompanying Jupyter notebooks.
     """
     _generic_def_function_class(
         classname, init, value, module, WeightedFunction, "value")
@@ -372,14 +381,25 @@ def def_constraint_class(classname, init, value, module="__main__"):
     are then stored at construction and due to this mechanism made 
     available in the value function.
 
-    Example:
+    Examples:
+    
     @code{.py}
     _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
     def_constraint_class('BPComp', lambda i, j: [i, j],
         lambda x, y: (x, y) in _bpcomp_tab)
     @endcode
 
-    More complex examples can be found in the accompanying Jupyter tutorials.
+    @code{.py}
+    def_function_class('ConstrainDimer',
+        # define dependency on consecutive variables X_i, X_i+1,
+        # specify allowed dimers, e.g. xs=[(1,2),(2,1)]
+        init  = lambda i, xs: [i, i+1],
+
+        # check at assigned values X_i->x, X_i+1->y for specified xs
+        value = lambda x, y, xs: (x,y) in xs)
+    @endcode
+
+    More complex examples are provided in the accompanying Jupyter notebooks.
     """
     _generic_def_function_class(
         classname, init, value, module, libinfrared.Constraint, "__call__")
