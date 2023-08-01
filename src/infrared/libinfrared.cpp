@@ -96,52 +96,12 @@ seed(int x) {
 }
 
 
-/**
- * @class infrared.libinfrared.FiniteDomain
- *
- * @brief Finite domain of a variable
- *
- * Defines lower and upper bound of a contiguous domain for a finite domain
- * variable.
- *
- * Interfaces the C++ class ired::FiniteDomain. Exposes construction by
- * size as well as lower and upper bound; and methods lb, ub, empty, size,
- * undet, in. Supports (deep) copying.
- */
-
-/**
- * @class infrared.libinfrared.Function
- *
- * Interfaces the C++ class ired::Function <double>. Exposes constructor as
- * __init__, operator() as __value__, and vars
- */
-
-/**
- * @class infrared.libinfrared.IntFunction
- *
- * Interfaces the C++ class ired::Function <int>. Exposes constructor as
- * __init__, operator() as __value__, and vars
- */
-
-/**
- * @class infrared.libinfrared.Constraint
- *
- * Interfaces the C++ class ired::Function <bool>
- * Exposes constructor as __init__, operator() as __value__, and vars
- */
-
-/**
- * @class infrared.libinfrared.Assignment
- *
- * Interfaces the C++ class ired::Assignment. Exposes method values
- */
-
 /** The libinfrared module exposing infrared to Python
  * @private
  */
 PYBIND11_MODULE(libinfrared,ir)
 {
-    ir.doc() = "Infrared module or Boltzmann sampling";
+    ir.doc() = "Infrared framework";
     ir.def("seed",&seed);
 
     py::class_< Assignment >
@@ -190,6 +150,7 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("size", &FiniteDomain::size)
         .def("undet", &FiniteDomain::undet)
         .def("in", &FiniteDomain::in)
+        .def("contains", &FiniteDomain::in)
         .def("__copy__", [](const FiniteDomain &fd) {return FiniteDomain(fd);})
         .def("__deepcopy__",
                 [](const FiniteDomain &fd, py::dict)

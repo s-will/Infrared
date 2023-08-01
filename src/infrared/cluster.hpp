@@ -115,7 +115,7 @@ namespace ired {
         /**
          * @brief Calculate separator variables
          *
-         * @params parent parent cluster of this object
+         * @param parent parent cluster of this object
          * @return vector of the indices of the separator variables
          *
          * The separator variables are the variables of this object
@@ -138,7 +138,7 @@ namespace ired {
         /**
          * @brief Calculate difference variables
          *
-         * @params parent parent cluster of this object
+         * @param parent parent cluster of this object
          * @return vector of the indices of the difference variables
          *
          * The difference variables are the variables of this object that

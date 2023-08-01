@@ -32,6 +32,35 @@ from treedecomp import seed as tdseed
 
 from abc import ABC, abstractmethod
 
+_exports = [
+    'seed',
+    'def_function_class',
+    'def_constraint_class',
+    'constraint_class',
+    'mc_optimize',
+    'dotfile_to_tgt',
+    'dotfile_to_pdf',
+    'dotfile_to_png',
+    'ConsistencyError',
+    'EvaluationAlgebra',
+    'PFFunctionAdapter',
+    'PFEvaluationAlgebra',
+    'ArcticFunctionAdapter',
+    'ArcticEvaluationAlgebra',
+    'WeightedFunction',
+    'ConstraintFunctionDefinitionError',
+    'ValueIn',
+    'Model',
+    'ClusterTreeBase',
+    'ArcticClusterTree',
+    'PFClusterTree',
+    'Feature',
+    'FeatureStatistics',
+    'EngineBase',
+    'ArcticOptimizer',
+    'BoltzmannSampler',
+    'MultiDimensionalBoltzmannSampler',
+    ]
 
 def seed(seed = None):
     """Seed random number generator of libinfrared and treedecomp
