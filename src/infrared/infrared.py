@@ -451,8 +451,13 @@ class ValueIn(libinfrared.Constraint):
     ValueIn(i, [0,2,3])
     ```
     """
+
+# set private condition to work around a bug in doxygen 1.9.7, which seems to
+# misinterpret named parameters as variables
+## @cond PRIVATE
 def_constraint_class('ValueIn', lambda i, values: [i],
                      lambda x,values: x in values, module=__name__)
+## @endcond
 
 ## @cond PRIVATE
 

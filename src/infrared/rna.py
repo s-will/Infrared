@@ -57,10 +57,12 @@ class BPComp(infrared.Constraint):
     """
 ## @cond PRIVATE
 _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
-## @endcond
 def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
+## @endcond
+
+
 
 class NotBPComp(infrared.Constraint):
     """Constraint for negation of BPComp
@@ -72,10 +74,11 @@ class NotBPComp(infrared.Constraint):
 
     @see BPComp
     """
+## @cond PRIVATE
 def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) not in _bpcomp_tab,
                      module=__name__)
-
+## @endcond
 
 class GCCont(infrared.infrared.WeightedFunction):
     """
@@ -86,9 +89,12 @@ class GCCont(infrared.infrared.WeightedFunction):
     ```
     GCCont is an Infrared Function to count GCCont at position i, 1 if the value is C or G, 0 otherwise.
     """
+
+## @cond PRIVATE
 def_function_class('GCCont', lambda i: [i],
                    lambda x: 1 if x == 1 or x == 2 else 0,
                    module=__name__)
+## @endcond
 
 class BPEnergy(infrared.infrared.WeightedFunction):
     """
@@ -102,9 +108,12 @@ class BPEnergy(infrared.infrared.WeightedFunction):
     bpFunctions = [BPEnergy(i,j, (i-1,j+1) not in bps) for (i,j) in bps]
     ```
     """
+
+## @cond PRIVATE
 def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    lambda x, y, is_terminal: _bpenergy(x, y, is_terminal),
                    module=__name__)
+## @endcond
 
 class StackEnergy(infrared.infrared.WeightedFunction):
     """
@@ -117,9 +126,12 @@ class StackEnergy(infrared.infrared.WeightedFunction):
     stackFunctions = [StackEnergy(i,j) for (i,j) in bps if (i+1,j-1) in bps]
     ```
     """
+
+## @cond PRIVATE
 def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    lambda x, y, x1, y1: _stackenergy(x, y, x1, y1),
                    module=__name__)
+## @endcond
 
 class SameComplClassConstraint(infrared.Constraint):
     """
@@ -130,9 +142,12 @@ class SameComplClassConstraint(infrared.Constraint):
     ```
     The constraint is satisfied if values at positions (i,j) are from the same complenentarity class, i.e. either both in {A,G} or both in {C,U}.
     """
+
+## @cond PRIVATE
 def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 == y & 1,
                      module=__name__)
+## @endcond
 
 class DifferentComplClassConstraint(infrared.Constraint):
     """
@@ -144,9 +159,12 @@ class DifferentComplClassConstraint(infrared.Constraint):
     Negation of SameComplClassConstraint.
     The constraint is satisfied if values at positions (i,j) are NOT from the same complenentarity class.
     """
+
+## @cond PRIVATE
 def_constraint_class('DifferentComplClassConstraint', lambda i, j: [i, j],
                      lambda x, y: x & 1 != y & 1,
                      module=__name__)
+## @endcond
 
 def parse_array(structure, *, opening="([{<", closing=")]}>"):
     """Parse RNA structure including pseudoknots
