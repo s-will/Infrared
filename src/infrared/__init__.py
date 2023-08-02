@@ -24,7 +24,18 @@ For example, `infrared.infrared.Model` is available as `infrared.Model`, `infrar
 from . import libinfrared
 from . import infrared
 
-globals().update(vars(libinfrared))
+libinfrared_exports=[
+    'seed',
+    'Assignment',
+    'Constraint',
+    'Function',
+    'IntFunction',
+    'FiniteDomain',
+    'PFClusterTree',
+    'ArcticClusterTree',
+]
+
+globals().update({k:v for k,v in vars(libinfrared).items() if k in libinfrared_exports})
 globals().update({k:v for k,v in vars(infrared).items() if k in infrared._exports})
 
 __version__ = '1.1'

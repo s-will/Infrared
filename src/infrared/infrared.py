@@ -41,6 +41,8 @@ _exports = [
     'dotfile_to_tgt',
     'dotfile_to_pdf',
     'dotfile_to_png',
+    'Sampler',
+    'Optimizer',
     'ConsistencyError',
     'EvaluationAlgebra',
     'PFFunctionAdapter',
