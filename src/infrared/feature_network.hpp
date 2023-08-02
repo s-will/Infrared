@@ -1,5 +1,5 @@
-#ifndef INFRARED_CONSTRAINT_NETWORK_HPP
-#define INFRARED_CONSTRAINT_NETWORK_HPP
+#ifndef INFRARED_FEATURE_NETWORK_HPP
+#define INFRARED_FEATURE_NETWORK_HPP
 
 /*
  * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
@@ -193,22 +193,20 @@ namespace ired {
     };
 
     /**
-     * @brief the constraint network
+     * @brief the feature network
      *
-     * A constraint network consists of sets of
+     * A feature network consists of sets of
      *  - variables
      *  - constraints
      *  - functions
      *
-     * The variables in a contraint network are indexed (0..n-1). Each
-     * variable has a finite domain.  A constraint network object holds
-     * shared pointers to the functions and constraints of the network. In
-     * this way, it guarantees their existence as long as the network
-     * exists.
+     * The variables are indexed (0..n-1). Each variable has a finite
+     * domain.  An object holds shared pointers to the functions and
+     * constraints of the network. In this way, it guarantees their
+     * existence as long as the network exists.
      */
-    template<class FunValue, class EvaluationPolicy> class
-    ConstraintNetwork { public: using var_idx_t = int; using var_value_t =
-        int;
+    template<class FunValue, class EvaluationPolicy> class FeatureNetwork {
+    public: using var_idx_t = int; using var_value_t = int;
 
         using fun_value_t = FunValue;
 
@@ -224,25 +222,25 @@ namespace ired {
         /**
          * @brief Construct empty
          */
-        ConstraintNetwork() {};
+        FeatureNetwork() {};
 
         /**
          * @brief Construct with domains
          */
         explicit
-        ConstraintNetwork(const FiniteDomainVector &domains)
+        FeatureNetwork(const FiniteDomainVector &domains)
             : domains_(domains) {
         };
 
         /**
          * @brief Construct with domains of equal size
          */
-        ConstraintNetwork(int num_vars, FiniteDomain domain)
+        FeatureNetwork(int num_vars, FiniteDomain domain)
             : domains_(num_vars, domain) {
         };
 
 
-        ~ConstraintNetwork() {};
+        ~FeatureNetwork() {};
 
 
         /**
@@ -275,7 +273,7 @@ namespace ired {
                 // for evaluating the constraints, construct a
                 // constraint network with the same variables
                 // and domains as this one, which evaluates constraints
-                auto cn = ConstraintNetwork<bool, StdEvaluationPolicy<bool>>(domains_);
+                auto cn = FeatureNetwork<bool, StdEvaluationPolicy<bool>>(domains_);
                 auto mx = std::make_shared<MaterializedFunction<bool, vecS>>(x.get(),cn);
 
                 constraints_.push_back( mx );

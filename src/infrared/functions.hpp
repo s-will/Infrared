@@ -38,7 +38,7 @@
 namespace ired {
 
     template<class FunValue, class EP>
-    class ConstraintNetwork;
+    class FeatureNetwork;
 
     /**
      * @brief Dependencies specify a dependency between variables
@@ -253,14 +253,14 @@ namespace ired {
          * The (non-zero) function values are typically set after
          * construction, using method @see set()
          */
-        template<class ConstraintNetwork>
+        template<class FeatureNetwork>
         MaterializedFunction(const std::vector<var_idx_t> &vars,
-                             const ConstraintNetwork &cn
+                             const FeatureNetwork &cn
                              )
             :
             parent_t(vars),
             domains_(extract_domains(cn.domains())),
-            zero_(ConstraintNetwork::evaluation_policy_t::zero()),
+            zero_(FeatureNetwork::evaluation_policy_t::zero()),
             name_("Message")
         {
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
@@ -276,26 +276,26 @@ namespace ired {
          * @param evaluation policy
          *
          */
-        template<class ConstraintNetwork>
+        template<class FeatureNetwork>
         MaterializedFunction(const function_t *function,
-                             const ConstraintNetwork &cn
+                             const FeatureNetwork &cn
                              )
             :
             parent_t(unique(function->vars())),
             domains_(extract_domains(cn.domains())),
-            zero_(ConstraintNetwork::evaluation_policy_t::zero()),
+            zero_(FeatureNetwork::evaluation_policy_t::zero()),
             name_(function->name())
         {
-            using constraint_network_t = ConstraintNetwork;
+            using feature_network_t = FeatureNetwork;
 
-            using ep = typename constraint_network_t::evaluation_policy_t;
+            using ep = typename feature_network_t::evaluation_policy_t;
 
             container_selector<FunValue,ContainerS>::init(data_, calc_size(), zero_);
 
             auto a = Assignment(cn.domains());
 
-            auto constraints = std::vector<const typename constraint_network_t::constraint_t *>();
-            auto functions = std::vector<const typename constraint_network_t::function_t *> {function};
+            auto constraints = std::vector<const typename feature_network_t::constraint_t *>();
+            auto functions = std::vector<const typename feature_network_t::function_t *> {function};
 
             auto initial_value = a.eval_determined(functions, ep()); //evaluate 0-ary functions
 

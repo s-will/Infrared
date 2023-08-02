@@ -27,7 +27,7 @@
 #include "finite_domain.hpp"
 
 namespace ired {
-    template<class ConstraintNetwork>
+    template<class FeatureNetwork>
     class AssignmentIterator;
 
     //@brief Vector type selector "no bit vector"
@@ -53,7 +53,7 @@ namespace ired {
      * An object of Assignment associates values to a series of
      * /finite domain/ variables (indexed 0..n-1); typically the
      * variables belong to a constraint network CN (@see
-     * ConstraintNetwork).
+     * FeatureNetwork).
      *
      * In an assignment for the CN, variables are associated to values
      * in their finite integer domain (according to CN) or are
@@ -178,15 +178,15 @@ namespace ired {
          * @param constraints check assignments
          * @param functions check and evaluate assignments
          */
-        template<class ConstraintNetwork>
+        template<class FeatureNetwork>
         auto
         make_iterator(const std::vector<var_idx_t> &vars,
-                      const ConstraintNetwork &cn,
-                      const std::vector<const typename ConstraintNetwork::constraint_t *> &
+                      const FeatureNetwork &cn,
+                      const std::vector<const typename FeatureNetwork::constraint_t *> &
                       constraints,
-                      const std::vector<const typename ConstraintNetwork::function_t *> &
+                      const std::vector<const typename FeatureNetwork::function_t *> &
                       functions,
-                      const typename ConstraintNetwork::fun_value_t & initial_value
+                      const typename FeatureNetwork::fun_value_t & initial_value
                       );
 
         /**
@@ -238,13 +238,13 @@ namespace ired {
      * via EvaluationPolicy::mul; partial products are tracked
      * on the enumeration stack.
      */
-    template<class ConstraintNetwork>
+    template<class FeatureNetwork>
     class AssignmentIterator {
     public:
         using assignment_t = Assignment;
         using var_idx_t = assignment_t::var_idx_t;
         using var_value_t = assignment_t::var_value_t;
-        using ep = typename ConstraintNetwork::evaluation_policy_t;
+        using ep = typename FeatureNetwork::evaluation_policy_t;
         using fun_value_t = typename ep::fun_value_t;
         using function_t = typename ep::function_t;
         using constraint_t = typename ep::constraint_t;
@@ -271,7 +271,7 @@ namespace ired {
          */
         AssignmentIterator(assignment_t &a,
                            const std::vector<var_idx_t> &vars,
-                           const ConstraintNetwork &cn,
+                           const FeatureNetwork &cn,
                            const std::vector<const constraint_t *> &constraints,
                            const std::vector<const function_t *> &functions,
                            const fun_value_t &initial_value

@@ -21,7 +21,7 @@
 #include <optional>
 
 #include "graph.hpp"
-#include "constraint_network.hpp"
+#include "feature_network.hpp"
 
 namespace ired {
     /**
@@ -55,17 +55,17 @@ namespace ired {
     class ClusterTree {
 
     public:
-        using constraint_network_t = ConstraintNetwork<FunValue, EvaluationPolicy>;
+        using feature_network_t = FeatureNetwork<FunValue, EvaluationPolicy>;
 
         //! evaluation policy type
-        using evaluation_policy_t = typename constraint_network_t::evaluation_policy_t;
+        using evaluation_policy_t = typename feature_network_t::evaluation_policy_t;
 
-        using var_idx_t = typename constraint_network_t::var_idx_t;
-        using cluster_t = typename constraint_network_t::cluster_t;
-        using assignment_t = typename constraint_network_t::assignment_t;
-        using fun_value_t = typename constraint_network_t::fun_value_t;
-        using constraint_t = typename constraint_network_t::constraint_t;
-        using function_t = typename constraint_network_t::function_t;
+        using var_idx_t = typename feature_network_t::var_idx_t;
+        using cluster_t = typename feature_network_t::cluster_t;
+        using assignment_t = typename feature_network_t::assignment_t;
+        using fun_value_t = typename feature_network_t::fun_value_t;
+        using constraint_t = typename feature_network_t::constraint_t;
+        using function_t = typename feature_network_t::function_t;
 
         using message_t = MaterializedFunction<fun_value_t>;
 
@@ -104,7 +104,7 @@ namespace ired {
          */
         explicit
         ClusterTree(const FiniteDomainVector &domains)
-            : cn_( domains ) {
+            : fn_( domains ) {
         }
 
         /**
@@ -112,7 +112,7 @@ namespace ired {
          */
         explicit
         ClusterTree(std::vector<int> domsizes)
-            : cn_( domains_from_domsizes( domsizes ) ) {
+            : fn_( domains_from_domsizes( domsizes ) ) {
         }
 
         /**
@@ -122,7 +122,7 @@ namespace ired {
          * @param domsize uniform domain size of each variable
          */
         ClusterTree(int num_vars, const FiniteDomain &domain)
-            : cn_(num_vars, domain) {
+            : fn_(num_vars, domain) {
         }
 
         /**
@@ -132,14 +132,14 @@ namespace ired {
          * @param domsize uniform domain size of each variable
          */
         ClusterTree(int num_vars, int domsize)
-            : cn_( num_vars, FiniteDomain(0, domsize-1) ) {
+            : fn_( num_vars, FiniteDomain(0, domsize-1) ) {
         }
 
         ~ClusterTree() {}
 
         //! @brief read access to constraint network
-        const auto & constraint_network() const {
-            return cn_;
+        const auto & feature_network() const {
+            return fn_;
         }
 
         /**
@@ -185,7 +185,7 @@ namespace ired {
          */
         void
         add_constraint( vertex_descriptor_t node, const std::shared_ptr<constraint_t> &x ) {
-            tree_[node].cluster.add_constraint( cn_.add_constraint(x) );
+            tree_[node].cluster.add_constraint( fn_.add_constraint(x) );
         }
 
         /**
@@ -198,7 +198,7 @@ namespace ired {
          */
         void
         add_function( vertex_descriptor_t node, const std::shared_ptr<function_t> &x ) {
-            tree_[node].cluster.add_function( cn_.add_function(x) );
+            tree_[node].cluster.add_function( fn_.add_function(x) );
         }
 
         /**
@@ -267,7 +267,7 @@ namespace ired {
             const assignment_t &assignment);
 
     private:
-        constraint_network_t cn_;
+        feature_network_t fn_;
         tree_t tree_;
 
         bool evaluated_ = false;
@@ -314,13 +314,13 @@ namespace ired {
                 auto sep_diff = sep;
                 sep_diff.insert(sep_diff.end(),diff.begin(),diff.end());
 
-                auto message = std::make_unique<message_t>(sep, cn_);
+                auto message = std::make_unique<message_t>(sep, fn_);
 
-                auto a = assignment_t(cn_.domains());
+                auto a = assignment_t(fn_.domains());
 
                 auto it = a.make_iterator
                     (sep_diff,
-                     cn_,
+                     fn_,
                      child.constraints(),
                      child.functions(),
                      //evaluate 0-ary functions
@@ -341,7 +341,7 @@ namespace ired {
                 }
 
                 // register message in cn, such that it persists!
-                auto msg = cn_.add_function(std::move(message));
+                auto msg = fn_.add_function(std::move(message));
                 // then, register in cluster parent
                 tree_[ e.source() ].cluster.add_function(msg);
 
@@ -385,7 +385,7 @@ namespace ired {
                     assert(a.eval_determined(child.constraints(),
                                              StdEvaluationPolicy<bool>()));
 
-                    auto it = a.make_iterator(diff, cn_,
+                    auto it = a.make_iterator(diff, fn_,
                                               child.constraints(),
                                               child.functions(),
                                               a.eval_determined(child.functions(),
@@ -476,7 +476,7 @@ namespace ired {
         if (!evaluated_) {
             dfs_evaluate(root);
 
-            auto a = assignment_t(cn_.domains());
+            auto a = assignment_t(fn_.domains());
             evaluation_result_ = a.eval_determined(tree_[root].cluster.functions(), evaluation_policy_t());
 
             evaluated_ = true;
@@ -491,7 +491,7 @@ namespace ired {
         assert(evaluated_);
         //assert(is_consistent());
 
-        auto a = assignment_t(cn_.domains());
+        auto a = assignment_t(fn_.domains());
 
         dfs_traceback(single_empty_root(), a);
 

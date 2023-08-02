@@ -10,7 +10,7 @@
 #include "assignment.hpp"
 #include "functions.hpp"
 #include "cluster.hpp"
-#include "constraint_network.hpp"
+#include "feature_network.hpp"
 #include "cluster_tree.hpp"
 
 #endif
