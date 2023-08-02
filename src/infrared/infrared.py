@@ -32,6 +32,7 @@ from treedecomp import seed as tdseed
 
 from abc import ABC, abstractmethod
 
+## @cond PRIVATE
 _exports = [
     'seed',
     'def_function_class',
@@ -63,6 +64,7 @@ _exports = [
     'BoltzmannSampler',
     'MultiDimensionalBoltzmannSampler',
     ]
+## @endcond
 
 def seed(seed = None):
     """Seed random number generator of libinfrared and treedecomp
@@ -212,6 +214,8 @@ class ConstraintFunctionDefinitionError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+## @cond PRIVATE
+
 def _generic_def_function_class(classname, init, value, module="__main__",
                                 parentclass=WeightedFunction,
                                 valuefunname="value"):
@@ -311,6 +315,8 @@ def _generic_def_function_class(classname, init, value, module="__main__",
     })
 
     sys.modules[module].__dict__[classname] = newclass
+
+## @endcond
 
 def def_function_class(classname, init, value, module="__main__"):
     """
@@ -446,8 +452,9 @@ class ValueIn(libinfrared.Constraint):
     ```
     """
 def_constraint_class('ValueIn', lambda i, values: [i],
-                     lambda x,values: x in values,
-                     module=__name__)
+                     lambda x,values: x in values, module=__name__)
+
+## @cond PRIVATE
 
 # support special functionality of propagation to domain and entailment
 # check when adding this constraint
@@ -463,6 +470,8 @@ def _domain_constraint_entailed(self, model):
     is_entailed = all( x in values for x in range(domain.lb(), domain.ub()+1) )
     return is_entailed
 ValueIn.entailed = _domain_constraint_entailed
+
+## @endcond
 
 
 class Model:

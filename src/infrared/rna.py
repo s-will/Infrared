@@ -55,7 +55,9 @@ class BPComp(infrared.Constraint):
     ```
     The constraint is satisfied if values at positions (i,j) form a valid canonical base pair, _i.e._ {(A,U), (C,G), (G,U)}.
     """
+## @cond PRIVATE
 _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
+## @endcond
 def_constraint_class('BPComp', lambda i, j: [i, j],
                      lambda x, y: (x, y) in _bpcomp_tab,
                      module=__name__)
@@ -380,6 +382,7 @@ def ass_to_seq(ass):
 #
 # support for IUPAC
 
+## @cond PRIVATE
 _iupac_nucleotides = {
     'A': 'A',
     'C': 'C',
@@ -400,12 +403,15 @@ _iupac_nucleotides = {
     '.': '-',
     '-': '-'
 }
+## @endcond
 
 def iupacvalues(symbol):
     return [ nucleotide_to_value(x) for x in _iupac_nucleotides[symbol] ]
 
 # ------------------------------------------------
 # RNA energy models / parameters
+
+## @cond PRIVATE
 
 ## Base pair energy parameters
 #
@@ -418,6 +424,8 @@ _params_bp = None
 # used by _stackenergy and Function StackEnergy
 # @see set_stacking_energy_table
 _params_stacking=None
+
+## @endcond
 
 
 ## Default parameters for the base pair model (magic params from the Redprint paper)
@@ -476,6 +484,8 @@ def set_stacking_energy_table(params=def_params_stacking):
 set_bpenergy_table()
 set_stacking_energy_table()
 
+## @cond PRIVATE
+
 ## lookup table for base pair indices
 #
 # used by _bpenergy and _stackenergy
@@ -483,7 +493,6 @@ _bpindex_tab = [[-1, -1, -1, 0],
                 [-1, -1, 2, -1],
                 [-1, 3, -1, 4],
                 [1, -1, 5, -1]]
-
 
 def _bpenergy(x, y, is_terminal=False):
     """
@@ -531,6 +540,7 @@ def _stackenergy(x, y, x1, y1):
 
     return _params_stacking[6 * (bpidx//2) + bpidx1]
 
+## @endcond
 
 if __name__ == "__main__":
     pass

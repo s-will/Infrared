@@ -24,7 +24,9 @@ For example, `infrared.infrared.Model` is available as `infrared.Model`, `infrar
 from . import libinfrared
 from . import infrared
 
-libinfrared_exports=[
+
+## @cond PRIVATE
+_libinfrared_exports=[
     'seed',
     'Assignment',
     'Constraint',
@@ -34,8 +36,9 @@ libinfrared_exports=[
     'PFClusterTree',
     'ArcticClusterTree',
 ]
+## @endcond
 
-globals().update({k:v for k,v in vars(libinfrared).items() if k in libinfrared_exports})
+globals().update({k:v for k,v in vars(libinfrared).items() if k in _libinfrared_exports})
 globals().update({k:v for k,v in vars(infrared).items() if k in infrared._exports})
 
 __version__ = '1.1'
