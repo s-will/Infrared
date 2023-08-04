@@ -130,6 +130,11 @@ class PFFunctionAdapter(libinfrared.Function):
     """
 
     def __init__(self, wf):
+        """Construct libinfrared.Function from WeightedFunction
+        Args:
+            wf WeightedFunction
+        """
+
         super().__init__(wf.vars())
         self._wf = wf
 
@@ -138,6 +143,7 @@ class PFFunctionAdapter(libinfrared.Function):
 
     def __str__(self):
         return f"<PFFunctionAdapter of {self._wf}>"
+
 
 class PFEvaluationAlgebra(EvaluationAlgebra):
     """Partition function algebra for sampling
@@ -186,9 +192,9 @@ class WeightedFunction:
     """Function of a constraint network
 
     Has features weight and variables; their value depends
-    on assignment to its variables
+    on assignment to its variables.
 
-    Is 'translated' to a Function of infrared by FunctionAdaptors
+    It is 'translated' to a Function of infrared by FunctionAdaptors.
     """
 
     def __init__(self, variables):
@@ -223,43 +229,43 @@ def _generic_def_function_class(classname, init, value, module="__main__",
 
     def _init(self, *args, **kwargs):
 
-        def check_errors():#(self,variables,siginit,sigvalue,parentclass):
-            
+        def check_errors():
+
             arity = len(variables)
-    
+
             confun_typename = "function" if parentclass == WeightedFunction else "constraint"
-            
+
             # the names of the first k value parameters must no occur in
             # siginit
-    
+
             etext = ""
-    
+
             for i, pname in enumerate(sigvalue.parameters.keys()):
                 if i<arity:
                     if pname in siginit.parameters:
                         etext += f"\nArgument name mismatch in the specification of {confun_typename} class `{self.__class__.__name__}`. "
                         etext += f"Argument name `{pname}` of function `value` must not occur in the signature of function `init`, "
                         etext += f"since it occurs within the first {arity} parameters of `value`. "
-                    break
-                if i>arity:
+                        break
+                if i>=arity:
                     if pname not in siginit.parameters:
                         etext += f"\nArgument name mismatch in the specification of {confun_typename} class `{self.__class__.__name__}`. "
                         etext += f"Argument name `{pname}` of function `value` must occur in signature of function `init`, "
                         etext += f"since it occurs after the first {arity} parameters of `value`. "
-                    break
+                        break
 
-            if etext is None and len(sigvalue.parameters.keys()) < arity:
-               
+            if etext=="" and len(sigvalue.parameters.keys()) < arity:
+
                 etext += f"Error in the specification of {confun_typename} class `{self.__class__.__name__}`. "
-                etext += f"The function `value` must accept at least {arity} arguments." 
-    
-    
+                etext += f"The function `value` must accept at least {arity} arguments."
+
+
             if etext != "":
                 etext += f"\nSee documentation of def_{confun_typename}_class."
-    
+
             return etext
-    
-    
+
+
         if "__direct_super__" in kwargs:
             del kwargs["__direct_super__"]
             super(self.__class__, self).__init__(*args, **kwargs)
@@ -274,7 +280,7 @@ def _generic_def_function_class(classname, init, value, module="__main__",
         sigvalue = inspect.signature(value)
 
         # Catch specification errors
-        etext = check_errors()#(self,variables,siginit,sigvalue,parentclass)
+        etext = check_errors()
         if etext!="":
             e = ConstraintFunctionDefinitionError(etext)
             raise e
@@ -304,8 +310,7 @@ def _generic_def_function_class(classname, init, value, module="__main__",
         cp.__dict__.update(self.__dict__)
         return cp
 
-    newclass = type(classname, (parentclass,),
-                    {
+    newclass = type(classname, (parentclass,), {
         "__init__": _init,
         valuefunname: _value,
         "__str__": _str,
@@ -323,7 +328,7 @@ def def_function_class(classname, init, value, module="__main__"):
     Define a function class (of type WeightedFunction)
 
     Defines a new class with name `classname` (by default, in the main namespace)
-    This defines a type of functions that can be added to models. 
+    This defines a type of functions that can be added to models.
 
     Args:
         classname: name of the class to be defined
@@ -333,13 +338,13 @@ def def_function_class(classname, init, value, module="__main__"):
 
     The definitions of constraint and function classes work in the same way, only
     differing in the return type of the value function. In the case of constraints,
-    it indicates satisfaction of the constraint by a boolean 
+    it indicates satisfaction of the constraint by a boolean
     (at concrete values of specified variables); in the case of functions,
     it returns a numerical value.
 
-    The function `init` returns the dependency list, i.e. the list of 
-    indices of the variables on which the function depends. 
-    
+    The function `init` returns the dependency list, i.e. the list of
+    indices of the variables on which the function depends.
+
     The init function defines arguments that are
     passed when constructing the constraint. Typically, these include
     variable indices. Additional information required in the construction and/or
@@ -348,13 +353,13 @@ def def_function_class(classname, init, value, module="__main__"):
 
     The value function computes the value of the constraint for determined
     values of the variables in the dependency list.
-    These values are passed (in the order of the dependency list) as 
+    These values are passed (in the order of the dependency list) as
     arguments of the init function; the names of these arguments must not occur
     in the signature of init.
 
     The value function can then define further arguments
     with names that occur in the signature of the init function. These arguments
-    are then stored at construction and due to this mechanism made 
+    are then stored at construction and due to this mechanism made
     available in the value function.
 
     Examples:
@@ -384,7 +389,7 @@ def def_constraint_class(classname, init, value, module="__main__"):
     Define a Constraint class
 
     Defines a new class with name `classname` (by default, in the main namespace)
-    This defines a type of constraints that can be added to models. 
+    This defines a type of constraints that can be added to models.
 
     Args:
         classname: name of the class to be defined
@@ -394,13 +399,13 @@ def def_constraint_class(classname, init, value, module="__main__"):
 
     The definitions of constraint and function classes work in the same way, only
     differing in the return type of the value function. In the case of constraints,
-    it indicates satisfaction of the constraint by a boolean 
+    it indicates satisfaction of the constraint by a boolean
     (at concrete values of specified variables); in the case of functions,
     it returns a numerical value.
 
-    The function `init` returns the dependency list, i.e. the list of 
-    indices of the variables on which the constraint depends. 
-    
+    The function `init` returns the dependency list, i.e. the list of
+    indices of the variables on which the constraint depends.
+
     The init function defines arguments that are
     passed when constructing the constraint. Typically, these include
     variable indices. Additional information required in the construction and/or
@@ -409,17 +414,17 @@ def def_constraint_class(classname, init, value, module="__main__"):
 
     The value function computes the value of the constraint for determined
     values of the variables in the dependency list.
-    These values are passed (in the order of the dependency list) as 
+    These values are passed (in the order of the dependency list) as
     arguments of the init function; the names of these arguments must not occur
     in the signature of init.
 
     The value function can then define further arguments
     with names that occur in the signature of the init function. These arguments
-    are then stored at construction and due to this mechanism made 
+    are then stored at construction and due to this mechanism made
     available in the value function.
 
     Examples:
-    
+
     @code{.py}
     _bpcomp_tab = [(0, 3), (1, 2), (2, 1), (2, 3), (3, 0), (3, 2)]
     def_constraint_class('BPComp', lambda i, j: [i, j],
@@ -857,7 +862,7 @@ class ClusterTreeBase:
     This class provides functionality to construct and populate C++
     cluster trees with constraints and functions.
 
-    It is used as mix-in class for the specialized cluster tree classes,
+    It is used as base of the specialized cluster tree classes,
     which wrap interface the C++/libinfrared cluster tree classes.
     """
 
@@ -878,7 +883,8 @@ class ClusterTreeBase:
         Returns:
             whether the cluster tree is consistent
         """
-        return self._ct.is_consistent()
+        c = self._ct.is_consistent()
+        return c
 
     def construct_cluster_tree(self, domains, td):
         """Construct the cluster tree object of the C++ engine
@@ -1038,7 +1044,7 @@ class Feature:
 
         Args:
             ifentifier:
-            eval_funciton:
+            eval_function:
             group: defaults to empty list []
         """
         self._identifier = identifier
@@ -1229,6 +1235,7 @@ class EngineBase(ABC):
 
             self._ct = self.gen_cluster_tree()
 
+            # note: _ct.is_consistent() implicitly evaluates the ct
             if not self._ct.is_consistent():
                 raise ConsistencyError("Inconsistent constraint model")
 
@@ -1401,6 +1408,8 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         self.samples_per_round = 1000
         self.tweak_factor = 0.01
 
+        self.verbose = False
+
     def is_good_sample(self, features, values):
         """whether the sample is of good quality
 
@@ -1474,6 +1483,12 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                     self._model.set_feature_weight(new_weight, fid)
                 except AttributeError:
                     pass
+
+            if self.verbose:
+                weights_dict = {k:f'{f.weight:0.3}' for k,f in features.items()}
+                print("--", counter)
+                print(fstats.report())
+                print(weights_dict)
 
             self.requires_reinitialization()
 
