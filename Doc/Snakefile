@@ -4,6 +4,7 @@ MYNOTEBOOKS = [
     "Examples/GraphColoring",
     "Examples/MultitargetRNADesign",
     "Examples/NetworkParsimony",
+    "Examples/MultiDimensionalBoltzmannSampling",
     "Tutorials/Bookchapter",
     "Tutorials/RNA Design"
   ]
