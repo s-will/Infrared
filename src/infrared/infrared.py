@@ -1473,7 +1473,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
             means = fstats.means()
 
-            targets = {k:f.target for k,f in features.items()}
+            targets = {k:f.target for k,f in features.items() if hasattr(f,"target")}
 
             # compute distance between means and targets
             oldrmsd = rmsd
