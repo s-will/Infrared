@@ -115,8 +115,9 @@ _ = report_time(lambda:[rna.ass_to_seq(sampler.sample()) for _ in range(n)],'Sam
 
 # +
 sampler = ir.Sampler(model,lazy=True)
-sampler.samples_per_round = 100
-sampler.tweak_factor = 0.025
+sampler.samples_per_round = 50
+sampler.tweak_factor = 0.05
+sampler.cooling = 2**(1/6)
 #sampler.verbose = True
 
 tolerance = 2

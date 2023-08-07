@@ -1405,9 +1405,9 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         super().__init__(model, td_factory, lazy)
 
         # parameters controlling the mdbs procedure
-        self.samples_per_round = 1000
-        self.tweak_factor = 0.01
-
+        self.samples_per_round = 100
+        self.tweak_factor = 0.05
+        self.cooling = 2**(1/8)
         self.verbose = False
 
     def is_good_sample(self, features, values):
@@ -1450,16 +1450,15 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         sample is tested for falling into target +/- tolerance for all
         features, in which case it is yielded.
 
-        self.tweak_factor controls the speed of recalibration of weights
+        self.tweak_factor controls the scale of weight recalibration in each round
         """
         features = self._model.features
-
-        means = None
+        rmsd = None
 
         counter = 0
         while True:
             fstats = FeatureStatistics()
-            for i in range(self.samples_per_round):
+            for i in range(int(self.samples_per_round)):
                 counter += 1
                 sample = self.sample()
 
@@ -1474,9 +1473,20 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
             means = fstats.means()
 
+            targets = {k:f.target for k,f in features.items()}
+
+            # compute distance between means and targets
+            oldrmsd = rmsd
+            rmsd = math.sqrt(sum((means[k]-targets[k])**2 for k in targets))
+
+            # if we could not reduce the distance, 
+            # decrease tweak factor and increase samples_per_round
+            if oldrmsd is not None and rmsd >= oldrmsd:
+                self.tweak_factor /= self.cooling
+                self.samples_per_round *= self.cooling
+
             # modify weight of each targeted feature
             for fid, f in features.items():
-                new_weight = 1
                 try:
                     new_weight = (f.weight +
                                   self.tweak_factor * (f.target - means[fid]))
@@ -1485,10 +1495,15 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                     pass
 
             if self.verbose:
-                weights_dict = {k:f'{f.weight:0.3}' for k,f in features.items()}
+                weights = {k:round(f.weight,3) for k,f in features.items()}
                 print("--", counter)
+                print('Tweak factor', self.tweak_factor)
+                print('Samples per round', int(self.samples_per_round))
+                print(f'RMSD {rmsd:.3f}')
+                #print('Targets', targets_dict)
                 print(fstats.report())
-                print(weights_dict)
+                #print('Means', means)
+                print('Weights', weights)
 
             self.requires_reinitialization()
 
