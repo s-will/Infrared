@@ -719,6 +719,7 @@ class Model:
         if type(groups) != list:
             groups = [groups]
         for group in groups:
+            self.features[group]._weight = weight
             for f in self._functions[group]:
                 f.weight = weight
 
@@ -1405,10 +1406,11 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         super().__init__(model, td_factory, lazy)
 
         # parameters controlling the mdbs procedure
-        self.samples_per_round = 100
+        self.samples_per_round = 400
         self.tweak_factor = 0.05
         self.cooling = 2**(1/8)
         self.verbose = False
+        self.callback=None
 
     def is_good_sample(self, features, values):
         """whether the sample is of good quality
@@ -1441,6 +1443,10 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         f.target = target
         f.tolerance = tolerance
 
+    @staticmethod
+    def rmsd(means,features):
+        return math.sqrt(sum((means[k]-features[k].target)**2 for k in means)) 
+
     def targeted_samples(self):
         """Generator of targeted samples
 
@@ -1450,9 +1456,20 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         sample is tested for falling into target +/- tolerance for all
         features, in which case it is yielded.
 
-        self.tweak_factor controls the scale of weight recalibration in each round
+        self.tweak_factor controls the scale of weight recalibration in each round.
+
+        self.cooling is a multiplier for the tweak factor to reduce it when
+        the rmsd of means to target increases (with the purpose to stabilize 
+        the optimization)
+
+        self.callback callback function, called after each round with
+        round statistics (FeatureStatistics)
         """
-        features = self._model.features
+        
+        features = {k:f for k,f in self._model.features.items()
+                    if hasattr(f,"target")}
+        targets = {k:f.target for k,f in features.items()}
+
         rmsd = None
 
         counter = 0
@@ -1462,7 +1479,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                 counter += 1
                 sample = self.sample()
 
-                # evaluate all features
+                # evaluate all targeted features
                 values = {k: features[k].eval(sample) for k in features}
 
                 # record the features
@@ -1473,11 +1490,9 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
             means = fstats.means()
 
-            targets = {k:f.target for k,f in features.items() if hasattr(f,"target")}
-
             # compute distance between means and targets
             oldrmsd = rmsd
-            rmsd = math.sqrt(sum((means[k]-targets[k])**2 for k in targets))
+            rmsd = self.rmsd(means,features)
 
             # if we could not reduce the distance, 
             # decrease tweak factor and increase samples_per_round
@@ -1500,10 +1515,11 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                 print('Tweak factor', self.tweak_factor)
                 print('Samples per round', int(self.samples_per_round))
                 print(f'RMSD {rmsd:.3f}')
-                #print('Targets', targets_dict)
                 print(fstats.report())
-                #print('Means', means)
                 print('Weights', weights)
+
+            if self.callback:
+                self.callback(counter, fstats)
 
             self.requires_reinitialization()
 

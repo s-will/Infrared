@@ -364,3 +364,167 @@ for i in range(10):
     print_sample(sample)
     print([(f.weight, model.eval_feature(sample,fname)) for fname, f in model.features.items() if f.weight!=0])
     print(model_objective(model,sample))
+
+
+# -
+
+# ## MDBS targeting distribution plots
+
+# +
+## collect some statistics
+def callback(i,fstats):
+    rmsd = sampler.rmsd(fstats.means(),sampler.model.features)
+    the_statistics.append({'samples':i, 'rmsd':rmsd, 'accepted':len(the_samples)})
+    print(fstats.report(),rmsd)
+    
+
+the_statistics = list()
+the_samples = list() ## store the produced samples
+
+
+# +
+model = construct_design_model(benchmark_targets)
+
+model.set_feature_weight( 0, 'E0' )
+model.set_feature_weight( 0, 'E1' )
+model.set_feature_weight( 0, 'E2' )
+model.set_feature_weight( 0, 'gc' )
+
+######
+# create sampler
+sampler = ir.Sampler( model )
+
+sampler.samples_per_round = 200
+sampler.tweak_factor = 0.025
+#sampler.verbose = True
+
+sampler.callback = callback
+
+
+######
+# set targets
+
+# control number of gc's; we target 70% +/- 15% GC-content
+seqlen = len(benchmark_targets[0])
+sampler.set_target( 0.85 * seqlen, 0.05 * seqlen, 'gc' )
+
+# control Turner energy, target -2 +/- 1 kcal/mol
+sampler.set_target( -40, 0.5, 'E0' )
+
+# control Turner energy, target -2 +/- 1 kcal/mol
+sampler.set_target( -40, 0.5, 'E1' )
+
+# control Turner energy, target -2 +/- 1 kcal/mol
+sampler.set_target( -30, 0.5, 'E2' )
+
+######
+# and print samples
+for i in range(100):
+    sample = sampler.targeted_sample()
+    print_sample(sample)
+    the_samples.append(sample)
+
+# +
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(2.5,5))
+
+plt.yscale('log')
+sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['accepted'] for row in the_statistics],ax=ax1)
+ax1.set_ylabel("Accepted samples")
+sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['rmsd'] for row in the_statistics],ax=ax2)
+ax2.set_xlabel("Total samples")
+ax2.set_ylabel("RMSD")
+fig.tight_layout()
+plt.savefig('mdbs_design_run.pdf')
+plt.show()
+# -
+
+print(the_statistics[-1])
+
+import math
+def distribution_heatmaps(model,n,feature_list,fig,*,limits,labels,targets=None,ax=None,cmap="Blues"):
+    sampler = ir.Sampler(model)
+    samples = [sampler.sample() for _ in range(n)]
+    
+    def eval_features(sample):
+        return {f:model.eval_feature(sample,f) for f in feature_list}
+    
+    features = [eval_features(sample) for sample in samples]
+
+    k = len(feature_list)
+    
+    the_plots = [(i,j) for i in range(1,k) for j in range(0,i)]
+    nplots = len(the_plots)
+    dimx = int(math.sqrt(nplots))
+    dimy = nplots // dimx
+    
+    the_cells = [(i,j) for i in range(0,dimx) for j in range(0,dimy)]
+    
+    if ax is None:
+        ax = fig.subplots(dimx,dimy+1,
+                          squeeze=False,
+                          width_ratios=[1]*dimy+[1]
+                         )
+            #sharex=True, sharey=True)
+            
+    for x in range(dimx):
+        for y in range(dimy+1):
+            if (x,y) not in the_cells[:nplots]:
+                ax[x][y].axis("off")
+
+    for idx,(i,j) in enumerate(the_plots):
+
+        fi = feature_list[i]
+        fj = feature_list[j]
+        
+        cax = ax[the_cells[idx][0]][the_cells[idx][1]]
+        
+        sns.kdeplot(x=[f[fj] for f in features],y=[f[fi] for f in features], ax = cax,
+                cmap=cmap, levels=8, thresh=0.2, cbar = False, fill=True)
+        if targets:
+            cax.axhline(y = targets[fi], color = 'red', linestyle = 'dashed')
+            cax.axvline(x = targets[fj], color = 'red', linestyle = 'dashed')
+
+        cax.set_ylabel(labels[i])
+        cax.set_xlabel(labels[j])
+
+        cax.set_ylim(limits[i])
+        cax.set_xlim(limits[j])
+
+    plt.colorbar(plt.cm.ScalarMappable(cmap=cmap),ax=ax[0][dimy],
+        pad=0.2,
+        location="left",
+        boundaries=[0.2+i/10 for i in range(9)],
+        values=[i/8 for i in range(1,9)])
+    
+    return ax
+
+
+# +
+sel_features = ["E0","E1","E2","gc"]
+labels = ["E1","E2","E3","GC content"]
+limits = [(-50,15),(-50,15),(-50,15),(30, seqlen)]
+
+
+n = 500
+
+k=len(sel_features)
+
+targets = {k:f.target for k,f in sampler.model.features.items() if k in sel_features}
+
+
+fig = plt.figure(figsize=(10,5))
+ax = distribution_heatmaps(model,n,sel_features,fig,
+                           limits=limits,labels=labels,cmap="Blues")
+distribution_heatmaps(sampler.model,n,sel_features,fig,
+                      limits=limits,labels=labels,
+                      targets=targets,
+                      ax=ax,cmap="Reds")
+fig.tight_layout()
+plt.savefig('mdbs_design_heatmaps.pdf')
+plt.show()
+# -
+
+
