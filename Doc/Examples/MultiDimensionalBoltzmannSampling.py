@@ -64,6 +64,11 @@ ir.def_function_class('DinuclFreq',
 seq0    = "UUUCGUUCACCCUCAUUUGAGGGCGCAGUUCGAGUCAUACCAUGGAACGGGGGAUGGC"
 struct0 = "...[[[[[.(((((....)))))..........(((((.((...]]]]]))..)))))"
 
+## Yann's example
+seq = "CACUGUCGACUCAGUCAGUGAGUCGCGACUGACUGCAUCGCGACUACGUCAGUCGUACGAUCUAUUGUGCGAUAUCGCGCGAUAUAGCUAUGCG"
+struct = None
+
+# SAM (RF00162)
 #>AP006840.1:c2688754-2688649 Symbiobacterium thermophilum IAM 14863 DNA, complete genome
 #GGUUCAUCGAGAGUGGCGGAGGGACUGGCCCCAUGAUGCCACGGCAACCUCUCCCGCGGGGAGAACGGUGCCAAAUCCAGCGGACACUCGGUCCGAGAGAUGAAGC
 seq    = "GGUUCAUCGAGAGUGGCGGAGGGACUGGCCCCAUGAUGCCACGGCAACCUCUCCCGCGGGGAGAACGGUGCCAAAUCCAGCGGACACUCGGUCCGAGAGAUGAAGC"
@@ -93,7 +98,8 @@ n = len(seq)
 model = ir.Model(n,4)
 
 # complementarity constraints
-model.add_constraints(rna.BPComp(*bp) for bp in rna.parse(struct))
+if struct is not None:
+    model.add_constraints(rna.BPComp(*bp) for bp in rna.parse(struct))
 
 # dinucleotide frequency functions
 for dimer in dimers:
@@ -115,7 +121,7 @@ _ = report_time(lambda:[rna.ass_to_seq(sampler.sample()) for _ in range(n)],'Sam
 
 # +
 sampler = ir.Sampler(model,lazy=True)
-sampler.samples_per_round = 50
+sampler.samples_per_round = 200
 sampler.tweak_factor = 0.05
 
 tolerance = 2
@@ -126,10 +132,10 @@ for dimer in dimers:
 
 # +
 ## collect some statistics
-def callback(i,fstats):
+def callback(total,accepted,fstats):
     rmsd = sampler.rmsd(fstats.means(),sampler.model.features)
-    the_statistics.append({'samples':i, 'rmsd':rmsd, 'accepted':len(the_samples)})
-    print(fstats.report(),rmsd)
+    the_statistics.append({'samples':total, 'rmsd':rmsd, 'accepted':accepted})
+    #print(fstats.report(),rmsd)
     
 sampler.callback = callback
 # -
@@ -137,8 +143,12 @@ sampler.callback = callback
 # Actually, draw the targeted samples (and stop run time.)
 
 # +
+sampler.verbose = False
+
 the_statistics = list()
 the_samples = list() ## store the produced samples
+
+print_samples = None
 
 stats = ir.FeatureStatistics()
 def draw_samples(n):
@@ -147,12 +157,14 @@ def draw_samples(n):
         feature_values = {dimer:model.eval_feature(sample,dimer) for dimer in dimers}
         stats.record_features(model.features,feature_values)
 
-        line = rna.ass_to_seq(sample)
-        for dimer,freq in feature_values.items(): line += f" {dimer}:{freq}"
-        print(i+1, line)
+        if print_samples:
+            line = rna.ass_to_seq(sample)
+            for dimer,freq in feature_values.items(): line += f" {dimer}:{freq}"
+            if type(print_samples)!=int or (i+1)%print_samples==0: 
+                print(i+1, line)
         the_samples.append(sample)
         
-report_time(lambda:draw_samples(100))
+report_time(lambda:draw_samples(1000))
 # -
 
 # Finally, report some statistics and learned weights
@@ -169,9 +181,10 @@ import seaborn as sns
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(2.5,5))
 
-plt.yscale('log')
-sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['accepted'] for row in the_statistics],ax=ax1)
-ax1.set_ylabel("Accepted samples")
+sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[100*row['accepted']/row['samples'] for row in the_statistics],ax=ax1)
+ax1.set_ylabel("Accepted percentage")
+#sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['accepted'] for row in the_statistics],ax=ax1)
+#ax1.set_ylabel("Accepted samples")
 sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['rmsd'] for row in the_statistics],ax=ax2)
 ax2.set_xlabel("Total samples")
 ax2.set_ylabel("RMSD")
@@ -236,7 +249,7 @@ def distribution_heatmaps(model,n,feature_list,fig,*,limits,labels=None,targets=
         cax.set_xlim(limits[j])
 
     plt.colorbar(plt.cm.ScalarMappable(cmap=cmap),ax=ax[0][dimy],
-        pad=0.2,
+        pad=0.4,
         location="left",
         boundaries=[0.2+i/10 for i in range(9)],
         values=[i/8 for i in range(1,9)])
@@ -247,14 +260,14 @@ def distribution_heatmaps(model,n,feature_list,fig,*,limits,labels=None,targets=
 # +
 sel_dimers = dimers #["CC","GU", "GG", "UU"]
 
-limits=[(0,18)]*len(sel_dimers)
+limits=[(-0.5,18)]*len(sel_dimers)
 
 n = 500
 
 k=len(sel_dimers)
 
 #fig = plt.figure(figsize=(10,5))
-fig = plt.figure(figsize=(20,20))
+fig = plt.figure(figsize=(20,16))
 
 ax = distribution_heatmaps(model,n,sel_dimers,fig,limits=limits,cmap="Blues")
 distribution_heatmaps(sampler.model,n,sel_dimers,fig,limits=limits,

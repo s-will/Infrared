@@ -66,6 +66,13 @@ try:
 except:
     print("Get VARNA to plot target structures.")
 
+import time
+def report_time(f,desc=""):
+    start=time.time()
+    res=f()
+    desc = "" if desc=="" else f' ({desc})'
+    print(f'Time{desc}: {time.time()-start:0.2f}s')
+    return res
     
 def has_module(m): return m in sys.modules
 
@@ -268,7 +275,8 @@ print()
 #tdfile = "treedecomp.pdf"
 #sampler.plot_td(tdfile)
 
-samples = [sampler.sample() for _ in range(1000)]
+samples = report_time(lambda:[sampler.sample() for _ in range(1000)])
+
 show_designs(samples,
     plotlogo=has_module("logomaker"),
     plotdist=has_module("matplotlib"))
@@ -337,7 +345,9 @@ for weight in [-5,0]:
 
     sampler = ir.BoltzmannSampler( model )
 
-    samples = [sampler.sample() for _ in range(5000)]
+    samples = report_time(lambda:
+        [sampler.sample() for _ in range(5000)])
+    
     show_designs(samples,
         plotlogo=has_module("logomaker"),
         plotdist=has_module("matplotlib"),
@@ -372,14 +382,12 @@ for i in range(10):
 
 # +
 ## collect some statistics
-def callback(i,fstats):
+def callback(total,accepted,fstats):
     rmsd = sampler.rmsd(fstats.means(),sampler.model.features)
-    the_statistics.append({'samples':i, 'rmsd':rmsd, 'accepted':len(the_samples)})
-    print(fstats.report(),rmsd)
+    the_statistics.append({'samples':total, 'rmsd':rmsd, 'accepted':accepted})
+    #print(fstats.report(),total,accepted,rmsd)
     
-
 the_statistics = list()
-the_samples = list() ## store the produced samples
 
 
 # +
@@ -394,9 +402,10 @@ model.set_feature_weight( 0, 'gc' )
 # create sampler
 sampler = ir.Sampler( model )
 
-sampler.samples_per_round = 200
-sampler.tweak_factor = 0.025
-#sampler.verbose = True
+sampler.samples_per_round = 500
+sampler.tweak_factor = 0.1
+sampler.cooling = 2**(1/16)
+sampler.verbose = True
 
 sampler.callback = callback
 
@@ -404,25 +413,23 @@ sampler.callback = callback
 ######
 # set targets
 
-# control number of gc's; we target 70% +/- 15% GC-content
+# control number of gc's
 seqlen = len(benchmark_targets[0])
 sampler.set_target( 0.85 * seqlen, 0.05 * seqlen, 'gc' )
 
-# control Turner energy, target -2 +/- 1 kcal/mol
+# control Turner energy
 sampler.set_target( -40, 0.5, 'E0' )
 
-# control Turner energy, target -2 +/- 1 kcal/mol
+# control Turner energy
 sampler.set_target( -40, 0.5, 'E1' )
 
-# control Turner energy, target -2 +/- 1 kcal/mol
+# control Turner energy
 sampler.set_target( -30, 0.5, 'E2' )
 
 ######
-# and print samples
-for i in range(100):
-    sample = sampler.targeted_sample()
-    print_sample(sample)
-    the_samples.append(sample)
+# and generate targetd samples
+the_samples = report_time(
+    lambda: [sampler.targeted_sample() for i in range(100)])
 
 # +
 import matplotlib.pyplot as plt
@@ -430,18 +437,17 @@ import seaborn as sns
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(2.5,5))
 
-plt.yscale('log')
-sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['accepted'] for row in the_statistics],ax=ax1)
-ax1.set_ylabel("Accepted samples")
+sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[100*row['accepted']/row['samples'] for row in the_statistics],ax=ax1)
+ax1.set_ylabel("Accepted percentage")
 sns.scatterplot(x=[row['samples'] for row in the_statistics], y=[row['rmsd'] for row in the_statistics],ax=ax2)
 ax2.set_xlabel("Total samples")
 ax2.set_ylabel("RMSD")
 fig.tight_layout()
 plt.savefig('mdbs_design_run.pdf')
 plt.show()
-# -
 
-print(the_statistics[-1])
+#print(the_statistics[-1])
+# -
 
 import math
 def distribution_heatmaps(model,n,feature_list,fig,*,limits,labels,targets=None,ax=None,cmap="Blues"):
@@ -467,8 +473,7 @@ def distribution_heatmaps(model,n,feature_list,fig,*,limits,labels,targets=None,
                           squeeze=False,
                           width_ratios=[1]*dimy+[1]
                          )
-            #sharex=True, sharey=True)
-            
+
     for x in range(dimx):
         for y in range(dimy+1):
             if (x,y) not in the_cells[:nplots]:
@@ -508,7 +513,7 @@ labels = ["E1","E2","E3","GC content"]
 limits = [(-50,15),(-50,15),(-50,15),(30, seqlen)]
 
 
-n = 500
+n = 1000
 
 k=len(sel_features)
 
@@ -526,5 +531,4 @@ fig.tight_layout()
 plt.savefig('mdbs_design_heatmaps.pdf')
 plt.show()
 # -
-
 
