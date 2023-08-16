@@ -1445,7 +1445,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
 
     @staticmethod
     def rmsd(means,features):
-        return math.sqrt(sum((means[k]-features[k].target)**2 for k in means)) 
+        return math.sqrt(1/len(means)*sum((means[k]-features[k].target)**2 for k in means))
 
     def targeted_samples(self):
         """Generator of targeted samples
@@ -1459,13 +1459,13 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         self.tweak_factor controls the scale of weight recalibration in each round.
 
         self.cooling is a multiplier for the tweak factor to reduce it when
-        the rmsd of means to target increases (with the purpose to stabilize 
+        the rmsd of means to target increases (with the purpose to stabilize
         the optimization)
 
         self.callback callback function, called after each round with
         round statistics (FeatureStatistics)
         """
-        
+
         features = {k:f for k,f in self._model.features.items()
                     if hasattr(f,"target")}
         targets = {k:f.target for k,f in features.items()}
@@ -1473,6 +1473,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
         rmsd = None
 
         counter = 0
+        accepted = 0
         while True:
             fstats = FeatureStatistics()
             for i in range(int(self.samples_per_round)):
@@ -1486,6 +1487,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
                 fstats.record_features(features, values)
 
                 if self.is_good_sample(features, values):
+                    accepted += 1
                     yield sample
 
             means = fstats.means()
@@ -1494,7 +1496,7 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             oldrmsd = rmsd
             rmsd = self.rmsd(means,features)
 
-            # if we could not reduce the distance, 
+            # if we could not reduce the distance,
             # decrease tweak factor and increase samples_per_round
             if oldrmsd is not None and rmsd >= oldrmsd:
                 self.tweak_factor /= self.cooling
@@ -1503,23 +1505,22 @@ class MultiDimensionalBoltzmannSampler(BoltzmannSampler):
             # modify weight of each targeted feature
             for fid, f in features.items():
                 try:
-                    new_weight = (f.weight +
-                                  self.tweak_factor * (f.target - means[fid]))
+                    new_weight = (f.weight + self.tweak_factor * (f.target - means[fid]))
                     self._model.set_feature_weight(new_weight, fid)
                 except AttributeError:
                     pass
 
             if self.verbose:
                 weights = {k:round(f.weight,3) for k,f in features.items()}
-                print("--", counter)
-                print('Tweak factor', self.tweak_factor)
-                print('Samples per round', int(self.samples_per_round))
+                print(f'-- {counter} {accepted} {accepted/counter:.4f}', end=' ')
+                print(f'Tweak factor {self.tweak_factor:.3}', end=' ')
+                print('Samples per round', int(self.samples_per_round), end=' ')
                 print(f'RMSD {rmsd:.3f}')
                 print(fstats.report())
                 print('Weights', weights)
 
             if self.callback:
-                self.callback(counter, fstats)
+                self.callback(counter, accepted, fstats)
 
             self.requires_reinitialization()
 
