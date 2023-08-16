@@ -245,7 +245,7 @@ def invalid_bps(seq, struc):
         list of base pairs that violate the complementarity constraints
     """
     if type(struc) == str:
-        bps = parse_RNA(struc)
+        bps = parse(struc)
     else:
         bps = struc
     invalids = []
