@@ -31,6 +31,7 @@ restriction_sites = ["GAAUUC",
                     ]
 
 words=stop_codons
+#words=restriction_sites
 # -
 
 import infrared as ir
@@ -258,13 +259,14 @@ for _ in range(10):
 from infrared import rna
 toy_targets = [
 #    012345678901234567890
-    "((((...)))).(((...)))",
-    "((((((......)))...)))",
-    "......(((...)))......",
-#    "....((((.......)))).."
+    "((((...))))(((...)))",
+    "((((((.....)))...)))",
+    "......(((..)))......",
+#    "....((((......)))).."
 ]
-# RNAfold/3str/f3.100.0.inp
 
+
+# RNAfold/3str/f3.100.0.inp
 benchmark_targets = [
 '((((.((....)).)))).((.(((.((((.....(((..((((((.((..(((.(.....).)))..)).)).))))..)))..)))).))).))....',
 '..(((((.....(((.(((((((.....))))..))).))).....)))))..((((((((((...))).)....))))))...((((((....))))))',
@@ -339,9 +341,83 @@ filename = re.sub(r"dot$","png",filename)
 Image(filename=filename,width=400)
 # -
 
+# ## Compute the tree decomposition - compare different strategies
+
+# ### Minimize tree width
+#
+# Here, we additionally set a fixed number of iterations
+
+# +
+import treedecomp
 from treedecomp import NXTreeDecompositionFactory
-sampler = ir.Sampler(model, td_factory=NXTreeDecompositionFactory(iterations=100, adaptive=None))
+
+weights = [d.size() for d in model.domains]
+
+sampler = ir.Sampler(model,
+    td_factory=NXTreeDecompositionFactory(iterations=100,
+        adaptive=None,
+        #objective="weight", weights=weights
+    ))
 print(f'Treewidth(design+automaton): {sampler.treewidth()}')
+
+td=sampler.td
+print(weights)
+bagweights = treedecomp._bagweights(td.bags, weights)
+print(bagweights)
+print(f"{float(sum(bagweights)):0.2}")
+# -
+
+# ### Minimize tree width after 'collapsing' corresponding variables
+#
+# This is useful to more easily argue worst case bounds in the context of series of corresponding variables with different domain sizes (here, for general FDA, this is the case for X_i and Y_i, which correspond to each other). In practice, this often seems to be significantly worse.
+#
+# Note that domain sizes happen to be almost uniform for the stop codon automaton.
+
+# +
+import treedecomp
+from treedecomp import NXTreeDecompositionFactory
+
+n= len(targets[0])
+
+weights = [d.size() for d in model.domains]
+
+sampler = ir.Sampler(model,
+    td_factory=NXTreeDecompositionFactory(iterations=100,
+        adaptive=None,
+        join = lambda i,j: i<n and j==i+n,
+        #objective="weight", weights=weights
+    ))
+print(f'Treewidth(design+automaton): {sampler.treewidth()}')
+
+td=sampler.td
+print(weights)
+bagweights = treedecomp._bagweights(td.bags, weights)
+print(bagweights)
+print(f"{float(sum(bagweights)):0.2}")
+# -
+
+# ### Optimize weight over tree decompositions with low tree width (from min-fill-in)
+#
+# Experimental feature. Finally, it would be desirable to optimize weight, i.e. the sum over the products of domain sizes per bag, over all possible tree decompositions. This strategy nevertheless typically improves evaluation-time over the non-weighted strategy in the context of non-uniform domain sizes. 
+
+# +
+import treedecomp
+from treedecomp import NXTreeDecompositionFactory
+
+weights = [d.size() for d in model.domains]
+sampler = ir.Sampler(model,
+    td_factory=NXTreeDecompositionFactory(iterations=100,
+        adaptive=None,
+        objective="weight",
+        weights=weights))
+print(f'Treewidth(design+automaton): {sampler.treewidth()}')
+
+td=sampler.td
+print(weights)
+bagweights = treedecomp._bagweights(td.bags, weights)
+print(bagweights)
+print(f"{float(sum(bagweights)):0.2}")
+# -
 
 # Plot tree decomposition
 filename="treedecomp"
@@ -353,3 +429,5 @@ for target in targets:
 for sample in (sampler.sample() for _ in range(10)):
     seq = a_to_seq(sample,n,"ACGU")
     print(seq)
+
+
