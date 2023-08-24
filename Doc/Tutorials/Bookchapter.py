@@ -13,12 +13,61 @@
 #     name: python3
 # ---
 
-# # Bookchapter Tutorial
+# ------------------------------------------------------------
 #
-# This notebook contains code for the examples from the bookchapter "Developing complex RNA design applications in the Infrared framework"
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/Bookchapter.ipynb) with precomputed results. Download this file to view, edit and run it in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz logomaker
+#
+# mamba activate infrared
+#
+# # optionally install the Vienna RNA package (only Linux or MacOS)
+# mamba install -c conda-forge -c bioconda viennarna
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Tutorials) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# # Bookchapter Tutorial
+
+# ## Disclaimer
+# This notebook contains code for the examples from the bookchapter ["Developing complex RNA design applications in the Infrared framework"](https://hal-lirmm.ccsd.cnrs.fr/X-LIX/hal-03711828v2)
 # by Hua-Ting Yao, Yann Ponty, and Sebastian Will.
 #
-# The main purpose of this notebook is to allow readers of the chapter to easily run examples and possibly experiment with the code. Code is therefore given in the same order as in the bookchapter and under corresponding section titles.
+# This document should be used **in parallel to the bookchapter**.
+#
+#
+# The main purpose of this notebook is to allow readers of the chapter to easily run examples and possibly experiment with the code. Code is therefore given in the same order as in the bookchapter and under corresponding section titles. In turn, the notebook contains almost no explanations, as these are given in the manuscript.
 #
 # Compared to the code given in the chapter, we extended some code to make it even more illustrative, e.g. by plotting results. Finally, we provide code to generate figures of the bookchapter in the Appendix.
 #

@@ -15,6 +15,51 @@
 
 # # RNA Design Tutorial
 
+# ------------------------------------------------------------
+#
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/RNA%20Design.ipynb) with precomputed results. Download this file to view, edit and run it in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz logomaker
+#
+# mamba activate infrared
+#
+# # optionally install the Vienna RNA package (only Linux or MacOS)
+# mamba install -c conda-forge -c bioconda viennarna
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Tutorials) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
 # ## Simple sampling of RNA sequences
 # We start by importing the infrared module (and assign a shortname).
 
