@@ -14,6 +14,50 @@
 # ---
 
 # # Alignment
+
+# ------------------------------------------------------------
+#
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/Alignment.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+#
+# mamba activate infrared
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# # The alignment problem
 #
 # We demonstrate LicoRNA-style alignment in Infrared. The code models and solves a variant of the pairwise RNA structure alignment where a potentially crossing secondary structure is given for the first sequence; it is aligned against the 'plain' second sequence. The alignment score captures correlated matches to the ends of base pairs. The model furthermore supports affine gap cost.
 #

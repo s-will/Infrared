@@ -14,6 +14,50 @@
 # ---
 
 # # Network parsimony
+
+# ------------------------------------------------------------
+#
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/NetworkParsimony.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+#
+# mamba activate infrared
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# ## The problem(s) of network parsimony
 #
 # The small parsimony problem is typically defined over phylogenetic trees. First assuming that traits are inherited independently of each other, we consider the problem for a single trait with possible characters in set $C$. The input of the small tree parsimony problem
 # is a tree and a labeling of the leaves by characters in $C$. The 
@@ -63,7 +107,7 @@
 #  * $f(v_r) = 1$
 #  * $|f(v)| \leq \sum_{u\text{ parent of }v} |f(u)|$ 
 #  * $\textrm{cost}_f(v) = |f(v) \setminus 
-#      \bigcup_{u\text{ parent of }v} f(u)|$
+#      \bigcup_{u\textrm{ parent of }v} f(u)|$
 
 import infrared as ir
 from collections import defaultdict

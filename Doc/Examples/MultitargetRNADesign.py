@@ -14,15 +14,58 @@
 # ---
 
 # # Multi-target RNA Design
+
+# ------------------------------------------------------------
 #
-# Implements RNARedprint-like design of RNA sequences with very specific properties towards multiple targets (several target secondary structures and GC content.
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/MultitargetRNADesign.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+#
+# mamba activate infrared
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# ## RNA design with multiple target structures
+#
+# In this notebook we model the design of RNA sequences with very specific properties towards multiple targets, i.e. several target secondary structures, and GC content. The resulting functionality and methods are very similar to RNARedprint.
 #
 #
-# **Software requirements**
+# ### Additional software requirements
 #
-# Software can be installed using ```conda``` and ```pip``` on MacOSX or Linux.
+# This notebook needs additional software that can be installed using ```conda``` and ```pip``` on MacOSX or Linux.
 #
-# Apart from, obviously, ```Infrared``` (*install* by ```conda install -c conda-forge infrared```), this notebook requires
 # * Vienna RNA package,
 #   *install* by ```conda install -c conda-forge -c bioconda viennarna```
 #

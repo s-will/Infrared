@@ -13,7 +13,51 @@
 #     name: python3
 # ---
 
-# # Use of Automata in Infrared models: forbid/enforce sequence motifs
+# # Automata to forbid/enforce sequence motifs
+
+# ------------------------------------------------------------
+#
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/Automata.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+#
+# mamba activate infrared
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# ## Enforcing and forbidding sequence motifs by finite deterministic automata
 #
 # We showcase an Infrared feature network model that forbids (or enforces) the occurrence of any (respectively one) of several given input motifs in randomly generated sequences.
 # The Infrared model is be based on a finite automaton that we construct from the input motifs/words.
@@ -429,5 +473,3 @@ for target in targets:
 for sample in (sampler.sample() for _ in range(10)):
     seq = a_to_seq(sample,n,"ACGU")
     print(seq)
-
-

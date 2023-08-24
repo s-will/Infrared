@@ -14,12 +14,54 @@
 # ---
 
 # # Multi-dimensional Boltzmann sampling
+
+# ------------------------------------------------------------
 #
+# ## Online resources and software environment
+#
+# ​
+#
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/MultiDimensionalBoltzmannSampling.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# ​
+#
+# We recommend to install all required software using Mamba (or Conda) and PIP.
+#
+# ```
+#
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+#
+# mamba activate infrared
+#
+# pip install graphviz
+#
+# mamba deactivate infrared
+#
+# ```
+#
+# ​
+#
+# Start the Jupyter notebook server after activating the environment
+#
+# ```
+#
+# mamba activate infrared
+#
+# jupyter notebook
+#
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ​
+#
+# ------------------------------------------------------------
+
+# ## Targeting dinucleotide frequencies by MDBS
 # We demonstrate sampling of sequences targeting specific dinucleotide frequences and additional requirements; 
 # in this example, compatibility with an RNA target structure.
 #
 # The targeting of dinucleotide frequencies is performed using the multi-dimensional Boltzmann sampling functionality of Infrared's Sampler (aka MultiDimensionalBoltzmannSampler) class.
-#
 
 # ## Import modules + define timing function
 
@@ -276,5 +318,3 @@ distribution_heatmaps(sampler.model,n,sel_dimers,fig,limits=limits,
 fig.tight_layout()
 plt.savefig('mdbs_heatmaps.pdf')
 plt.show()
-# -
-
