@@ -1,10 +1,16 @@
 # Infrared Tutorials
 
-We provide two tutorial Jupyter notebooks.
+We provide two tutorial Jupyter notebooks. The Bookchapter tutorial should
+be used together with our bookchaper on RNA design. The other works as an
+introduction to RNA design using Infrared and general ideas of modeling in
+Infrared.
+
+For further instructive material, see the examples, which showcase how to
+express various bioinformatics problems in Infrared.
 
 These tutorials are part of the [online documentation](https://www.lix.polytechnique.fr/~will/Software/Infrared) of Infrared and Supplemental material of the upcoming Infrared publication.
 
-To view the notebooks, including results, visit the [tutorials in the online documentation](https://www.lix.polytechnique.fr/~will/Software/Infrared/Doc/usergroup2.html).
+To view the notebooks, including results, visit the [tutorials in the online documentation](https://www.lix.polytechnique.fr/~will/Software/Infrared/Doc/usergroup0.html).
 
 
 ## How to edit and run the notebooks 
