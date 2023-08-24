@@ -19,14 +19,17 @@
 #
 # This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/GraphColoring.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
 #
-# We recommend to install all required software using Conda.
+# We recommend to install all required software using Mamba (or Conda) and PIP.
 # ```
-# conda create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+# mamba create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+# mamba activate infrared
+# pip install graphviz
+# mamba deactivate infrared
 # ```
 #
 # Start the Jupyter notebook server after activating the environment
 # ```
-# conda activate infrared
+# mamba activate infrared
 # jupyter notebook
 # ```
 #
