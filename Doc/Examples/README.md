@@ -37,7 +37,7 @@ software, which can as well be installed via Conda or using PIP.
 
 ### Start Jupyter and load notebooks
 
-To start up the Jupyter server, activate the environment and start jupyter
+To start up the Jupyter server, activate the environment, and start jupyter
 
 ```
 conda activate infrared

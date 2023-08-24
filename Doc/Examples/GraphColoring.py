@@ -14,7 +14,26 @@
 # ---
 
 # # Graph coloring
+
+# ------------------------------------------------------------
 #
+# This document is hosted online as [Jupyter notebook](https://www.lix.polytechnique.fr/~will/Software/Infrared/current/Doc/GraphColoring.ipynb) with precomputed results. Download this file to view, edit and run examples in Jupyter.
+#
+# We recommend to install all required software using Conda.
+# ```
+# conda create -n infrared -c conda-forge infrared jupyter jupytext matplotlib seaborn graphviz
+# ```
+#
+# Start the Jupyter notebook server after activating the environment
+# ```
+# conda activate infrared
+# jupyter notebook
+# ```
+#
+# The [original sources](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc/Examples) are part of the Infrared distribution and hosted on Gitlab (in Jupytext light Script format).
+#
+# ------------------------------------------------------------
+
 # As a toy example for the use of Infrared, we model (a small instance) of graph coloring. The graph coloring model
 # defines variables for the graph nodes, whose possible values are the colors. Furthermore, we define inequality constraints for every edge, to ensure that connected nodes receive different colors in valid solutions.
 #
