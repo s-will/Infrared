@@ -80,9 +80,9 @@ namespace ired {
 
         /** quick check whether function is definitely zero at assignment
          * @param a assignment
-         * @return whether defined
+         * @return true, if certainly zero
          *
-         *  some functions know how to quick check for zero (in particular sparse materialized functions)
+         * some functions know how to quick check for zero (in particular sparse materialized functions)
          */
         virtual
         bool
@@ -222,7 +222,7 @@ namespace ired {
      * @brief A materialized function
      *
      * A function that holds a table of function values. It is used to
-     * represent computed messages (DP matrices) during evalution of
+     * represent computed messages (DP matrices) during evaluation of
      * the cluster tree, or precomputed functions.
      *
      * Supports sparse and non-sparse representation of the function
@@ -341,7 +341,7 @@ namespace ired {
             return container_selector<FunValue,ContainerS>::guaranteed_zero(data_, index(a));
         }
 
-        //! @brief whether to automatically materialzize when added to CN
+        //! @brief whether to automatically materialize when added to CN
         virtual
         bool
         auto_materialize() const override { return false; }
