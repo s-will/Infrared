@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# # Multi-target RNA Design
+# # Multitarget RNA Design
 
 # ------------------------------------------------------------
 #

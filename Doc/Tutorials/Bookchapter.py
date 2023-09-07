@@ -13,6 +13,9 @@
 #     name: python3
 # ---
 
+# # Bookchapter Tutorial
+# A collection of code from the Infrared RNA design bookchapter
+
 # ------------------------------------------------------------
 #
 # ## Online resources and software environment
@@ -58,7 +61,6 @@
 #
 # ------------------------------------------------------------
 
-# # Bookchapter Tutorial
 
 # ## Disclaimer
 # This notebook contains code for the examples from the bookchapter ["Developing complex RNA design applications in the Infrared framework"](https://hal-lirmm.ccsd.cnrs.fr/X-LIX/hal-03711828v2)
