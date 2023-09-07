@@ -15,7 +15,7 @@
       <tab type="user" url="@ref md_Doc_2Examples_2Automata" title="Automata"/>
       <tab type="user" url="@ref md_Doc_2Examples_2MultiDimensionalBoltzmannSampling" title="Multidim. Boltzmann sampling"/>
     </tab>
-    <tab type="user" url="@ref md_Doc_2RelativeWorks" title="Relative Works" intro=""/>
+    <tab type="user" url="@ref md_Doc_2RelatedWorks" title="Related Works" intro=""/>
     <tab type="user" url="@ref md_ChangeLog" title="Change Log" intro=""/>
     <tab type="modules" visible="yes" title="" intro=""/>
     <tab type="namespaces" visible="yes" title="">
