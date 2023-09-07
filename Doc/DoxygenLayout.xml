@@ -7,7 +7,7 @@
       <tab type="user" url="@ref md_Doc_2Tutorials_2Bookchapter" title="Bookchapter"/>
       <tab type="user" url="@ref md_Doc_2Tutorials_2RNA_01Design" title="RNA Design"/>
     </tab>
-    <tab type="usergroup" visible="yes" title="Examples">
+    <tab type="usergroup" url="@ref md_Doc_2Examples" visible="yes" title="Examples">
       <tab type="user" url="@ref md_Doc_2Examples_2GraphColoring" title="Graph Coloring"/>
       <tab type="user" url="@ref md_Doc_2Examples_2NetworkParsimony" title="Network Parsimony"/>
       <tab type="user" url="@ref md_Doc_2Examples_2Alignment" title="Alignment"/>
@@ -46,7 +46,6 @@
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="examples" visible="yes" title="" intro=""/>  
   </navindex>
 
   <!-- Layout definition for a class page -->
