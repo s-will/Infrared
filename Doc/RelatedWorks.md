@@ -1,4 +1,4 @@
-# Related Works
+# Related Work
 
 Here, we show a non-exhaustive list of works based on or related to the Infrared framework
 
