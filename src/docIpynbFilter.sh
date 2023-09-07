@@ -12,6 +12,9 @@ cp "$1" "$target"
 
 jupyter nbconvert --to markdown "$target"
 
+
+head -n 1 "${target/.ipynb/.md}"
+
 echo [TOC]
 echo
 
