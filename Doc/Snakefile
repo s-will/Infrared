@@ -46,6 +46,19 @@ GENERATED_FILES=[
 
 TARGETS = expand("{nb}.{ext}", nb=MYNOTEBOOKS, ext=["md"])
 
+
+FIGURES=[
+   "alignment.svg",
+   "automaton.svg",
+   "mdbs.svg",
+   "multi-target.svg",
+   "parsimony.svg",
+   "toy-graph.svg"
+]
+
+HTML_FIGURES = ["html/"+figure for figure in FIGURES]
+IMAGES_FIGURES = ["images/"+figure for figure in FIGURES]
+
 rule all:
     input:
         TARGETS
@@ -53,6 +66,14 @@ rule all:
         "html/index.html"
     shell:
         "cd ..; doxygen src/doxygen.cfg"
+
+rule examplepage:
+    input:
+        IMAGES_FIGURES+["genExampleLst.py"]
+    output:
+        HTML_FIGURES
+    shell:
+        "cp images/* html; python ./genExampleLst.py"
 
 rule convert_py_to_ipynb:
     input:

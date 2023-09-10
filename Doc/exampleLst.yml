@@ -16,10 +16,10 @@
     alt: Alignment
   page: md_Doc_2Examples_2Alignment.html
   description:
-- name: Multi-target Design
+- name: Multitarget Design
   img:
     src: multi-target.svg
-    alt: Multi-Target
+    alt: Multitarget
   page: md_Doc_2Examples_2MultitargetRNADesign.html
   description:
 - name: Automata 
@@ -33,5 +33,5 @@
     src: mdbs.svg
     alt: MDBS
   page: md_Doc_2Examples_2MultiDimensionalBoltzmannSampling.html
-  description: Multi-dimensional Boltzmann sampling
+  description: Multidimensional Boltzmann sampling
 
