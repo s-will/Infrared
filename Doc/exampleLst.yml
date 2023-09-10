@@ -1,37 +1,31 @@
 - name: Graph Coloring
-  img:
-    src: toy-graph.svg
-    alt: Toy Graph
+  img-src: toy-graph.svg
+  img-alt: Toy Graph
   page: md_Doc_2Examples_2GraphColoring.html
   description:
 - name: Network Parsimony
-  img:
-    src: parsimony.svg
-    alt: Parsimony
+  img-src: parsimony.svg
+  img-alt: Parsimony
   page: md_Doc_2Examples_2NetworkParsimony.html
   description:
 - name: Alignment
-  img:
-    src: alignment.svg
-    alt: Alignment
+  img-src: alignment.svg
+  img-alt: Alignment
   page: md_Doc_2Examples_2Alignment.html
   description:
 - name: Multitarget Design
-  img:
-    src: multi-target.svg
-    alt: Multitarget
+  img-src: multi-target.svg
+  img-alt: Multitarget
   page: md_Doc_2Examples_2MultitargetRNADesign.html
   description:
 - name: Automata 
-  img:
-    src: automaton.svg
-    alt: Automaton
+  img-src: automaton.svg
+  img-alt: Automaton
   page: md_Doc_2Examples_2Automata.html
   description: Sample words accepted by automaton
 - name: MDBS
-  img:
-    src: mdbs.svg
-    alt: MDBS
+  img-src: mdbs.svg
+  img-alt: MDBS
   page: md_Doc_2Examples_2MultiDimensionalBoltzmannSampling.html
   description: Multidimensional Boltzmann sampling
 
