@@ -8,8 +8,8 @@
    version="1.1"
    id="svg1049"
    inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
-   sodipodi:docname="infrared-draft-2.svg"
-   inkscape:export-filename="infrared-draft-2-3.png"
+   sodipodi:docname="infrared.svg"
+   inkscape:export-filename="infrared-5.png"
    inkscape:export-xdpi="150"
    inkscape:export-ydpi="150"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -76,16 +76,16 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.87265506"
-     inkscape:cx="527.12695"
-     inkscape:cy="594.16375"
+     inkscape:cx="473.84129"
+     inkscape:cy="598.74746"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1978"
+     inkscape:window-width="989"
      inkscape:window-height="1088"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
+     inkscape:window-x="20"
+     inkscape:window-y="20"
+     inkscape:window-maximized="0"
      inkscape:showpageshadow="2"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
@@ -116,7 +116,7 @@
     <path
        inkscape:connector-curvature="0"
        id="path1037-3-6"
-       d="m 152.09434,154.3919 -10.58011,-10.97727 -13.38528,5.81964 c -4.09085,-2.52285 -8.29575,-4.58175 -12.80129,-5.85114 l 0.0856,-0.10927 -4.82734,-14.38385 -15.139929,-0.39602 -5.230521,14.08133 0.0047,0.024 c -4.536941,1.0443 -8.715255,2.96109 -12.869915,5.28339 l -13.312609,-6.57953 -10.862977,10.44442 6.077611,13.54046 c -2.482966,4.05488 -4.439204,8.27904 -5.659289,12.76644 l -0.08961,-0.0642 -14.330562,4.66772 -0.208852,15.12903 14.159037,5.39703 0.02788,-0.005 c 1.099119,4.54671 2.458804,9.33169 4.831868,13.50628 l -7.037544,13.81042 10.583672,10.97397 14.091114,-6.49453 c 4.087131,2.52612 8.641752,4.24393 13.15091,5.51008 l 0.0889,-0.0548 4.914733,14.29857 15.187079,0.35358 5.25231,-14.10098 0.005,-0.0374 c 4.53367,-1.04789 9.21743,-2.45437 13.37207,-4.77669 l 13.81805,7.0898 10.85941,-10.44112 -6.57258,-14.05369 c 2.47973,-4.05851 4.19351,-8.5373 5.41365,-13.02466 l -0.0377,-0.0712 14.26814,-4.72971 0.18276,-15.15803 -14.17903,-5.41191 -0.0334,-0.01 c -1.10273,-4.54345 -3.16818,-8.65355 -5.54127,-12.82815 z m -32.23312,55.667 c -9.99686,9.61198 -25.997326,9.21581 -35.742132,-0.88477 -9.741125,-10.10391 -9.532498,-26.08653 0.467995,-35.70178 9.996882,-9.61203 26.000637,-9.21221 35.738507,0.88806 9.7412,10.10384 9.53618,26.0832 -0.46437,35.69849 z m 0,0"
+       d="m 164.71233,192.69678 -1.71122,-15.14961 -14.16205,-3.53141 c -1.70966,-4.49188 -3.79225,-8.68508 -6.59397,-12.43496 l 0.13441,-0.0346 4.92654,-14.35018 -11.77024,-9.53079 -12.72182,7.98733 -0.0109,0.0218 c -4.23514,-1.93343 -8.71687,-2.95633 -13.42672,-3.64312 l -6.55623,-13.32411 -14.976349,1.67316 -3.42121,14.44218 c -4.438328,1.70542 -8.561821,3.86579 -12.261537,6.68316 l -0.03196,-0.10558 -14.210732,-5.02074 -9.375656,11.87551 7.947609,12.90125 0.0248,0.0138 c -1.895869,4.27624 -3.730072,8.90014 -4.388726,13.65671 l -13.990504,6.67235 1.716061,15.14916 15.132848,3.42568 c 1.704735,4.4922 4.272426,8.6277 7.078997,12.37721 l 0.103879,0.0106 -4.805296,14.3357 11.833471,9.52583 12.751072,-7.98965 0.0269,-0.0265 c 4.234723,1.92858 8.806815,3.66403 13.516643,4.3508 l 6.646607,14.03661 14.97148,-1.67269 3.34098,-15.15069 c 4.43796,-1.71026 8.5241,-4.22024 12.22385,-7.03753 l 0.0135,-0.0794 14.19894,4.93355 9.37261,-11.91441 -7.95441,-12.92519 -0.0205,-0.0283 c 1.89103,-4.27587 2.75447,-8.794 3.41311,-13.55056 z m -59.46017,24.54132 c -13.782449,1.53999 -26.235299,-8.51478 -27.81753,-22.46037 -1.577286,-13.94599 8.317836,-26.49885 22.10515,-28.03922 13.78249,-1.54002 26.23572,8.51964 27.81264,22.46077 1.57739,13.94599 -8.31288,26.49846 -22.10026,28.03882 z m 0,0"
        style="fill:#7d7d7d;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.24942" />
     <rect
        style="fill:#ffffff;fill-opacity:0.837044;fill-rule:evenodd;stroke:none;stroke-width:10;stroke-linecap:round;stroke-dasharray:none"
@@ -187,16 +187,5 @@
        sodipodi:arc-type="arc"
        d="M 37.980785,42.257994 A 158.07321,158.33606 0 0 1 166.20332,45.092892"
        sodipodi:open="true" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16.9333px;line-height:125%;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#ff0000;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="63.297596"
-       y="231.65436"
-       id="text13441"><tspan
-         sodipodi:role="line"
-         id="tspan13439"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16.9333px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ff0000;stroke:none;stroke-width:0.264583px"
-         x="63.297596"
-         y="231.65436">Infrared</tspan></text>
   </g>
 </svg>
