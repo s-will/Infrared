@@ -41,4 +41,4 @@ _libinfrared_exports=[
 globals().update({k:v for k,v in vars(libinfrared).items() if k in _libinfrared_exports})
 globals().update({k:v for k,v in vars(infrared).items() if k in infrared._exports})
 
-__version__ = '1.1'
+__version__ = '1.2'
