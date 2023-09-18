@@ -2,6 +2,35 @@
 
 [TOC]
 
+# Release 1.2 - 2023-09-18
+
+## Documentation
+
+* Various minor improvements of documentation
+
+* Update documentation layout
+
+* Clean up documentation of Python classes and functions in infrared
+  namespace
+
+* Improve application example notebook
+
+* Add applications examples: graph coloring, automata and network parsimony
+
+* Elaborate documentation of def_constraint_class, def_function_class
+
+## Python library
+
+* New defaults and additional parameters for targeted sampling (multi-dimensional Boltzmann
+  sampling)
+
+* Add error checking in def_constraint_class, def_function_class
+
+## C++ library
+
+* Rename class ired:ConstraintNetwork to ired:FeatureNetwork
+
+
 # Release 1.1 - 2022-11-15
 
 This release improves support for stochastic optimization
