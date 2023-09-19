@@ -1,9 +1,9 @@
 [TOC]
 
 # Infrared
+![](Doc/Infrared-Logos/infrared-small.gif)
 
-Infrared is a generic C++/Python hybrid library for efficient
-(fixed-parameter tractable) Boltzmann sampling.
+Infrared is a generic C++/Python hybrid library for efficient, tree-decomposition based Boltzmann sampling.
 
 ## Resources
 **Gitlab repository**: <https://gitlab.inria.fr/amibio/Infrared>
