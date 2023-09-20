@@ -11,21 +11,20 @@ optimization.
 
 ## Resources
 
-**Online documentation**: <https://www.lix.polytechnique.fr/~will/Software/Infrared>
+* **Online documentation**: <https://www.lix.polytechnique.fr/~will/Software/Infrared>
 
-**Usage examples and tutorials**: Various examples of solving bioinformatics problems in
-Infrared provide an important entry point for practical use of the system
-(see online Documentation, Examples). Tutorials are provided for RNA design
-in Infrared. One is accompanying a book chapter and design in Infrared; the
-other, directly showcasing elementary usage.
+  Various **examples** of solving bioinformatics problems in
+Infrared provide an important entry point for practical use of Infrared.
+Moreover, two **tutorials** address RNA design in Infrared.
+One is accompanying a book chapter and design in Infrared; the
+other, directly showcasing elementary usage. 
 
-**Preprint**: [HT Yao, B Marchand, SJ Berkemer, Y Ponty, S Will. 
+* **Preprint**: [HT Yao, B Marchand, SJ Berkemer, Y Ponty, S Will. 
 Infrared: a declarative tree decomposition-powered framework for bioinformatics. 2023](https://inria.hal.science/hal-04211173)
 
-This manuscript comprehensively describes the system and also discusses many of the given example applications.
+  This manuscript comprehensively describes the system and also discusses many of the given example applications.
 
-**Installation**: [```conda install -c conda-forge infrared```](https://anaconda.org/conda-forge/infrared)
-
+* **Installation**: [```conda install -c conda-forge infrared```](https://anaconda.org/conda-forge/infrared)
 <table>
 <thead>
 <tr>
@@ -45,7 +44,7 @@ This manuscript comprehensively describes the system and also discusses many of 
 </tbody>
 </table>
 
-**Gitlab repository**: <https://gitlab.inria.fr/amibio/Infrared>
+* **Gitlab repository**: <https://gitlab.inria.fr/amibio/Infrared>
 
 
 ## Main features
