@@ -46,6 +46,8 @@ Infrared: a declarative tree decomposition-powered framework for bioinformatics.
 
 * **Gitlab repository**: <https://gitlab.inria.fr/amibio/Infrared>
 
+* **Github repository**: <https://github.com/s-will/Infrared>
+
 
 ## Main features
 
