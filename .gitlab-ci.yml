@@ -1,6 +1,8 @@
-image: continuum:miniconda3
+image: python:latest 
 pages:
   stage: deploy
+  tags: 
+    - small
   only:
     - release-doc
   script: 
