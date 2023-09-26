@@ -1,0 +1,10 @@
+image: continuum:miniconda3
+pages:
+  stage: deploy
+  only:
+    - release-doc
+  script: 
+    - echo "Do nothing" 
+  artifacts:
+    paths:
+      - public
