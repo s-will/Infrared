@@ -1,0 +1,11 @@
+<map id="infrared.infrared.EngineBase" name="infrared.infrared.EngineBase">
+<area shape="rect" id="Node000001" title="Abstract base class for samplers and optimizers." alt="" coords="82,79,269,104"/>
+<area shape="rect" id="Node000003" href="$classinfrared_1_1infrared_1_1ArcticOptimizer.html" title="Maximizing optimizer (based on arctic algebra)" alt="" coords="5,152,156,192"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="153,115,105,154,102,150,149,111"/>
+<area shape="rect" id="Node000004" href="$classinfrared_1_1infrared_1_1BoltzmannSampler.html" title="Boltzmann sampler." alt="" coords="181,152,359,192"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="201,111,249,150,245,154,198,115"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="150,5,201,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="178,44,178,79,173,79,173,44"/>
+<area shape="rect" id="Node000005" href="$classinfrared_1_1infrared_1_1MultiDimensionalBoltzmannSampler.html" title="Multi&#45;dimensional Boltzmann sampler." alt="" coords="162,240,378,280"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="273,206,273,240,267,240,267,206"/>
+</map>

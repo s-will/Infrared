@@ -1,0 +1,5 @@
+<map id="infrared.infrared.EngineBase" name="infrared.infrared.EngineBase">
+<area shape="rect" id="Node000001" title="Abstract base class for samplers and optimizers." alt="" coords="5,79,192,104"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="73,5,124,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,44,101,79,96,79,96,44"/>
+</map>

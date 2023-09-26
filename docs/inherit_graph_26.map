@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classired_1_1Dependency.html" title="Dependencies specify a dependency between variables." alt="" coords="5,38,129,63"/>
+<area shape="rect" id="Node000001" href="$classired_1_1Function.html" title=" " alt="" coords="177,13,356,38"/>
+<area shape="poly" id="edge22_Node000000_Node000001" title=" " alt="" coords="143,38,177,34,177,39,143,44"/>
+<area shape="rect" id="Node000003" href="$classired_1_1Function.html" title="Functions evaluate assignments of a subset of variables." alt="" coords="177,62,356,87"/>
+<area shape="poly" id="edge24_Node000000_Node000003" title=" " alt="" coords="143,57,177,61,177,67,143,62"/>
+<area shape="rect" id="Node000002" href="$classired_1_1MaterializedFunction.html" title="A materialized function." alt="" coords="404,5,577,45"/>
+<area shape="poly" id="edge23_Node000001_Node000002" title=" " alt="" coords="369,23,404,23,404,28,369,28"/>
+</map>

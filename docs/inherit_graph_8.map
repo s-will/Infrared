@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classinfrared_1_1infrared_1_1WeightedFunction.html" title="Function of a constraint network." alt="" coords="5,47,176,87"/>
+<area shape="rect" id="Node000001" href="$classinfrared_1_1rna_1_1BPEnergy.html" title="Function for Stack Energy model." alt="" coords="232,5,383,31"/>
+<area shape="poly" id="edge16_Node000000_Node000001" title=" " alt="" coords="189,42,250,28,252,33,190,47"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1rna_1_1GCCont.html" title="Function for (basepair&#45;wise) BasePair Energy model." alt="" coords="238,55,377,80"/>
+<area shape="poly" id="edge17_Node000000_Node000002" title=" " alt="" coords="190,65,238,65,238,70,190,70"/>
+<area shape="rect" id="Node000003" href="$classinfrared_1_1rna_1_1StackEnergy.html" title="Constrain nucleotides to be in the same complementarity class." alt="" coords="224,104,391,129"/>
+<area shape="poly" id="edge18_Node000000_Node000003" title=" " alt="" coords="190,87,252,101,250,107,189,92"/>
+</map>

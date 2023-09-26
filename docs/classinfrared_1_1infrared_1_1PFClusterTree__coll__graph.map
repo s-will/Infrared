@@ -1,0 +1,5 @@
+<map id="infrared.infrared.PFClusterTree" name="infrared.infrared.PFClusterTree">
+<area shape="rect" id="Node000001" title="Cluster tree for partition function calculation and sampling." alt="" coords="5,93,207,119"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1infrared_1_1ClusterTreeBase.html" title="Cluster tree base class." alt="" coords="27,5,185,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,59,109,93,103,93,103,59"/>
+</map>

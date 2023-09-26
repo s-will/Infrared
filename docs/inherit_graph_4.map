@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classinfrared_1_1infrared_1_1ClusterTreeBase.html" title="Cluster tree base class." alt="" coords="5,35,164,75"/>
+<area shape="rect" id="Node000001" href="$classinfrared_1_1infrared_1_1ArcticClusterTree.html" title="Cluster tree for maximization (in arctic semiring)" alt="" coords="237,5,388,45"/>
+<area shape="poly" id="edge14_Node000000_Node000001" title=" " alt="" coords="177,40,237,32,237,38,178,45"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1infrared_1_1PFClusterTree.html" title="Cluster tree for partition function calculation and sampling." alt="" coords="212,70,413,95"/>
+<area shape="poly" id="edge15_Node000000_Node000002" title=" " alt="" coords="178,63,212,68,212,73,177,69"/>
+</map>
