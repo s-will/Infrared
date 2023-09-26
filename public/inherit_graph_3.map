@@ -1,0 +1,11 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" title=" " alt="" coords="5,92,135,117"/>
+<area shape="rect" id="Node000001" href="$classinfrared_1_1rna_1_1BPComp.html" title="Constrain complementarity of the base pair (i,j)" alt="" coords="209,5,353,31"/>
+<area shape="poly" id="edge10_Node000000_Node000001" title=" " alt="" coords="102,82,139,61,182,41,221,28,222,33,184,46,142,66,104,87"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1rna_1_1DifferentComplClassConstraint.html" title="Parse RNA structure including pseudoknots." alt="" coords="192,55,371,95"/>
+<area shape="poly" id="edge11_Node000000_Node000002" title=" " alt="" coords="148,91,191,85,192,90,149,96"/>
+<area shape="rect" id="Node000003" href="$classinfrared_1_1rna_1_1NotBPComp.html" title="Function for (position&#45;wise) GC content." alt="" coords="199,120,364,145"/>
+<area shape="poly" id="edge12_Node000000_Node000003" title=" " alt="" coords="149,112,199,119,198,124,148,118"/>
+<area shape="rect" id="Node000004" href="$classinfrared_1_1rna_1_1SameComplClassConstraint.html" title="Constrain nucleotides to be in different complementarity classes." alt="" coords="183,170,380,210"/>
+<area shape="poly" id="edge13_Node000000_Node000004" title=" " alt="" coords="110,121,184,154,219,167,217,172,182,159,108,126"/>
+</map>

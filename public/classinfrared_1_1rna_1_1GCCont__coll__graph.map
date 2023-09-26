@@ -1,0 +1,5 @@
+<map id="infrared.rna.GCCont" name="infrared.rna.GCCont">
+<area shape="rect" id="Node000001" title="Function for (basepair&#45;wise) BasePair Energy model." alt="" coords="21,93,160,119"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1infrared_1_1WeightedFunction.html" title="Function of a constraint network." alt="" coords="5,5,176,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,59,93,93,88,93,88,59"/>
+</map>

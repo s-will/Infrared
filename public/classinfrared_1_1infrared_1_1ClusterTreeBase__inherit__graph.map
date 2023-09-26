@@ -1,0 +1,7 @@
+<map id="infrared.infrared.ClusterTreeBase" name="infrared.infrared.ClusterTreeBase">
+<area shape="rect" id="Node000001" title="Cluster tree base class." alt="" coords="101,5,260,45"/>
+<area shape="rect" id="Node000002" href="$classinfrared_1_1infrared_1_1ArcticClusterTree.html" title="Cluster tree for maximization (in arctic semiring)" alt="" coords="5,93,156,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,56,105,95,101,91,146,52"/>
+<area shape="rect" id="Node000003" href="$classinfrared_1_1infrared_1_1PFClusterTree.html" title="Cluster tree for partition function calculation and sampling." alt="" coords="180,101,381,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="215,52,269,98,265,102,211,56"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="infrared.infrared.EvaluationAlgebra" name="infrared.infrared.EvaluationAlgebra">
+<area shape="rect" id="Node000001" title="Algebra for evaluating a constraint network." alt="" coords="91,79,268,119"/>
+<area shape="rect" id="Node000003" href="$classinfrared_1_1infrared_1_1ArcticEvaluationAlgebra.html" title="Maximization algebra for optimization." alt="" coords="5,167,156,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,130,104,168,101,164,146,126"/>
+<area shape="rect" id="Node000004" href="$classinfrared_1_1infrared_1_1PFEvaluationAlgebra.html" title="Partition function algebra for sampling." alt="" coords="181,167,375,207"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="213,126,258,164,254,168,210,130"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="154,5,205,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="182,44,182,79,177,79,177,44"/>
+</map>
