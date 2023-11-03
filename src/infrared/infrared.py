@@ -33,11 +33,10 @@ from treedecomp import seed as tdseed
 from abc import ABC, abstractmethod
 
 ## @cond PRIVATE
-_exports = [
+__all__ = [
     'seed',
     'def_function_class',
     'def_constraint_class',
-    'constraint_class',
     'mc_optimize',
     'dotfile_to_tgt',
     'dotfile_to_pdf',
@@ -1617,4 +1616,3 @@ def dotfile_to_png(graphfile, outfile=None):
     """
 
     dotfile_to_tgt(graphfile, "png", outfile)
-

@@ -23,22 +23,11 @@ For example, `infrared.infrared.Model` is available as `infrared.Model`, `infrar
 
 from . import libinfrared
 from . import infrared
+from . import rna
+
+from .libinfrared import *
+from .infrared import *
 
 
-## @cond PRIVATE
-_libinfrared_exports=[
-    'seed',
-    'Assignment',
-    'Constraint',
-    'Function',
-    'IntFunction',
-    'FiniteDomain',
-    'PFClusterTree',
-    'ArcticClusterTree',
-]
-## @endcond
-
-globals().update({k:v for k,v in vars(libinfrared).items() if k in _libinfrared_exports})
-globals().update({k:v for k,v in vars(infrared).items() if k in infrared._exports})
 
 __version__ = '1.2'
