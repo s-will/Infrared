@@ -14,12 +14,12 @@
 #  @brief Functionality for RNA-related Infrared applications
 #
 #  @code
-#    import infrared.rna as rna
+#    import libinfrared.rna as rna
 #  @endcode
 #
 
 ##
-#  @package infrared.rna
+#  @package libinfrared.rna
 #  @copydoc rna.py
 
 
@@ -27,8 +27,8 @@ import re
 import collections
 import math
 
-import infrared
-from .infrared import def_constraint_class, def_function_class
+from . import libinfrared
+from .infrared import def_constraint_class, def_function_class, WeightedFunction
 
 # @brief exception to signal inconsistency, when consistency would be required
 class ParseError(RuntimeError):
@@ -46,7 +46,7 @@ class ParseError(RuntimeError):
 # def_*_class functions.
 #
 
-class BPComp(infrared.Constraint):
+class BPComp(libinfrared.Constraint):
     """
     Constrain complementarity of the base pair (i,j)
 
@@ -64,7 +64,7 @@ def_constraint_class('BPComp', lambda i, j: [i, j],
 
 
 
-class NotBPComp(infrared.Constraint):
+class NotBPComp(libinfrared.Constraint):
     """Constraint for negation of BPComp
 
     ```
@@ -80,7 +80,7 @@ def_constraint_class('NotBPComp', lambda i, j: [i, j],
                      module=__name__)
 ## @endcond
 
-class GCCont(infrared.infrared.WeightedFunction):
+class GCCont(WeightedFunction):
     """
     Function for (position-wise)  GC content
 
@@ -96,7 +96,7 @@ def_function_class('GCCont', lambda i: [i],
                    module=__name__)
 ## @endcond
 
-class BPEnergy(infrared.infrared.WeightedFunction):
+class BPEnergy(WeightedFunction):
     """
     Function for (basepair-wise) BasePair Energy model
 
@@ -115,7 +115,7 @@ def_function_class('BPEnergy', lambda i, j, is_terminal: [i, j],
                    module=__name__)
 ## @endcond
 
-class StackEnergy(infrared.infrared.WeightedFunction):
+class StackEnergy(WeightedFunction):
     """
     Function for Stack Energy model
 
@@ -133,7 +133,7 @@ def_function_class('StackEnergy', lambda i, j: [i, j, i+1, j-1],
                    module=__name__)
 ## @endcond
 
-class SameComplClassConstraint(infrared.Constraint):
+class SameComplClassConstraint(libinfrared.Constraint):
     """
     Constrain nucleotides to be in the same complementarity class
 
@@ -149,7 +149,7 @@ def_constraint_class('SameComplClassConstraint', lambda i, j: [i, j],
                      module=__name__)
 ## @endcond
 
-class DifferentComplClassConstraint(infrared.Constraint):
+class DifferentComplClassConstraint(libinfrared.Constraint):
     """
     Constrain nucleotides to be in different complementarity classes
 
