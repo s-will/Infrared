@@ -14,12 +14,12 @@
 #  @brief Functionality for RNA-related Infrared applications
 #
 #  @code
-#    import libinfrared.rna as rna
+#    import infrared.rna as rna
 #  @endcode
 #
 
 ##
-#  @package libinfrared.rna
+#  @package infrared.rna
 #  @copydoc rna.py
 
 
