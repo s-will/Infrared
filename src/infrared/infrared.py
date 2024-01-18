@@ -1008,16 +1008,16 @@ class ArcticClusterTree(ClusterTreeBase):
     def optimize(self):
         return self._ct.optimize()
 
+    '''
     def test_sample(self):
-        valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
-        if valid:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector[:-1]}')
-            return a
-        else:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector}')
-            print('Aready sampled!')
+        for i in range(1000): # while True:
+            valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
+            if valid:
+                print(f'sample id: {sample_ID}')
+                print(f'list of previous samples: {samples_ID_vector[:-1]}')
+                return a
+        print('No new sample found!')
+    '''
 
 
 class PFClusterTree(ClusterTreeBase):
@@ -1026,6 +1026,7 @@ class PFClusterTree(ClusterTreeBase):
     """
     def __init__(self, model, td):
         self._ct = libinfrared.PFClusterTree(model.domains)
+        self.samples_ID_list = []
         super().__init__(model, td, PFEvaluationAlgebra())
 
     def sample(self):
@@ -1034,16 +1035,17 @@ class PFClusterTree(ClusterTreeBase):
     def resample(self, variables, assignment):
         return self._ct.resample(variables, assignment)
 
+    '''
     def test_sample(self):
-        valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
-        if valid:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector[:-1]}')
-            return a
-        else:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector}')
-            print('Aready sampled!')
+        for _ in range(1000): # while True:
+            sample_ID, a = self._ct.test_sample() # valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
+            if sample_ID not in self.samples_ID_list: # if valid:
+                print(f'sample id: {sample_ID}')
+                print(f'list of previous samples: {self.samples_ID_list}')
+                self.samples_ID_list.append(sample_ID)
+                return a
+        print('No new sample found!')
+    '''
 
 
 class Feature:
@@ -1365,6 +1367,7 @@ class BoltzmannSampler(EngineBase):
         See also:
             EngineBase
         """
+        self.samples_ID_list = []
         super().__init__(model, td_factory, lazy)
 
     def sample(self):
@@ -1395,19 +1398,20 @@ class BoltzmannSampler(EngineBase):
         self.setup_engine()
         return self._ct.resample(variables, assignment)
 
-    def test_sample(self):
+    def test_sample(self, non_redundant):
         self.setup_engine()
-        valid, sample_ID, samples_ID_vector, a = self._ct._ct.test_sample()
-        if valid:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector[:-1]}')
-            return a
+        if non_redundant:
+            for _ in range(1000): # while True:
+                sample_ID, a = self._ct._ct.test_sample() # valid, sample_ID, samples_ID_vector, a = self._ct._ct.test_sample()
+                if sample_ID not in self.samples_ID_list: # if valid:
+                    print(f'sample id: {sample_ID}')
+                    print(f'list of previous samples: {self.samples_ID_list}')
+                    self.samples_ID_list.append(sample_ID)
+                    return a
+            print('No new sample found!')
         else:
-            print(f'sample id: {sample_ID}')
-            print(f'list of previous samples: {samples_ID_vector}')
-            print('Aready sampled!')
+            return self._ct._ct.sample()
         
-
     def samples(self):
         """Sample generator
         """

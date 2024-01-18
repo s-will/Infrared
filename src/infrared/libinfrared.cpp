@@ -183,6 +183,6 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("evaluate", &ArcticClusterTree::evaluate)
         .def("is_consistent", &ArcticClusterTree::is_consistent)
         .def("optimize", &ArcticClusterTree::traceback)
-        .def("test_sample", &ArcticClusterTree::test_traceback)
+        // .def("test_sample", &ArcticClusterTree::test_traceback)
         ;
 }

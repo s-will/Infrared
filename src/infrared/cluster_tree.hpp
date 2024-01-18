@@ -24,7 +24,7 @@
 #include "feature_network.hpp"
 
 namespace ired {
-    std::vector<int> samples_ID_vector;
+    // std::vector<int> samples_ID_vector;
 
     /**
      * @brief A tree of clusters (=variables, functions, constraints)
@@ -431,8 +431,8 @@ namespace ired {
         }
 
         void
-        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, int *num_assigned, int base, bool *valid) {
-            if ((*num_assigned) == a.size()) {
+        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, /*int *num_assigned,*/ int base/*, bool *valid*/) {
+            /* if ((*num_assigned) == a.size()) {
                 auto it = std::find(samples_ID_vector.begin(), samples_ID_vector.end(), (*sample_ID));
 
                 if (it != samples_ID_vector.end()) {
@@ -440,7 +440,7 @@ namespace ired {
                 } else {
                     samples_ID_vector.push_back((*sample_ID));
                 }
-            }
+            } */
 
             for(const auto &e: tree_.adj_edges(v)) {
 
@@ -506,13 +506,13 @@ namespace ired {
                     for (auto e: diff) {
                         if (a.is_det(e)) {
                             (*sample_ID) += a[e] * std::pow(base, e);
-                            (*num_assigned) += 1;
+                            // (*num_assigned) += 1;
                         }
                     }
                 }
 
                 // trace back from target
-                dfs_test_traceback(e.target(), a, sample_ID, num_assigned, base, valid);
+                dfs_test_traceback(e.target(), a, sample_ID, /*num_assigned,*/ base/*, valid*/);
             }
         }
 
@@ -617,7 +617,7 @@ namespace ired {
         auto a = assignment_t(fn_.domains());
 
         int sample_ID = 0;
-        int num_assigned = 0;
+        // int num_assigned = 0;
 
         int base = 0;
         for (auto domain : fn_.domains()) {
@@ -627,11 +627,11 @@ namespace ired {
             }
         }
 
-        bool valid = true;
+        // bool valid = true;
 
-        dfs_test_traceback(single_empty_root(), a, &sample_ID, &num_assigned, base, &valid);
+        dfs_test_traceback(single_empty_root(), a, &sample_ID, /*&num_assigned,*/ base/*, &valid*/);
 
-        return std::make_tuple(valid, sample_ID, samples_ID_vector, a);
+        return std::make_tuple(/*valid,*/ sample_ID, /*samples_ID_vector,*/ a);
     }
 }
 
