@@ -24,6 +24,8 @@
 #include "feature_network.hpp"
 
 namespace ired {
+    std::vector<int> samples_ID_vector;
+
     /**
      * @brief A tree of clusters (=variables, functions, constraints)
      *
@@ -266,6 +268,8 @@ namespace ired {
         auto restricted_traceback(const std::set<var_idx_t> &variables,
             const assignment_t &assignment);
 
+        auto test_traceback();
+
     private:
         feature_network_t fn_;
         tree_t tree_;
@@ -426,6 +430,92 @@ namespace ired {
             }
         }
 
+        void
+        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, int *num_assigned, int base, bool *valid) {
+            if ((*num_assigned) == a.size()) {
+                auto it = std::find(samples_ID_vector.begin(), samples_ID_vector.end(), (*sample_ID));
+
+                if (it != samples_ID_vector.end()) {
+                    (*valid) = false;
+                } else {
+                    samples_ID_vector.push_back((*sample_ID));
+                }
+            }
+
+            for(const auto &e: tree_.adj_edges(v)) {
+
+                const auto &parent = tree_[ e.source() ].cluster;
+                const auto &child =  tree_[ e.target() ].cluster;
+
+                auto diff = child.diff_vars(parent);
+                bool diff_changed = false;
+
+                if (trace_variables) { // if the trace is restricted,
+                                       // then remove other vars from diff
+                    auto new_end = remove_if(diff.begin(), diff.end(),
+                            [&](var_idx_t i) {
+                                return trace_variables->find(i) == trace_variables->end();
+                            });
+                    diff_changed = new_end != diff.end();
+                    diff.erase(new_end, diff.end());
+                }
+
+                if (! diff.empty()) {
+
+                    a.set_undet(diff);
+
+                    assert(a.eval_determined(child.constraints(),
+                                             StdEvaluationPolicy<bool>()));
+
+                    auto it = a.make_iterator(diff, fn_,
+                                              child.constraints(),
+                                              child.functions(),
+                                              a.eval_determined(child.functions(),
+                                                                evaluation_policy_t())
+                                              );
+
+                    // -----
+                    // determine value for selector
+                    auto value = evaluation_policy_t::zero();
+                    if (diff_changed) {
+                        // recompute value for selector
+                        for( ; ! it.finished(); ++it ) {
+                            value = evaluation_policy_t::plus( value, it.value() );
+                        }
+                        it.reset();
+                    } else {
+                        // get value by evaluating message:
+                        // evaluate message at partial assignment a;
+                        value = (*e.message)(a);
+                    }
+                    // initialize the Selector
+                    auto selector = typename evaluation_policy_t::selector(value);
+
+                    // enumerate all combinations of values assigned to diff variables;
+                    // recompute SUM_a(PROD_f(f(a))), where a runs over these
+                    // combinations
+                    auto x = evaluation_policy_t::zero();
+                    for( ; ! it.finished(); ++it ) {
+                        x = evaluation_policy_t::plus( x, it.value() );
+
+                        if (selector.select(x)) {
+                            break;
+                        }
+                    }
+
+                    for (auto e: diff) {
+                        if (a.is_det(e)) {
+                            (*sample_ID) += a[e] * std::pow(base, e);
+                            (*num_assigned) += 1;
+                        }
+                    }
+                }
+
+                // trace back from target
+                dfs_test_traceback(e.target(), a, sample_ID, num_assigned, base, valid);
+            }
+        }
+
     }; // end class ClusterTree
 
     // return single empty cluster that roots the tree; if such a
@@ -516,6 +606,32 @@ namespace ired {
         trace_variables.reset();
 
         return a;
+    }
+
+    template<class FunValue, class EvaluationPolicy>
+    auto
+    ClusterTree<FunValue,EvaluationPolicy>::test_traceback() {
+
+        assert(evaluated_);
+
+        auto a = assignment_t(fn_.domains());
+
+        int sample_ID = 0;
+        int num_assigned = 0;
+
+        int base = 0;
+        for (auto domain : fn_.domains()) {
+            int domain_order = domain.size();
+            if (domain_order > base) {
+                base = domain_order;
+            }
+        }
+
+        bool valid = true;
+
+        dfs_test_traceback(single_empty_root(), a, &sample_ID, &num_assigned, base, &valid);
+
+        return std::make_tuple(valid, sample_ID, samples_ID_vector, a);
     }
 }
 

@@ -1008,6 +1008,17 @@ class ArcticClusterTree(ClusterTreeBase):
     def optimize(self):
         return self._ct.optimize()
 
+    def test_sample(self):
+        valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
+        if valid:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector[:-1]}')
+            return a
+        else:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector}')
+            print('Aready sampled!')
+
 
 class PFClusterTree(ClusterTreeBase):
     """
@@ -1022,6 +1033,17 @@ class PFClusterTree(ClusterTreeBase):
 
     def resample(self, variables, assignment):
         return self._ct.resample(variables, assignment)
+
+    def test_sample(self):
+        valid, sample_ID, samples_ID_vector, a = self._ct.test_sample()
+        if valid:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector[:-1]}')
+            return a
+        else:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector}')
+            print('Aready sampled!')
 
 
 class Feature:
@@ -1372,6 +1394,19 @@ class BoltzmannSampler(EngineBase):
         """
         self.setup_engine()
         return self._ct.resample(variables, assignment)
+
+    def test_sample(self):
+        self.setup_engine()
+        valid, sample_ID, samples_ID_vector, a = self._ct._ct.test_sample()
+        if valid:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector[:-1]}')
+            return a
+        else:
+            print(f'sample id: {sample_ID}')
+            print(f'list of previous samples: {samples_ID_vector}')
+            print('Aready sampled!')
+        
 
     def samples(self):
         """Sample generator
