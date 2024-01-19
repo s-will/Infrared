@@ -24,7 +24,6 @@
 #include "feature_network.hpp"
 
 namespace ired {
-    // std::vector<int> samples_ID_vector;
 
     /**
      * @brief A tree of clusters (=variables, functions, constraints)
@@ -431,16 +430,7 @@ namespace ired {
         }
 
         void
-        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, /*int *num_assigned,*/ int base/*, bool *valid*/) {
-            /* if ((*num_assigned) == a.size()) {
-                auto it = std::find(samples_ID_vector.begin(), samples_ID_vector.end(), (*sample_ID));
-
-                if (it != samples_ID_vector.end()) {
-                    (*valid) = false;
-                } else {
-                    samples_ID_vector.push_back((*sample_ID));
-                }
-            } */
+        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, int base, int shift) {
 
             for(const auto &e: tree_.adj_edges(v)) {
 
@@ -505,14 +495,13 @@ namespace ired {
 
                     for (auto e: diff) {
                         if (a.is_det(e)) {
-                            (*sample_ID) += a[e] * std::pow(base, e);
-                            // (*num_assigned) += 1;
+                            (*sample_ID) += (a[e] + shift) * std::pow(base, e);
                         }
                     }
                 }
 
                 // trace back from target
-                dfs_test_traceback(e.target(), a, sample_ID, /*num_assigned,*/ base/*, valid*/);
+                dfs_test_traceback(e.target(), a, sample_ID, base, shift);
             }
         }
 
@@ -617,21 +606,20 @@ namespace ired {
         auto a = assignment_t(fn_.domains());
 
         int sample_ID = 0;
-        // int num_assigned = 0;
 
-        int base = 0;
+        int min = std::numeric_limits<int>::max();
+        int max = std::numeric_limits<int>::min();
         for (auto domain : fn_.domains()) {
-            int domain_order = domain.size();
-            if (domain_order > base) {
-                base = domain_order;
-            }
+            min = (domain.lb() < min) ? domain.lb() : min;
+            max = (domain.ub() > max) ? domain.ub() : max;
         }
 
-        // bool valid = true;
+        int base = max - min + 1;
+        int shift = - min;
 
-        dfs_test_traceback(single_empty_root(), a, &sample_ID, /*&num_assigned,*/ base/*, &valid*/);
+        dfs_test_traceback(single_empty_root(), a, &sample_ID, base, shift);
 
-        return std::make_tuple(/*valid,*/ sample_ID, /*samples_ID_vector,*/ a);
+        return std::make_tuple(sample_ID, a);
     }
 }
 
