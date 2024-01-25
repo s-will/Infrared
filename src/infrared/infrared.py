@@ -1344,6 +1344,7 @@ class BoltzmannSampler(EngineBase):
             EngineBase
         """
         self.samples_ID_list = []
+        self.forbidden = []
         super().__init__(model, td_factory, lazy)
 
     def sample(self):
@@ -1374,17 +1375,24 @@ class BoltzmannSampler(EngineBase):
         self.setup_engine()
         return self._ct.resample(variables, assignment)
 
-    def test_sample(self, non_redundant, repeats=1):
+    def sample_naive(self, non_redundant, repeats=1):
         self.setup_engine()
         if non_redundant:
             for _ in range(repeats):
-                sample_ID, a = self._ct._ct.test_sample()
+                sample_ID, a = self._ct._ct.sample_naive()
                 if sample_ID not in self.samples_ID_list:
                     print(f'sample id: {sample_ID}')
                     print(f'list of previous samples: {self.samples_ID_list}')
                     self.samples_ID_list.append(sample_ID)
                     return a
             print('No new sample found!')
+        else:
+            return self._ct._ct.sample()
+    
+    def sample_nonredundant(self, non_redundant):
+        self.setup_engine()
+        if non_redundant:
+            return self._ct._ct.sample_nonredundant()
         else:
             return self._ct._ct.sample()
         

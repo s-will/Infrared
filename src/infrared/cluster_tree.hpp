@@ -267,7 +267,9 @@ namespace ired {
         auto restricted_traceback(const std::set<var_idx_t> &variables,
             const assignment_t &assignment);
 
-        auto test_traceback();
+        auto traceback_naive();
+
+        auto traceback_nonredundant();
 
     private:
         feature_network_t fn_;
@@ -430,78 +432,76 @@ namespace ired {
         }
 
         void
-        dfs_test_traceback(vertex_descriptor_t v, assignment_t &a, int *sample_ID, int base, int shift) {
+        dfs_traceback_naive(vertex_descriptor_t v, assignment_t &a) {
 
             for(const auto &e: tree_.adj_edges(v)) {
 
                 const auto &parent = tree_[ e.source() ].cluster;
-                const auto &child =  tree_[ e.target() ].cluster;
+                const auto &child  = tree_[ e.target() ].cluster;
 
                 auto diff = child.diff_vars(parent);
-                bool diff_changed = false;
+                a.set_undet(diff);
 
-                if (trace_variables) { // if the trace is restricted,
-                                       // then remove other vars from diff
-                    auto new_end = remove_if(diff.begin(), diff.end(),
-                            [&](var_idx_t i) {
-                                return trace_variables->find(i) == trace_variables->end();
-                            });
-                    diff_changed = new_end != diff.end();
-                    diff.erase(new_end, diff.end());
-                }
+                assert(a.eval_determined(child.constraints(),
+                                         StdEvaluationPolicy<bool>()));
 
-                if (! diff.empty()) {
+                auto it = a.make_iterator(diff, fn_,
+                                          child.constraints(),
+                                          child.functions(),
+                                          a.eval_determined(child.functions(),
+                                                            evaluation_policy_t())
+                                          );
 
-                    a.set_undet(diff);
+                auto value = (*e.message)(a);
+                auto selector = typename evaluation_policy_t::selector(value);
 
-                    assert(a.eval_determined(child.constraints(),
-                                             StdEvaluationPolicy<bool>()));
+                auto x = evaluation_policy_t::zero();
+                for( ; ! it.finished(); ++it ) {
+                    x = evaluation_policy_t::plus( x, it.value() );
 
-                    auto it = a.make_iterator(diff, fn_,
-                                              child.constraints(),
-                                              child.functions(),
-                                              a.eval_determined(child.functions(),
-                                                                evaluation_policy_t())
-                                              );
-
-                    // -----
-                    // determine value for selector
-                    auto value = evaluation_policy_t::zero();
-                    if (diff_changed) {
-                        // recompute value for selector
-                        for( ; ! it.finished(); ++it ) {
-                            value = evaluation_policy_t::plus( value, it.value() );
-                        }
-                        it.reset();
-                    } else {
-                        // get value by evaluating message:
-                        // evaluate message at partial assignment a;
-                        value = (*e.message)(a);
-                    }
-                    // initialize the Selector
-                    auto selector = typename evaluation_policy_t::selector(value);
-
-                    // enumerate all combinations of values assigned to diff variables;
-                    // recompute SUM_a(PROD_f(f(a))), where a runs over these
-                    // combinations
-                    auto x = evaluation_policy_t::zero();
-                    for( ; ! it.finished(); ++it ) {
-                        x = evaluation_policy_t::plus( x, it.value() );
-
-                        if (selector.select(x)) {
-                            break;
-                        }
-                    }
-
-                    for (auto e: diff) {
-                        if (a.is_det(e)) {
-                            (*sample_ID) += (a[e] + shift) * std::pow(base, e);
-                        }
+                    if (selector.select(x)) {
+                        break;
                     }
                 }
 
-                // trace back from target
-                dfs_test_traceback(e.target(), a, sample_ID, base, shift);
+                dfs_traceback_naive(e.target(), a);
+            }
+        }
+
+        void
+        dfs_traceback_nonredundant(vertex_descriptor_t v, assignment_t &a) {
+
+            for(const auto &e: tree_.adj_edges(v)) {
+
+                const auto &parent = tree_[ e.source() ].cluster;
+                const auto &child  = tree_[ e.target() ].cluster;
+
+                auto diff = child.diff_vars(parent);
+                a.set_undet(diff);
+
+                assert(a.eval_determined(child.constraints(), 
+                                         StdEvaluationPolicy<bool>()));
+
+                auto it = a.make_iterator(diff, fn_,
+                                          child.constraints(),
+                                          child.functions(),
+                                          a.eval_determined(child.functions(),
+                                                            evaluation_policy_t())
+                                          );
+
+                auto value = (*e.message)(a);
+                auto selector = typename evaluation_policy_t::selector(value);
+
+                auto x = evaluation_policy_t::zero();
+                for( ; ! it.finished(); ++it ) {
+                    x = evaluation_policy_t::plus( x, it.value() );
+                    
+                    if (selector.select(x)) {
+                        break;
+                    }
+                }
+
+                dfs_traceback_nonredundant(e.target(), a);
             }
         }
 
@@ -599,11 +599,13 @@ namespace ired {
 
     template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<FunValue,EvaluationPolicy>::test_traceback() {
+    ClusterTree<FunValue,EvaluationPolicy>::traceback_naive() {
 
         assert(evaluated_);
 
         auto a = assignment_t(fn_.domains());
+
+        dfs_traceback_naive(single_empty_root(), a);
 
         int sample_ID = 0;
 
@@ -617,9 +619,24 @@ namespace ired {
         int base = max - min + 1;
         int shift = - min;
 
-        dfs_test_traceback(single_empty_root(), a, &sample_ID, base, shift);
+        for (int i; i<a.size(); ++i) {
+            sample_ID += (a[i] + shift) * std::pow(base, i);
+        }
 
         return std::make_tuple(sample_ID, a);
+    }
+
+    template<class FunValue, class EvaluationPolicy>
+    auto
+    ClusterTree<FunValue,EvaluationPolicy>::traceback_nonredundant() {
+
+        assert(evaluated_);
+
+        auto a = assignment_t(fn_.domains());
+
+        dfs_traceback_nonredundant(single_empty_root(), a);
+
+        return a;
     }
 }
 

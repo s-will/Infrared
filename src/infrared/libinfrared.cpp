@@ -170,7 +170,8 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("is_consistent", &PFClusterTree::is_consistent)
         .def("resample", &PFClusterTree::restricted_traceback)
         .def("sample", &PFClusterTree::traceback)
-        .def("test_sample", &PFClusterTree::test_traceback)
+        .def("sample_naive", &PFClusterTree::traceback_naive)
+        .def("sample_nonredundant", &PFClusterTree::traceback_nonredundant)
         ;
 
     py::class_< ArcticClusterTree >(ir,"ArcticClusterTree")
