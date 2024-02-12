@@ -100,6 +100,31 @@ namespace ired {
         ~Function() {}
     };
 
+    template <class FunValue = double>
+    class WeightedFunction : public Function<FunValue> {
+    public:
+        using base_t = Function<FunValue>;
+        using function_ptr_t = const base_t*;
+        using assignment_t = typename base_t::assignment_t;
+        using fun_value_t = typename base_t::fun_value_t;
+        using var_idx_t = int;
+
+        WeightedFunction(const std::vector<var_idx_t> &vars,
+                         function_ptr_t f, fun_value_t& c) : base_t(vars) {
+            function = f;
+            constant = c;
+        }
+
+        fun_value_t
+        operator() (const assignment_t& a) const override {
+            return (*function)(a) - constant;
+        }
+    
+    private:
+        function_ptr_t function;
+        fun_value_t constant;
+    };
+
     template <class T>
     inline
     std::ostream & operator << (std::ostream &out, const Function<T> &f) {

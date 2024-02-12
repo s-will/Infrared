@@ -112,6 +112,11 @@ namespace ired {
             funs_.push_back(f);
         }
 
+        void
+        modify_function(size_t i, function_t *f) const {
+            const_cast<std::vector<const function_t*>*>(&funs_)->operator[](i) = f;
+        }
+
         /**
          * @brief Calculate separator variables
          *

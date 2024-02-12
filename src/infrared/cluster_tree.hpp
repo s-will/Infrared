@@ -22,6 +22,7 @@
 
 #include "graph.hpp"
 #include "feature_network.hpp"
+#include "subtree_weights.hpp"
 
 namespace ired {
 
@@ -90,6 +91,10 @@ namespace ired {
 
         //! @brief type of identifiers of vertices (typically 'long int')
         using vertex_descriptor_t = typename tree_t::vertex_descriptor_t;
+
+        using weighted_function_t = WeightedFunction<fun_value_t>;
+        using weights_tree_t = WeightsTree<fun_value_t, evaluation_policy_t>;
+        using cluster_info_t = typename weights_tree_t::cluster_info_t;
 
         /**
          * @brief construct empty
@@ -267,9 +272,7 @@ namespace ired {
         auto restricted_traceback(const std::set<var_idx_t> &variables,
             const assignment_t &assignment);
 
-        auto traceback_naive();
-
-        auto traceback_nonredundant();
+        auto traceback_new(bool non_redundant, std::string non_redundant_mode);
 
     private:
         feature_network_t fn_;
@@ -283,6 +286,9 @@ namespace ired {
 
         std::optional<std::set<var_idx_t>> trace_variables;
 
+        std::vector<assignment_t> forbidden;
+        weights_tree_t weights_tree_;
+        
         // insert pseudo root to connect trees of the forest (unless already done)
         // @returns new root
         auto
@@ -432,76 +438,109 @@ namespace ired {
         }
 
         void
-        dfs_traceback_naive(vertex_descriptor_t v, assignment_t &a) {
+        dfs_traceback_new(vertex_descriptor_t v, assignment_t &a, bool non_redundant) {
 
             for(const auto &e: tree_.adj_edges(v)) {
 
                 const auto &parent = tree_[ e.source() ].cluster;
-                const auto &child  = tree_[ e.target() ].cluster;
+                const auto &child =  tree_[ e.target() ].cluster;
 
                 auto diff = child.diff_vars(parent);
-                a.set_undet(diff);
+                bool diff_changed = false;
 
-                assert(a.eval_determined(child.constraints(),
-                                         StdEvaluationPolicy<bool>()));
-
-                auto it = a.make_iterator(diff, fn_,
-                                          child.constraints(),
-                                          child.functions(),
-                                          a.eval_determined(child.functions(),
-                                                            evaluation_policy_t())
-                                          );
-
-                auto value = (*e.message)(a);
-                auto selector = typename evaluation_policy_t::selector(value);
-
-                auto x = evaluation_policy_t::zero();
-                for( ; ! it.finished(); ++it ) {
-                    x = evaluation_policy_t::plus( x, it.value() );
-
-                    if (selector.select(x)) {
-                        break;
-                    }
+                if (trace_variables) { // if the trace is restricted,
+                                       // then remove other vars from diff
+                    auto new_end = remove_if(diff.begin(), diff.end(),
+                            [&](var_idx_t i) {
+                                return trace_variables->find(i) == trace_variables->end();
+                            });
+                    diff_changed = new_end != diff.end();
+                    diff.erase(new_end, diff.end());
                 }
 
-                dfs_traceback_naive(e.target(), a);
+                if (! diff.empty()) {
+
+                    a.set_undet(diff);
+
+                    assert(a.eval_determined(child.constraints(),
+                                             StdEvaluationPolicy<bool>()));
+
+                    if (non_redundant) {
+                        size_t num_messages = tree_.adj_edges(e.target()).size();
+                        size_t total_num_funs = child.functions().size();
+                        for (size_t i=total_num_funs-num_messages; i<total_num_funs; ++i) {
+                            fun_value_t Z_c = weights_tree_.get_weight(e.target(), a);
+                            function_t *weighted_function = new weighted_function_t(child.functions()[i]->vars(), child.functions()[i], Z_c);
+                            child.modify_function(i, weighted_function);
+                        }
+                    }
+
+                    auto it = a.make_iterator(diff, fn_,
+                                              child.constraints(),
+                                              child.functions(),
+                                              a.eval_determined(child.functions(),
+                                                                evaluation_policy_t())
+                                              );
+                    
+                    // -----
+                    // determine value for selector
+                    auto value = evaluation_policy_t::zero();
+                    if (diff_changed) {
+                        // recompute value for selector
+                        for( ; ! it.finished(); ++it ) {
+                            value = evaluation_policy_t::plus( value, it.value() );
+                        }
+                        it.reset();
+                    } else {
+                        // get value by evaluating message:
+                        // evaluate message at partial assignment a;
+                        value = (*e.message)(a);
+                    }
+                    if (non_redundant) {
+                        fun_value_t Z = weights_tree_.get_weight(e.source(), a);
+                        value = evaluation_policy_t::plus(value, -Z);
+                        if (value==evaluation_policy_t::zero()) {
+                            throw std::exception();
+                        }
+                    }
+                    
+
+                    // initialize the Selector
+                    auto selector = typename evaluation_policy_t::selector(value);
+
+                    // enumerate all combinations of values assigned to diff variables;
+                    // recompute SUM_a(PROD_f(f(a))), where a runs over these
+                    // combinations
+                    auto x = evaluation_policy_t::zero();
+                    for( ; ! it.finished(); ++it ) {
+                        x = evaluation_policy_t::plus( x, it.value() );
+
+                        if (selector.select(x)) {
+                            break;
+                        }
+                    }
+                }
+                // trace back from target
+                dfs_traceback_new(e.target(), a, non_redundant);
             }
         }
 
         void
-        dfs_traceback_nonredundant(vertex_descriptor_t v, assignment_t &a) {
+        df_traversal(vertex_descriptor_t n, std::vector<cluster_info_t> &nodes,
+                     vertex_descriptor_t &p, std::vector<vertex_descriptor_t> &preorder) {
+            std::vector<vertex_descriptor_t> children;
+            for(const auto &e: tree_.adj_edges(n)) {
+                children.push_back(e.target());
+            }
 
-            for(const auto &e: tree_.adj_edges(v)) {
+            cluster_info_t item(tree_[n].cluster, children);
+            nodes.push_back(item);
 
-                const auto &parent = tree_[ e.source() ].cluster;
-                const auto &child  = tree_[ e.target() ].cluster;
-
-                auto diff = child.diff_vars(parent);
-                a.set_undet(diff);
-
-                assert(a.eval_determined(child.constraints(), 
-                                         StdEvaluationPolicy<bool>()));
-
-                auto it = a.make_iterator(diff, fn_,
-                                          child.constraints(),
-                                          child.functions(),
-                                          a.eval_determined(child.functions(),
-                                                            evaluation_policy_t())
-                                          );
-
-                auto value = (*e.message)(a);
-                auto selector = typename evaluation_policy_t::selector(value);
-
-                auto x = evaluation_policy_t::zero();
-                for( ; ! it.finished(); ++it ) {
-                    x = evaluation_policy_t::plus( x, it.value() );
-                    
-                    if (selector.select(x)) {
-                        break;
-                    }
-                }
-
-                dfs_traceback_nonredundant(e.target(), a);
+            preorder[n] = p;
+            p++;
+            
+            for(const auto &e: tree_.adj_edges(n)) {
+                df_traversal(e.target(), nodes, p, preorder);
             }
         }
 
@@ -599,44 +638,50 @@ namespace ired {
 
     template<class FunValue, class EvaluationPolicy>
     auto
-    ClusterTree<FunValue,EvaluationPolicy>::traceback_naive() {
+    ClusterTree<FunValue,EvaluationPolicy>::traceback_new(bool non_redundant, std::string non_redundant_mode) {
 
         assert(evaluated_);
 
         auto a = assignment_t(fn_.domains());
 
-        dfs_traceback_naive(single_empty_root(), a);
+        if (non_redundant) {
+            if (non_redundant_mode == "default") {
+                if (!weights_tree_.defined()) {
+                    std::vector<cluster_info_t> nodes;
+                    vertex_descriptor_t p = 0;
+                    std::vector<vertex_descriptor_t> preorder(tree_.size());
+                    df_traversal(single_empty_root(), nodes, p, preorder);
+                    weights_tree_.define(nodes, preorder);
+                }
 
-        int sample_ID = 0;
+                dfs_traceback_new(single_empty_root(), a, true);
+                weights_tree_.add_forbidden(a);
+                return a;
 
-        int min = std::numeric_limits<int>::max();
-        int max = std::numeric_limits<int>::min();
-        for (auto domain : fn_.domains()) {
-            min = (domain.lb() < min) ? domain.lb() : min;
-            max = (domain.ub() > max) ? domain.ub() : max;
+            } else if (non_redundant_mode == "rejection") {
+                dfs_traceback_new(single_empty_root(), a, false);
+                
+                for (const auto& fa : forbidden) {
+                    bool sampled = true;
+                    for (size_t i=0; i<a.size(); i++) {
+                        if (a[i]!=fa[i]) {
+                            sampled = false;
+                            break;
+                        }
+                    }
+                    if (sampled) {
+                        throw std::exception();
+                    }
+                }
+
+                forbidden.push_back(a);
+                return a;
+
+            }
+        } else {
+            dfs_traceback_new(single_empty_root(), a, false);
+            return a;
         }
-
-        int base = max - min + 1;
-        int shift = - min;
-
-        for (int i; i<a.size(); ++i) {
-            sample_ID += (a[i] + shift) * std::pow(base, i);
-        }
-
-        return std::make_tuple(sample_ID, a);
-    }
-
-    template<class FunValue, class EvaluationPolicy>
-    auto
-    ClusterTree<FunValue,EvaluationPolicy>::traceback_nonredundant() {
-
-        assert(evaluated_);
-
-        auto a = assignment_t(fn_.domains());
-
-        dfs_traceback_nonredundant(single_empty_root(), a);
-
-        return a;
     }
 }
 

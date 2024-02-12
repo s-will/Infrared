@@ -299,14 +299,10 @@ namespace ired {
 
             // set up value stack
             value_stack_.resize(vars_.size()+1);
-            test_value_stack_.resize(vars_.size()+1);
-            test_weight_stack_.resize(vars_.size()+1);
 
             value_stack_[0] = initial_value_;
-            test_value_stack_[0] = initial_value_;
-            test_weight_stack_[0] = ep::one();
 
-            if ( value_stack_[0]==ep::zero() || test_value_stack_[0]==ep::zero()) {
+            if ( value_stack_[0]==ep::zero() ) {
                 top_=-1;
                 return;
             }
@@ -329,14 +325,6 @@ namespace ired {
             assert( ( top_==0 && vars_.size()==0 )
                     || top_ == static_cast<int>(vars_.size())-1 );
             return value_stack_[vars_.size()];
-        }
-
-        auto
-        test_value() {
-            assert(top_>=0);
-            assert( ( top_==0 && vars_.size()==0 )
-                    || top_ == static_cast<int>(vars_.size())-1 );
-            return test_value_stack_[vars_.size()];
         }
 
         /**
@@ -419,10 +407,6 @@ namespace ired {
                      if ( value_stack_[top_+1] == ep::zero() )
                          continue;
 
-                     /* test_eval_at_top();
-                     if ( test_value_stack_[top_+1] == ep::zero() )
-                         continue;*/
-
                      break;
                 } while (true);
                 top_++;
@@ -460,8 +444,6 @@ namespace ired {
 
         using value_stack_t = typename vector_nbv_sel<fun_value_t>::type;
         value_stack_t value_stack_;
-        value_stack_t test_value_stack_;
-        value_stack_t test_weight_stack_;
 
         int stage1_size_;
         std::function<void()> finish_stage2_hook_;
@@ -504,21 +486,6 @@ namespace ired {
             }
 
             value_stack_[top_+1] = x;
-        }
-
-        void
-        test_eval_at_top() {
-            assert(top_>=0);
-            auto x = test_value_stack_[top_];
-            auto y = test_weight_stack_[top_];
-            x = ep::plus( x, -y );
-            for ( const auto f: function_board_[top_] ) {
-                x = ep::mul( x, (*f)(a_) );
-                y = ep::mul( y, (*f)(a_) );
-            }
-
-            test_value_stack_[top_+1] = x;
-            test_weight_stack_[top_+1] = y;
         }
 
         /**
