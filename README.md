@@ -11,7 +11,7 @@ optimization.
 
 ## Resources
 
-* **Online documentation**: <https://www.lix.polytechnique.fr/~will/Software/Infrared>
+* **Online documentation**: <https://amibio.gitlabpages.inria.fr/Infrared>
 
   Various **examples** of solving bioinformatics problems in
 Infrared provide an important entry point for practical use of Infrared.
@@ -114,7 +114,7 @@ PYBIND11_GLOBAL_SDIST=1 python3 -m pip install https://github.com/pybind/pybind1
 
 ## Documentation
 
-We provide [Infrared's documentation](https://www.lix.polytechnique.fr/~will/Software/Infrared) online. The documentation comprises general information, API reference and examples for the use of Infrared's high-level Python interface.
+We provide [Infrared's documentation](https://amibio.gitlabpages.inria.fr/Infrared) online. The documentation comprises general information, API reference and examples for the use of Infrared's high-level Python interface.
 
 Jupyter notebooks with code examples are part of the online documentation and can be as well downloaded from subdirectory [Doc](https://gitlab.inria.fr/amibio/Infrared/-/tree/master/Doc) on Inrared's Gitlab repository.
 
