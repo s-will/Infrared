@@ -11,7 +11,7 @@ optimization.
 
 ## Resources
 
-* **Online documentation**: <https://www.lix.polytechnique.fr/~will/Software/Infrared>
+* **Online documentation**: <https://amibio.gitlabpages.inria.fr/Infrared>
 
   Various **examples** of solving bioinformatics problems in
 Infrared provide an important entry point for practical use of Infrared.
