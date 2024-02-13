@@ -25,7 +25,6 @@
 #include "subtree_weights.hpp"
 
 namespace ired {
-
     /**
      * @brief A tree of clusters (=variables, functions, constraints)
      *
@@ -272,6 +271,23 @@ namespace ired {
         auto restricted_traceback(const std::set<var_idx_t> &variables,
             const assignment_t &assignment);
 
+        /**
+         * @brief Generate a (possibly non-redundant) traceback
+         *
+         * @param non_redundant specifies whether the samples should be unique
+         * @param non_redundant_mode type of non-redundant algorithm
+         *
+         * @return assignment obtained by (possibly non-redundant) traceback
+         *
+         * If non_redundant is false, operates in the same way as @see traceback.
+         * 
+         * If non_redundant_mode == "rejection", stores all generated assignments. 
+         * If an assignment is already present in the list throws an exception.
+         * 
+         * If non_redundant_mode == "default", uses subtree weights 
+         * to ensure the generated assignment are unique. In case 
+         * there are no more possible assignments throws an exception.
+         */
         auto traceback_new(bool non_redundant, std::string non_redundant_mode);
 
     private:
@@ -437,6 +453,15 @@ namespace ired {
             }
         }
 
+        /**
+         * @brief trace back by dfs
+         * @param v trace back from this node in tree_
+         * @param a [inout] the assignment that determines the variables above
+         * v; as well used to return the variables from trace back in the
+         * subtree of v
+         * @param non_redundant specifies whether subtree weights should be added 
+         * to ensure non-redundancy
+         */
         void
         dfs_traceback_new(vertex_descriptor_t v, assignment_t &a, bool non_redundant) {
 
@@ -465,6 +490,7 @@ namespace ired {
                     assert(a.eval_determined(child.constraints(),
                                              StdEvaluationPolicy<bool>()));
 
+                    // add weights to the messages from the children nodes
                     if (non_redundant) {
                         size_t num_messages = tree_.adj_edges(e.target()).size();
                         size_t total_num_funs = child.functions().size();
@@ -496,10 +522,12 @@ namespace ired {
                         // evaluate message at partial assignment a;
                         value = (*e.message)(a);
                     }
+                    // add weight to the value for selector
                     if (non_redundant) {
                         fun_value_t Z = weights_tree_.get_weight(e.source(), a);
                         value = evaluation_policy_t::plus(value, -Z);
                         if (value==evaluation_policy_t::zero()) {
+                            // if the value becomes zero, there are no more new samples
                             throw std::exception();
                         }
                     }
@@ -525,6 +553,16 @@ namespace ired {
             }
         }
 
+        /**
+         * @brief Traverse the cluster tree and store its nodes in order
+         * 
+         * @param n current node in the cluster tree
+         * @param nodes list of collected node information 
+         * (cluster and children) for the previous nodes
+         * @param p possition of the current node in df order
+         * @param preorder list of possitions corresponding 
+         * to the vector describtors from the cluster tree
+         */
         void
         df_traversal(vertex_descriptor_t n, std::vector<cluster_info_t> &nodes,
                      vertex_descriptor_t &p, std::vector<vertex_descriptor_t> &preorder) {
@@ -646,7 +684,10 @@ namespace ired {
 
         if (non_redundant) {
             if (non_redundant_mode == "default") {
+                
                 if (!weights_tree_.defined()) {
+                    // pass the necessary information from the cluster tree
+                    // the first time the weights tree is used
                     std::vector<cluster_info_t> nodes;
                     vertex_descriptor_t p = 0;
                     std::vector<vertex_descriptor_t> preorder(tree_.size());

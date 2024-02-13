@@ -1343,8 +1343,6 @@ class BoltzmannSampler(EngineBase):
         See also:
             EngineBase
         """
-        self.samples_ID_list = []
-        self.forbidden = []
         super().__init__(model, td_factory, lazy)
 
     def sample(self):
@@ -1376,6 +1374,15 @@ class BoltzmannSampler(EngineBase):
         return self._ct.resample(variables, assignment)
 
     def sample_new(self, non_redundant=False, non_redundant_mode="default", repeats=1):
+        """Generate sample
+
+        Operates in a similar way to sample(). Exception when trying to generate a sample 
+        indicates that no new sample can be found.
+        
+        Returns:
+            A raw sample if one can be found or
+            None if after a certain amount of repeats there is no new sample
+        """
         self.setup_engine()
         for _ in range(repeats):
             try:

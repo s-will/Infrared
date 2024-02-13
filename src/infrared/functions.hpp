@@ -100,6 +100,10 @@ namespace ired {
         ~Function() {}
     };
 
+    /**
+     * @brief WeightedFunction operates in the same way as @see Function
+     * but with added constant weight to the value
+     */
     template <class FunValue = double>
     class WeightedFunction : public Function<FunValue> {
     public:

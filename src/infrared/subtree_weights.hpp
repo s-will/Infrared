@@ -1,6 +1,22 @@
 #ifndef INFRARED_SUBTREE_WEIGHTS_HPP
 #define INFRARED_SUBTREE_WEIGHTS_HPP
 
+/*
+ * InfraRed ---  A generic engine for Boltzmann sampling over constraint networks
+ * (C) Sebastian Will, 2018
+ *
+ * This file is part of the InfraRed source code.
+ *
+ * InfraRed provides a generic framework for tree decomposition-based
+ * Boltzmann sampling over constraint networks
+ */
+
+/**
+ * @file
+ *
+ * @brief Defines the weights tree.
+ */
+
 #include "graph.hpp"
 #include "feature_network.hpp"
 
@@ -9,7 +25,11 @@
 #include <string>
 
 namespace ired {
-
+    /**
+     * @brief Tree data structure containing information about weights 
+     * that should be added based on previously generated assignments 
+     * in order to achieve non-redundancy
+     */
     template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy <FunValue>>
     class WeightsTree {
 
@@ -20,15 +40,17 @@ namespace ired {
         using evaluation_policy_t = typename feature_network_t::evaluation_policy_t;
         using fun_value_t = typename feature_network_t::fun_value_t;
 
+        //! @brief information at a vertex: weight Z 
         struct vertex_info_t {
             vertex_info_t()
                 : Z(), w() {}
             vertex_info_t(fun_value_t Z_value, fun_value_t w_value)
                 : Z(Z_value), w(w_value) {}
             fun_value_t Z;
-            fun_value_t w; // TO DO: maek temporary
+            fun_value_t w;  //TO DO: make temporary
         };
 
+        //! @brief information at an edge: partial assignment a
         struct edge_info_t {
             edge_info_t(const assignment_t &assignment)
                 : assignment(assignment) {}
@@ -38,6 +60,8 @@ namespace ired {
         using tree_t = graph::adjacency_list<vertex_info_t, edge_info_t>;
         using vertex_descriptor_t = typename tree_t::vertex_descriptor_t;
 
+        // information about a node from the cluster tree:
+        // cluster (variables, constraints and functions) + list of children
         struct cluster_info_t {
             cluster_info_t(cluster_t cluster, std::vector<vertex_descriptor_t> children)
                 : cluster(cluster), children(children) {}
@@ -49,11 +73,13 @@ namespace ired {
 
         ~WeightsTree() {}
 
+        //! @brief checks whether the necessary information from the cluster tree has been passed
         bool
         defined() {
             return defined_;
         }
 
+        //! @brief sets the cluster tree nodes information and their order in df traversal
         void
         define(std::vector<cluster_info_t> &nodes, std::vector<vertex_descriptor_t> &preorder) {
             vertex_descriptor_t root_ = tree_.add_vertex();
@@ -63,6 +89,11 @@ namespace ired {
             defined_ = true;
         }
 
+        /**
+         * @brief Modify the tree with a new assignment
+         *
+         * @param a generated assignment by traceback
+         */
         void
         add_forbidden(assignment_t &a) {
             update_tree_structure(a);
@@ -73,6 +104,12 @@ namespace ired {
             record_tree(filename);
         }
 
+        /**
+         * @brief Get specific subtree weight
+         *
+         * @param v cluster tree node
+         * @param a assignment
+         */
         fun_value_t
         get_weight(vertex_descriptor_t v, assignment_t &a) {
             vertex_descriptor_t current_node = path_[0];
@@ -104,14 +141,24 @@ namespace ired {
         feature_network_t fn_;
         tree_t tree_;
 
+        // stores the tree nodes from the weights tree 
+        // corresponding to the currently proccessed assignment
         std::vector<vertex_descriptor_t> path_;
+        
         std::vector<cluster_info_t> cluster_nodes_;
         std::vector<vertex_descriptor_t> preorder_;
 
         bool defined_ = false;
 
-        int count = 0;
+        int count = 0; //used for generating a diferent dotfile name
 
+        /**
+         * @brief Add new node to the weights tree
+         *
+         * @param e assignment for the connecting edge
+         *
+         * Every new node is initialized with weight 0.
+         */
         void
         add_node(const edge_info_t& e) {
             vertex_descriptor_t current_node = path_.back();
@@ -124,6 +171,15 @@ namespace ired {
             path_.push_back(new_node);
         }
 
+        /**
+         * @brief Add the necessary nodes and edges to represent a new assignment
+         *
+         * @param a total assignment
+         *
+         * At each level of the weights tree the new assignment is compared to 
+         * the existing partial assignments. If there is a match, the search 
+         * continues in the respective subtree. Otherwise a new node is added.
+         */
         void
         update_tree_structure(assignment_t &a) {
             for (size_t i = 0; i < cluster_nodes_.size()-1; ++i) {
@@ -149,6 +205,14 @@ namespace ired {
             }
         }
 
+        /**
+         * @brief Compute the product of cluster functions for a given assignment
+         *
+         * @param cluster_node cluster information (cluster + list of children)
+         * @param a total assignment
+         * 
+         * @return value of the product
+         */
         auto
         funs_product(cluster_info_t &cluster_node, assignment_t &a) {
             auto funs = cluster_node.cluster.functions();
@@ -161,6 +225,14 @@ namespace ired {
             return x;
         }
 
+        /**
+         * @brief Update the weights after adding a new assignment
+         *
+         * @param a total assignment
+         *
+         * Following the assignment path from the leaf to the root, 
+         * update each weight by adding the product of all functions in the subtree 
+         */
         void
         update_weights(assignment_t &a) {
             tree_[path_.back()].w = funs_product(cluster_nodes_.back(), a);
@@ -177,6 +249,11 @@ namespace ired {
             }
         }
 
+        /**
+         * @brief Store the current state of the weights tree in a dotfile
+         *
+         * @param filename name of the dotfile
+         */
         void
         record_tree(std::string filename) {
             std::ofstream dotFile(filename);
