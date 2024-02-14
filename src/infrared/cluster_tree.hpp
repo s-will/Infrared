@@ -454,16 +454,14 @@ namespace ired {
         }
 
         /**
-         * @brief trace back by dfs
+         * @brief trace back by dfs with added weights
          * @param v trace back from this node in tree_
          * @param a [inout] the assignment that determines the variables above
          * v; as well used to return the variables from trace back in the
          * subtree of v
-         * @param non_redundant specifies whether subtree weights should be added 
-         * to ensure non-redundancy
          */
         void
-        dfs_traceback_new(vertex_descriptor_t v, assignment_t &a, bool non_redundant) {
+        dfs_traceback_nonredundant(vertex_descriptor_t v, assignment_t &a) {
 
             for(const auto &e: tree_.adj_edges(v)) {
 
@@ -471,85 +469,61 @@ namespace ired {
                 const auto &child =  tree_[ e.target() ].cluster;
 
                 auto diff = child.diff_vars(parent);
-                bool diff_changed = false;
+                a.set_undet(diff);
 
-                if (trace_variables) { // if the trace is restricted,
-                                       // then remove other vars from diff
-                    auto new_end = remove_if(diff.begin(), diff.end(),
-                            [&](var_idx_t i) {
-                                return trace_variables->find(i) == trace_variables->end();
-                            });
-                    diff_changed = new_end != diff.end();
-                    diff.erase(new_end, diff.end());
+                assert(a.eval_determined(child.constraints(),
+                                         StdEvaluationPolicy<bool>()));
+
+                // add weights to the messages from the children nodes
+                std::vector<const function_t*> weighted_functions;
+                size_t num_messages = tree_.adj_edges(e.target()).size();
+                size_t num_funs = child.functions().size();
+                        
+                for (size_t i=0; i<num_funs-num_messages; ++i) {
+                    weighted_functions.push_back(child.functions()[i]);
                 }
-
-                if (! diff.empty()) {
-
-                    a.set_undet(diff);
-
-                    assert(a.eval_determined(child.constraints(),
-                                             StdEvaluationPolicy<bool>()));
-
-                    // add weights to the messages from the children nodes
-                    if (non_redundant) {
-                        size_t num_messages = tree_.adj_edges(e.target()).size();
-                        size_t total_num_funs = child.functions().size();
-                        for (size_t i=total_num_funs-num_messages; i<total_num_funs; ++i) {
-                            fun_value_t Z_c = weights_tree_.get_weight(e.target(), a);
-                            function_t *weighted_function = new weighted_function_t(child.functions()[i]->vars(), child.functions()[i], Z_c);
-                            child.modify_function(i, weighted_function);
-                        }
-                    }
-
-                    auto it = a.make_iterator(diff, fn_,
-                                              child.constraints(),
-                                              child.functions(),
-                                              a.eval_determined(child.functions(),
-                                                                evaluation_policy_t())
-                                              );
+                for (size_t i=num_funs-num_messages; i<num_funs; ++i) {
+                    fun_value_t Z_c = weights_tree_.get_weight(e.target(), a);
+                    std::cout << "Z_c: " << Z_c << std::endl;
+                    function_t* weighted_function = new weighted_function_t(child.functions()[i]->vars(), 
+                                                                            child.functions()[i], Z_c);
+                    weighted_functions.push_back(weighted_function);
+                }
                     
-                    // -----
-                    // determine value for selector
-                    auto value = evaluation_policy_t::zero();
-                    if (diff_changed) {
-                        // recompute value for selector
-                        for( ; ! it.finished(); ++it ) {
-                            value = evaluation_policy_t::plus( value, it.value() );
-                        }
-                        it.reset();
-                    } else {
-                        // get value by evaluating message:
-                        // evaluate message at partial assignment a;
-                        value = (*e.message)(a);
-                    }
-                    // add weight to the value for selector
-                    if (non_redundant) {
-                        fun_value_t Z = weights_tree_.get_weight(e.source(), a);
-                        value = evaluation_policy_t::plus(value, -Z);
-                        if (value==evaluation_policy_t::zero()) {
-                            // if the value becomes zero, there are no more new samples
-                            throw std::exception();
-                        }
-                    }
+                auto it = a.make_iterator(diff, fn_,
+                                          child.constraints(),
+                                          weighted_functions,
+                                          a.eval_determined(child.functions(),
+                                                            evaluation_policy_t())
+                                          );
                     
+                // determine value for selector
+                auto value = (*e.message)(a);
+                fun_value_t Z = weights_tree_.get_weight(e.source(), a);
+                value = evaluation_policy_t::plus(value, -Z);
+                std::cout << "message: " << value << std::endl;
+                if (value==evaluation_policy_t::zero()) {
+                    // if the value becomes zero, there are no more new samples
+                    throw std::exception();
+                }
+                    
+                // initialize the Selector
+                auto selector = typename evaluation_policy_t::selector(value);
 
-                    // initialize the Selector
-                    auto selector = typename evaluation_policy_t::selector(value);
+                // enumerate all combinations of values assigned to diff variables;
+                // recompute SUM_a(PROD_f(f(a))), where a runs over these
+                // combinations
+                auto x = evaluation_policy_t::zero();
+                for( ; ! it.finished(); ++it ) {
+                    x = evaluation_policy_t::plus( x, it.value() );
+                    std::cout << "x: " << x << std::endl;
 
-                    // enumerate all combinations of values assigned to diff variables;
-                    // recompute SUM_a(PROD_f(f(a))), where a runs over these
-                    // combinations
-                    auto x = evaluation_policy_t::zero();
-                    for( ; ! it.finished(); ++it ) {
-                        x = evaluation_policy_t::plus( x, it.value() );
-
-                        if (selector.select(x)) {
-                            break;
-                        }
+                    if (selector.select(x)) {
+                        break;
                     }
                 }
                 // trace back from target
-                dfs_traceback_new(e.target(), a, non_redundant);
+                dfs_traceback_nonredundant(e.target(), a);
             }
         }
 
@@ -564,13 +538,17 @@ namespace ired {
          * to the vector describtors from the cluster tree
          */
         void
-        df_traversal(vertex_descriptor_t n, std::vector<cluster_info_t> &nodes,
+        df_traversal(std::vector<var_idx_t> diff, std::vector<std::vector<var_idx_t>> &diffs,
+                     vertex_descriptor_t n, std::vector<cluster_info_t> &nodes,
                      vertex_descriptor_t &p, std::vector<vertex_descriptor_t> &preorder) {
+            if (p>0) {
+                diffs.push_back(diff);
+            }
+            
             std::vector<vertex_descriptor_t> children;
             for(const auto &e: tree_.adj_edges(n)) {
                 children.push_back(e.target());
             }
-
             cluster_info_t item(tree_[n].cluster, children);
             nodes.push_back(item);
 
@@ -578,7 +556,10 @@ namespace ired {
             p++;
             
             for(const auto &e: tree_.adj_edges(n)) {
-                df_traversal(e.target(), nodes, p, preorder);
+                const auto &parent = tree_[e.source()].cluster;
+                const auto &child =  tree_[e.target()].cluster;
+
+                df_traversal(child.diff_vars(parent), diffs, e.target(), nodes, p, preorder);
             }
         }
 
@@ -688,19 +669,21 @@ namespace ired {
                 if (!weights_tree_.defined()) {
                     // pass the necessary information from the cluster tree
                     // the first time the weights tree is used
+                    std::vector<var_idx_t> diff;
+                    std::vector<std::vector<var_idx_t>> diffs;
                     std::vector<cluster_info_t> nodes;
                     vertex_descriptor_t p = 0;
                     std::vector<vertex_descriptor_t> preorder(tree_.size());
-                    df_traversal(single_empty_root(), nodes, p, preorder);
-                    weights_tree_.define(nodes, preorder);
+                    df_traversal(diff, diffs, single_empty_root(), nodes, p, preorder);
+                    weights_tree_.define(diffs, nodes, preorder);
                 }
 
-                dfs_traceback_new(single_empty_root(), a, true);
+                dfs_traceback_nonredundant(single_empty_root(), a);
                 weights_tree_.add_forbidden(a);
                 return a;
 
             } else if (non_redundant_mode == "rejection") {
-                dfs_traceback_new(single_empty_root(), a, false);
+                dfs_traceback(single_empty_root(), a);
                 
                 for (const auto& fa : forbidden) {
                     bool sampled = true;
@@ -720,7 +703,7 @@ namespace ired {
 
             }
         } else {
-            dfs_traceback_new(single_empty_root(), a, false);
+            dfs_traceback(single_empty_root(), a);
             return a;
         }
     }

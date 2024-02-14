@@ -39,22 +39,23 @@ namespace ired {
         using cluster_t = typename feature_network_t::cluster_t;
         using evaluation_policy_t = typename feature_network_t::evaluation_policy_t;
         using fun_value_t = typename feature_network_t::fun_value_t;
+        using var_idx_t = typename feature_network_t::var_idx_t;
+        using var_value_t = int;
 
         //! @brief information at a vertex: weight Z 
         struct vertex_info_t {
             vertex_info_t()
-                : Z(), w() {}
-            vertex_info_t(fun_value_t Z_value, fun_value_t w_value)
-                : Z(Z_value), w(w_value) {}
+                : Z() {}
+            vertex_info_t(fun_value_t Z_value)
+                : Z(Z_value) {}
             fun_value_t Z;
-            fun_value_t w;  //TO DO: make temporary
         };
 
         //! @brief information at an edge: partial assignment a
         struct edge_info_t {
-            edge_info_t(const assignment_t &assignment)
+            edge_info_t(std::vector<var_value_t> &assignment)
                 : assignment(assignment) {}
-            assignment_t assignment;
+            std::vector<var_value_t> assignment;
         };
 
         using tree_t = graph::adjacency_list<vertex_info_t, edge_info_t>;
@@ -81,11 +82,17 @@ namespace ired {
 
         //! @brief sets the cluster tree nodes information and their order in df traversal
         void
-        define(std::vector<cluster_info_t> &nodes, std::vector<vertex_descriptor_t> &preorder) {
+        define(std::vector<std::vector<var_idx_t>> &diffs, 
+               std::vector<cluster_info_t> &nodes, 
+               std::vector<vertex_descriptor_t> &preorder) {
+            diffs_ = diffs;
+            cluster_nodes_ = nodes;
+            preorder_ = preorder;
+
             vertex_descriptor_t root_ = tree_.add_vertex();
             path_.push_back(root_);
-            preorder_ = preorder;
-            cluster_nodes_ = nodes;
+            w_.push_back(evaluation_policy_t::zero());
+
             defined_ = true;
         }
 
@@ -99,6 +106,8 @@ namespace ired {
             update_tree_structure(a);
             update_weights(a);
             path_.erase(path_.begin() + 1, path_.end());
+            w_.erase(w_.begin() + 1, w_.end());
+            w_[0] = evaluation_policy_t::zero();
 
             std::string filename = "weights_graph_" + std::to_string(count) + ".dot";
             record_tree(filename);
@@ -113,23 +122,24 @@ namespace ired {
         fun_value_t
         get_weight(vertex_descriptor_t v, assignment_t &a) {
             vertex_descriptor_t current_node = path_[0];
-            for (size_t i = 0; i < preorder_[v]; ++i) {
-                auto& parent = (cluster_nodes_[i]).cluster;
-                auto& child = cluster_nodes_[i+1].cluster;
-
-                auto diff = child.diff_vars(parent);
-
+            std::cout << preorder_[v]<<std::endl;
+            for (size_t k=0; k<preorder_[v]; ++k) {
+                auto diff = diffs_[k];
                 bool exists = false;
-                for (auto &e: tree_.adj_edges(current_node))  {
-                    if (std::all_of(std::begin(diff), std::end(diff), [&](const auto &i) {
-                            return a[i] == e.assignment[i];
-                        })) {
+                for (auto &e: tree_.adj_edges(current_node)) {
+                    bool match = true;
+                    for (size_t i=0; i<diff.size(); ++i) {
+                        if (a[diff[i]] != e.assignment[i]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
                         current_node = e.target();
                         exists = true;
                         break;
                     }
                 }
-
                 if (!exists) {
                     return evaluation_policy_t::zero();
                 }
@@ -144,9 +154,11 @@ namespace ired {
         // stores the tree nodes from the weights tree 
         // corresponding to the currently proccessed assignment
         std::vector<vertex_descriptor_t> path_;
+        std::vector<fun_value_t> w_;
         
         std::vector<cluster_info_t> cluster_nodes_;
         std::vector<vertex_descriptor_t> preorder_;
+        std::vector<std::vector<var_idx_t>> diffs_;
 
         bool defined_ = false;
 
@@ -165,10 +177,10 @@ namespace ired {
             vertex_descriptor_t new_node = tree_.add_vertex();
 
             tree_[new_node].Z = evaluation_policy_t::zero();
-            tree_[new_node].w = evaluation_policy_t::zero();
-            
             tree_.add_edge(current_node, new_node, e);
+            
             path_.push_back(new_node);
+            w_.push_back(evaluation_policy_t::zero());
         }
 
         /**
@@ -182,25 +194,28 @@ namespace ired {
          */
         void
         update_tree_structure(assignment_t &a) {
-            for (size_t i = 0; i < cluster_nodes_.size()-1; ++i) {
-                auto& parent = (cluster_nodes_[i]).cluster;
-                auto& child = cluster_nodes_[i+1].cluster;
-
-                auto diff = child.diff_vars(parent);
-
+            for (auto &diff: diffs_) {
                 bool exists = false;
-                for (auto &e: tree_.adj_edges(path_.back()))  {
-                    if (std::all_of(std::begin(diff), std::end(diff), [&](const auto &i) {
-                            return a[i] == e.assignment[i];
-                        })) {
+                for (auto &e: tree_.adj_edges(path_.back())) {
+                    bool match = true;
+                    for (size_t i=0; i<diff.size(); ++i) {
+                        if (a[diff[i]] != e.assignment[i]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
                         path_.push_back(e.target());
                         exists = true;
                         break;
                     }
                 }
-
                 if (!exists) {
-                    add_node(a);
+                    std::vector<var_value_t> e;
+                    for (size_t i=0; i<diff.size(); ++i) {
+                        e.push_back(a[diff[i]]);
+                    }
+                    add_node(e);
                 }
             }
         }
@@ -235,18 +250,22 @@ namespace ired {
          */
         void
         update_weights(assignment_t &a) {
-            tree_[path_.back()].w = funs_product(cluster_nodes_.back(), a);
-            tree_[path_.back()].Z = tree_[path_.back()].w;
+            w_.back() = funs_product(cluster_nodes_.back(), a);
+            tree_[path_.back()].Z = w_.back();
             
             for (size_t i = path_.size() - 2; i > 0; --i) {
-                auto w = funs_product(cluster_nodes_[i], a);
+                w_[i] = funs_product(cluster_nodes_[i], a);
                 for(const auto &child: cluster_nodes_[i].children) {
-                    w = evaluation_policy_t::mul(w, tree_[path_[preorder_[child]]].w);
+                    w_[i] = evaluation_policy_t::mul(w_[i], w_[preorder_[child]]);
                 }
-
-                tree_[path_[i]].w = w;
-                tree_[path_[i]].Z = evaluation_policy_t::plus(tree_[path_[i]].Z, w);
+                tree_[path_[i]].Z = evaluation_policy_t::plus(tree_[path_[i]].Z, w_[i]);
             }
+
+            w_[0] = evaluation_policy_t::one();
+            for(const auto &child: cluster_nodes_[0].children) {
+                w_[0] = evaluation_policy_t::mul(w_[0], w_[preorder_[child]]);
+            }
+            tree_[path_[0]].Z = evaluation_policy_t::plus(tree_[path_[0]].Z, w_[0]);
         }
 
         /**
@@ -259,13 +278,13 @@ namespace ired {
             std::ofstream dotFile(filename);
             dotFile << "graph G {" << std::endl;
             for (vertex_descriptor_t v = 0; v < tree_.size(); ++v) {
-                dotFile << "  var" << v << " [label=\"" << tree_[v].Z << ", " << tree_[v].w << "\"];" << std::endl;
+                dotFile << "  var" << v << " [label=\"" << tree_[v].Z << "\"];" << std::endl;
             }
             for (vertex_descriptor_t v = 0; v < tree_.size(); ++v) {
                 for(const auto &e: tree_.adj_edges(v)) {
                     std::string a = "";
                     for (size_t i=0; i<e.assignment.size(); ++i) {
-                        a += "x" + std::to_string(i) + "=" + std::to_string(e.assignment[i]) + ", ";
+                        a += std::to_string(e.assignment[i]);
                     }
                     dotFile << "  var" << e.source() << " -- var" << e.target() << " [label=\"" << a << "\"];" << std::endl;           
                 }
