@@ -483,10 +483,12 @@ namespace ired {
                     weighted_functions.push_back(child.functions()[i]);
                 }
                 for (size_t i=num_funs-num_messages; i<num_funs; ++i) {
-                    fun_value_t Z_c = weights_tree_.get_weight(e.target(), a);
-                    std::cout << "Z_c: " << Z_c << std::endl;
+                    auto lambda_function = [this](vertex_descriptor_t v, const assignment_t& a) {
+                        return weights_tree_.get_weight(v, a);
+                    };
                     function_t* weighted_function = new weighted_function_t(child.functions()[i]->vars(), 
-                                                                            child.functions()[i], Z_c);
+                                                                            child.functions()[i], 
+                                                                            lambda_function, e.target());
                     weighted_functions.push_back(weighted_function);
                 }
                     
@@ -501,9 +503,8 @@ namespace ired {
                 auto value = (*e.message)(a);
                 fun_value_t Z = weights_tree_.get_weight(e.source(), a);
                 value = evaluation_policy_t::plus(value, -Z);
-                std::cout << "message: " << value << std::endl;
                 if (value==evaluation_policy_t::zero()) {
-                    // if the value becomes zero, there are no more new samples
+                    // if the value of the first message becomes zero, there are no more new samples
                     throw std::exception();
                 }
                     
@@ -516,7 +517,6 @@ namespace ired {
                 auto x = evaluation_policy_t::zero();
                 for( ; ! it.finished(); ++it ) {
                     x = evaluation_policy_t::plus( x, it.value() );
-                    std::cout << "x: " << x << std::endl;
 
                     if (selector.select(x)) {
                         break;

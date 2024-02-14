@@ -112,21 +112,27 @@ namespace ired {
         using assignment_t = typename base_t::assignment_t;
         using fun_value_t = typename base_t::fun_value_t;
         using var_idx_t = int;
+        using vertex_descriptor_t = size_t;
 
         WeightedFunction(const std::vector<var_idx_t> &vars,
-                         function_ptr_t f, fun_value_t& c) : base_t(vars) {
-            function = f;
-            constant = c;
-        }
+                         function_ptr_t function, 
+                         std::function<fun_value_t(vertex_descriptor_t, const assignment_t&)> lambda_function, 
+                         vertex_descriptor_t vertex
+        ) : base_t(vars),
+            function(function),
+            lambda_function(lambda_function),
+            vertex(vertex) {}
 
         fun_value_t
         operator() (const assignment_t& a) const override {
-            return (*function)(a) - constant;
+            auto c = lambda_function(vertex, a);
+            return (*function)(a) - c;
         }
     
     private:
         function_ptr_t function;
-        fun_value_t constant;
+        std::function<fun_value_t(vertex_descriptor_t, const assignment_t&)> lambda_function;
+        vertex_descriptor_t vertex;
     };
 
     template <class T>

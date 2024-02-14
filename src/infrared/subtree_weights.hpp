@@ -120,9 +120,8 @@ namespace ired {
          * @param a assignment
          */
         fun_value_t
-        get_weight(vertex_descriptor_t v, assignment_t &a) {
+        get_weight(vertex_descriptor_t v, const assignment_t &a) {
             vertex_descriptor_t current_node = path_[0];
-            std::cout << preorder_[v]<<std::endl;
             for (size_t k=0; k<preorder_[v]; ++k) {
                 auto diff = diffs_[k];
                 bool exists = false;
