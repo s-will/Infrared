@@ -100,41 +100,6 @@ namespace ired {
         ~Function() {}
     };
 
-    /**
-     * @brief WeightedFunction operates in the same way as @see Function
-     * but with added constant weight to the value
-     */
-    template <class FunValue = double>
-    class WeightedFunction : public Function<FunValue> {
-    public:
-        using base_t = Function<FunValue>;
-        using function_ptr_t = const base_t*;
-        using assignment_t = typename base_t::assignment_t;
-        using fun_value_t = typename base_t::fun_value_t;
-        using var_idx_t = int;
-        using vertex_descriptor_t = size_t;
-
-        WeightedFunction(const std::vector<var_idx_t> &vars,
-                         function_ptr_t function, 
-                         std::function<fun_value_t(vertex_descriptor_t, const assignment_t&)> lambda_function, 
-                         vertex_descriptor_t vertex
-        ) : base_t(vars),
-            function(function),
-            lambda_function(lambda_function),
-            vertex(vertex) {}
-
-        fun_value_t
-        operator() (const assignment_t& a) const override {
-            auto c = lambda_function(vertex, a);
-            return (*function)(a) - c;
-        }
-    
-    private:
-        function_ptr_t function;
-        std::function<fun_value_t(vertex_descriptor_t, const assignment_t&)> lambda_function;
-        vertex_descriptor_t vertex;
-    };
-
     template <class T>
     inline
     std::ostream & operator << (std::ostream &out, const Function<T> &f) {

@@ -78,8 +78,20 @@ namespace ired {
 
         static
         fun_value_t
+        minus(const fun_value_t &x, const fun_value_t &y) {
+            return x-y;
+        }
+
+        static
+        fun_value_t
         mul(const fun_value_t &x, const fun_value_t &y) {
             return x*y;
+        }
+
+        static
+        fun_value_t
+        del(const fun_value_t &x, const fun_value_t &y) {
+            return x/y;
         }
 
         static
@@ -92,6 +104,12 @@ namespace ired {
         fun_value_t
         zero() {
             return fun_value_t();
+        }
+
+        static
+        fun_value_t
+        almost_zero(const fun_value_t &x) {
+            return std::abs(x)<1e-14; // TO DO: adjust the exact value
         }
     };
 

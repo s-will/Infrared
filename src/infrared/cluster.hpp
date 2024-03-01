@@ -113,17 +113,6 @@ namespace ired {
         }
 
         /**
-         * @brief Replace an existing function
-         * 
-         * @param i index in the vector of functions
-         * @param f new function
-         */
-        void
-        modify_function(size_t i, function_t *f) const {
-            const_cast<std::vector<const function_t*>*>(&funs_)->operator[](i) = f;
-        }
-
-        /**
          * @brief Calculate separator variables
          *
          * @param parent parent cluster of this object

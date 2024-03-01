@@ -1386,10 +1386,10 @@ class BoltzmannSampler(EngineBase):
         self.setup_engine()
         for _ in range(repeats):
             try:
-                return self._ct._ct.sample_new(non_redundant, non_redundant_mode)
+                a = self._ct._ct.sample_new(non_redundant, non_redundant_mode)
+                return a
             except:
                 pass
-        print('No new sample found!')
         
     def samples(self):
         """Sample generator

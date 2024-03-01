@@ -91,7 +91,6 @@ namespace ired {
         //! @brief type of identifiers of vertices (typically 'long int')
         using vertex_descriptor_t = typename tree_t::vertex_descriptor_t;
 
-        using weighted_function_t = WeightedFunction<fun_value_t>;
         using weights_tree_t = WeightsTree<fun_value_t, evaluation_policy_t>;
         using cluster_info_t = typename weights_tree_t::cluster_info_t;
 
@@ -304,6 +303,7 @@ namespace ired {
 
         std::vector<assignment_t> forbidden;
         weights_tree_t weights_tree_;
+        fun_value_t CF;
         
         // insert pseudo root to connect trees of the forest (unless already done)
         // @returns new root
@@ -462,6 +462,9 @@ namespace ired {
          */
         void
         dfs_traceback_nonredundant(vertex_descriptor_t v, assignment_t &a) {
+            if (v==single_empty_root()) {
+                CF = (*tree_.adj_edges(v)[0].message)(a);
+            }
 
             for(const auto &e: tree_.adj_edges(v)) {
 
@@ -473,41 +476,26 @@ namespace ired {
 
                 assert(a.eval_determined(child.constraints(),
                                          StdEvaluationPolicy<bool>()));
-
-                // add weights to the messages from the children nodes
-                std::vector<const function_t*> weighted_functions;
-                size_t num_messages = tree_.adj_edges(e.target()).size();
-                size_t num_funs = child.functions().size();
-                        
-                for (size_t i=0; i<num_funs-num_messages; ++i) {
-                    weighted_functions.push_back(child.functions()[i]);
-                }
-                for (size_t i=num_funs-num_messages; i<num_funs; ++i) {
-                    auto lambda_function = [this](vertex_descriptor_t v, const assignment_t& a) {
-                        return weights_tree_.get_weight(v, a);
-                    };
-                    function_t* weighted_function = new weighted_function_t(child.functions()[i]->vars(), 
-                                                                            child.functions()[i], 
-                                                                            lambda_function, e.target());
-                    weighted_functions.push_back(weighted_function);
-                }
-                    
+                                
                 auto it = a.make_iterator(diff, fn_,
                                           child.constraints(),
-                                          weighted_functions,
+                                          child.functions(),
                                           a.eval_determined(child.functions(),
                                                             evaluation_policy_t())
                                           );
                     
                 // determine value for selector
-                auto value = (*e.message)(a);
-                fun_value_t Z = weights_tree_.get_weight(e.source(), a);
-                value = evaluation_policy_t::plus(value, -Z);
-                if (value==evaluation_policy_t::zero()) {
+                auto message = (*e.message)(a);
+                fun_value_t Z = evaluation_policy_t::mul(weights_tree_.get_weight(e.source(), a),
+                                                         evaluation_policy_t::del(message, CF));
+                auto value = evaluation_policy_t::minus(message, Z);
+                
+                if (evaluation_policy_t::almost_zero(value)) {
                     // if the value of the first message becomes zero, there are no more new samples
+                    weights_tree_.clear();
                     throw std::exception();
                 }
-                    
+
                 // initialize the Selector
                 auto selector = typename evaluation_policy_t::selector(value);
 
@@ -515,13 +503,26 @@ namespace ired {
                 // recompute SUM_a(PROD_f(f(a))), where a runs over these
                 // combinations
                 auto x = evaluation_policy_t::zero();
-                for( ; ! it.finished(); ++it ) {
-                    x = evaluation_policy_t::plus( x, it.value() );
-
+                for(; ! it.finished(); ++it) {
+                    auto new_CF = evaluation_policy_t::del(evaluation_policy_t::mul(CF,
+                                                                                    evaluation_policy_t::del(it.value(),
+                                                                                                             weights_tree_.get_value())),
+                                                           message);
+                    
+                    auto c = evaluation_policy_t::mul(weights_tree_.get_weight(e.target(), a),
+                                                      evaluation_policy_t::del(it.value(), new_CF));
+                    c = evaluation_policy_t::minus(it.value(), c);
+                
+                    x = evaluation_policy_t::plus(x, c);
+                    
                     if (selector.select(x)) {
+                        CF = new_CF;
                         break;
                     }
                 }
+
+                weights_tree_.update_tree_structure(a, diff);
+
                 // trace back from target
                 dfs_traceback_nonredundant(e.target(), a);
             }
@@ -545,11 +546,7 @@ namespace ired {
                 diffs.push_back(diff);
             }
             
-            std::vector<vertex_descriptor_t> children;
-            for(const auto &e: tree_.adj_edges(n)) {
-                children.push_back(e.target());
-            }
-            cluster_info_t item(tree_[n].cluster, children);
+            cluster_info_t item(tree_[n].cluster.functions(), tree_.adj_edges(n).size());
             nodes.push_back(item);
 
             preorder[n] = p;
@@ -558,7 +555,6 @@ namespace ired {
             for(const auto &e: tree_.adj_edges(n)) {
                 const auto &parent = tree_[e.source()].cluster;
                 const auto &child =  tree_[e.target()].cluster;
-
                 df_traversal(child.diff_vars(parent), diffs, e.target(), nodes, p, preorder);
             }
         }
@@ -679,7 +675,8 @@ namespace ired {
                 }
 
                 dfs_traceback_nonredundant(single_empty_root(), a);
-                weights_tree_.add_forbidden(a);
+                weights_tree_.update_weights(a);
+                weights_tree_.clear();
                 return a;
 
             } else if (non_redundant_mode == "rejection") {
