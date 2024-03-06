@@ -63,7 +63,7 @@ namespace ired {
     /**
      * @brief Functions evaluate assignments of a subset of variables
      */
-    template<class FunValue=double>
+    template<class FunValue>
     class Function : public Dependency {
     public:
         using self_t = Function<FunValue>;

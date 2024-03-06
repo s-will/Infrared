@@ -30,7 +30,7 @@ namespace ired {
      * that should be added based on previously generated assignments 
      * in order to achieve non-redundancy
      */
-    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy <FunValue>>
+    template<class FunValue, class EvaluationPolicy=StdEvaluationPolicy <FunValue>>
     class WeightsTree {
 
     public:

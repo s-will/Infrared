@@ -45,7 +45,7 @@ using namespace ired;
  *
  * @private
  */
-template<class FunValue=double>
+template<class FunValue>
 struct PyFunction
     : public Function<FunValue> {
     using var_idx_t = int;
@@ -84,8 +84,13 @@ struct PyFunction
     }
 };
 
-using PFClusterTree = ClusterTree<>;
+//! the type of partition functions
+//using pf_type = long double;
+using pf_type = __float128;
+
+using PFClusterTree = ClusterTree<pf_type>;
 using ArcticClusterTree = ClusterTree< int, ArcticEvaluationPolicy<int> >;
+
 
 /**
  * @brief seed the C++-side random number generator
@@ -120,13 +125,13 @@ PYBIND11_MODULE(libinfrared,ir)
              py::return_value_policy::copy)
         ;
 
-    py::class_< Function<>, PyFunction<>, std::shared_ptr<Function<>> >
+    py::class_< Function<pf_type>, PyFunction<pf_type>, std::shared_ptr<Function<pf_type>> >
         function(ir, "Function");
 
     function
         .def(py::init<const std::vector<int> &>())
-        .def("__call__", &Function<>::operator ())
-        .def("vars", &Function<>::vars,
+        .def("__call__", &Function<pf_type>::operator ())
+        .def("vars", &Function<pf_type>::vars,
              py::return_value_policy::copy)
         ;
 

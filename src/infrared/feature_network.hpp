@@ -109,7 +109,7 @@ namespace ired {
         static
         fun_value_t
         almost_zero(const fun_value_t &x) {
-            return std::abs(x) < 1e-40; // TO DO: adjust the exact value
+            return std::abs(x) < 1e-250; // ?? factor * std::numeric_limits<fun_value_t>::min();
         }
     };
 

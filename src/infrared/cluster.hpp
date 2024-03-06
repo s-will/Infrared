@@ -36,7 +36,7 @@ namespace ired {
      * constraint network CN. Variables are stored/identified by their unique
      * indices in the CN.
      */
-    template<class FunValue=double>
+    template<class FunValue>
     class Cluster {
     public:
         using var_idx_t = int;

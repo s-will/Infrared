@@ -52,7 +52,7 @@ namespace ired {
      *
      * Ensuring those properties is the job of the user of this class!
      */
-    template<class FunValue=double, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
+    template<class FunValue, class EvaluationPolicy=StdEvaluationPolicy<FunValue>>
     class ClusterTree {
 
     public:
