@@ -171,6 +171,7 @@ PYBIND11_MODULE(libinfrared,ir)
         .def("resample", &PFClusterTree::restricted_traceback)
         .def("sample", &PFClusterTree::traceback)
         .def("sample_new", &PFClusterTree::traceback_new)
+        .def("evaluation", &PFClusterTree::accumulated_weight)
         ;
 
     py::class_< ArcticClusterTree >(ir,"ArcticClusterTree")

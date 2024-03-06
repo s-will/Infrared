@@ -191,6 +191,11 @@ namespace ired {
             return w_.back();
         }
 
+        fun_value_t
+        get_accumulated_weight() {
+            return tree_[0].Z;
+        }
+
     private:
         tree_t tree_;
 

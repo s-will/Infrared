@@ -289,6 +289,8 @@ namespace ired {
          */
         auto traceback_new(bool non_redundant, std::string non_redundant_mode);
 
+        auto accumulated_weight();
+
     private:
         feature_network_t fn_;
         tree_t tree_;
@@ -703,6 +705,12 @@ namespace ired {
             dfs_traceback(single_empty_root(), a);
             return a;
         }
+    }
+
+    template<class FunValue, class EvaluationPolicy>
+    auto
+    ClusterTree<FunValue,EvaluationPolicy>::accumulated_weight() {
+        return weights_tree_.get_accumulated_weight();
     }
 }
 

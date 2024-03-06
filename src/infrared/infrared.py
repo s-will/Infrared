@@ -1391,6 +1391,10 @@ class BoltzmannSampler(EngineBase):
             except:
                 pass
         
+    def evaluation(self):
+        self.setup_engine()
+        return self._ct._ct.evaluation()
+    
     def samples(self):
         """Sample generator
         """
